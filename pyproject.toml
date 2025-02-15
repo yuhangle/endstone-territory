@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "endstone_territory"
+version = "0.0.4dev4"
+description = "一个高级领地插件"
+authors = [
+    { name = "yuhang", email = "yuhang2006@hotmail.com" },
+]
+keywords = ["endstone", "plugin", "territory"]
+[project.urls]
+Homepage = "https://github.com/yuhangle"
+[project.entry-points."endstone"]
+territory = "endstone_territory:Territory"
