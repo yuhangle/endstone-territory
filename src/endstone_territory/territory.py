@@ -408,7 +408,7 @@ class Territory(Plugin):
         """
         用于列出所有玩家为领地的主人、管理员的领地的函数
         
-        player_name: 领地名
+        player_name: 玩家名
         """
         op_tty_list = []
         for row in all_tty:
@@ -613,6 +613,23 @@ class Territory(Plugin):
         if online_player_list == []:
             return None
         return online_player_list
+    
+    # 列出所有玩家权限为成员及以上的领地的函数
+    def list_member_tty(self,player_name):
+        """
+        用于列出所有玩家权限为成员及以上的领地的函数
+        
+        player_name: 玩家名
+        """
+        member_tty_list = []
+        for row in all_tty:
+            if player_name == row['owner'] or player_name == row['manager'] or player_name == row['member']:
+                member_tty_list.append(row)
+            
+        if member_tty_list == []:
+            return None
+        else:
+            return member_tty_list
     
     
     def on_load(self) -> None:
@@ -967,7 +984,7 @@ class Territory(Plugin):
                 
                 # 领地传送功能
                 def tp_tty():
-                    tty_list = self.list_player_tty(sender.name)
+                    tty_list = self.list_member_tty(sender.name)
 
                     def run_tp_tty(sender,json_str:str):
                         try:
@@ -987,6 +1004,7 @@ class Territory(Plugin):
                             ttyname = tty['name']
                             option.append(ttyname)
                         tp_tty_form = ModalForm(
+                            title="传送领地",
                             controls=[
                                 Dropdown(label="§l选择你要传送的领地",options=option)
                             ],
@@ -1007,6 +1025,7 @@ class Territory(Plugin):
                     
                     def on_click(sender):
                         tp_all_tty_form = ModalForm(
+                            title="传送领地",
                             controls=[
                                 TextInput(label="§l输入你要传送的领地"),
                             ],
@@ -1373,7 +1392,7 @@ class Territory(Plugin):
                 # 创建按钮
                 create_tty_button = ActionForm.Button(text="§l§5创建领地",icon="textures/ui/color_plus",on_click=create_tty())
                 rename_tty_button = ActionForm.Button(text="§l§5重命名领地",icon="textures/ui/book_edit_default",on_click=rename_tty())
-                tp_tty_button = ActionForm.Button(text="§l§5传送自己领地",icon="textures/ui/csb_purchase_warning",on_click=tp_tty())
+                tp_tty_button = ActionForm.Button(text="§l§5传送自己及已加入的领地",icon="textures/ui/csb_purchase_warning",on_click=tp_tty())
                 tp_all_tty_button = ActionForm.Button(text="§l§5传送全部领地",icon="textures/ui/default_world",on_click=tp_all_tty())
                 man_tty_button = ActionForm.Button(text="§l§5管理领地",icon="textures/ui/icon_setting",on_click=man_tty())
                 help_tty_button = ActionForm.Button(text="§l§5查看领地帮助",icon="textures/ui/Feedback",on_click=run_command(com="territory help"))
