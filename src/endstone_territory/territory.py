@@ -23,7 +23,7 @@ if not os.path.exists(tty_data):
 
 
 class Territory(Plugin):
-    api_version = "0.5"
+    api_version = "0.6"
     
     # 连接数据库函数
     def connect(self):
@@ -251,7 +251,7 @@ class Territory(Plugin):
         else:
             # 以当前时间作为领地名
             current_time = datetime.now().strftime("%Y%m%d%H%M%S")
-            new_ttydata = (current_time,pos1[0],pos1[1],pos1[2],pos2[0],pos2[1],pos2[2],tppos[0],tppos[1],tppos[2],player_name,"","",False,False,False,False,True,dim)
+            new_ttydata = (current_time,pos1[0],pos1[1],pos1[2],pos2[0],pos2[1],pos2[2],tppos[0],tppos[1],tppos[2],player_name,"","",False,False,False,False,False,dim)
             self.write_to_database(new_ttydata)
             self.server.get_player(player_name).send_message("成功添加领地")
             # 更新全局数据
@@ -471,6 +471,49 @@ class Territory(Plugin):
             msg = f"变更领地成员时发生错误: {e}"
             return False,msg
         
+    # 领地转让函数
+    def change_tty_owner(self,ttyname,old_owner_name,new_owner_name):
+        """
+        用于转让领地的函数
+        ttyname: 领地名
+        old_owner_name: 原主人玩家名
+        new_owner_name: 新主人玩家名
+        """
+        global all_tty
+        
+        try:        
+            with self.cursor() as cur:
+                # 获取当前成员列表
+                cur.execute('SELECT owner FROM territories WHERE name=?', (ttyname,))
+                row = cur.fetchone()
+                
+                if not row:
+                    msg = f"尝试更改领地成员但未找到领地: {ttyname}"
+                    return False,msg
+                
+                current_owner = row[0]
+                
+                if current_owner == old_owner_name and not current_owner == new_owner_name:
+                    current_owner = new_owner_name
+                    msg = f"领地转让成功,领地主人已由 {old_owner_name} 变更为 {new_owner_name}"
+                else:
+                    msg = f"领地转让失败,请检查是否为领地主人以及转让对象是否合规"
+                    return False,msg
+
+                # 更新领地主人信息
+                cur.execute('UPDATE territories SET owner=? WHERE name=?', (current_owner, ttyname))
+                
+                if cur.rowcount > 0:
+                    # 更新全局领地信息
+                    all_tty = self.read_all_territories()
+                    return True,msg
+                else:
+                    msg = f"更新领地主人时发生未知错误: {ttyname}"
+                    return False,msg
+        except sqlite3.Error as e:
+            msg = f"变更领地主人时发生错误: {e}"
+            return False,msg
+        
     # 添加或删除领地管理员的函数
     def change_tty_manager(self,ttyname,action,player_name):
         """
@@ -640,7 +683,7 @@ class Territory(Plugin):
     def on_enable(self) -> None:
         global all_tty
         self.logger.info("on_enable is called!")
-        self.logger.info(f"{ColorFormat.YELLOW}Territory领地插件已启用 版本v0.0.4dev1版本")
+        self.logger.info(f"{ColorFormat.YELLOW}Territory领地插件已启用 版本{self.server.plugin_manager.get_plugin("territory")._get_description().version}")
         self.register_events(self)
         # 插件加载时获取一次全部领地信息
         all_tty = self.read_all_territories()
@@ -665,6 +708,7 @@ class Territory(Plugin):
                 "/territory (member)<opt: optmember> (add|remove)<opt: optmemar> <player: target> <msg: message>",
                 "/territory (manager)<opt: optmanager> (add|remove)<opt: optman> <player: target> <msg: message>",
                 "/territory (settp)<opt: optsettp> [pos: pos] <msg: message>",
+                "/territory (transfer)<opt: opttransfer> <msg: message> <msg: message>",
                 "/territory (tp)<opt: opttp> <msg: message>",
                 "/territory (help)<opt: opthelp>",
                 "/territory"
@@ -682,6 +726,7 @@ class Territory(Plugin):
                 "/tty (member)<opt: optmember2> (add|remove)<opt: optmemar2> <player: target> <msg: message>",
                 "/tty (manager)<opt: optmanager2> (add|remove)<opt: optman2> <player: target> <msg: message>",
                 "/tty (settp)<opt: optsettp2> [pos: pos] <msg: message>",
+                "/tty (transfer)<opt: opttransfer2> <msg: message> <msg: message>",
                 "/tty (tp)<opt: opttp2> <msg: message>",
                 "/tty (help)<opt: opthelp2>",
                 "/tty"
@@ -722,6 +767,9 @@ class Territory(Plugin):
                 self.server.logger.error("此命令无法在服务端执行")
                 return
             if len(args) == 3:
+                if not args[0] or not args[1] or not args[2]:
+                    sender.send_error_message("缺失参数")
+                    return
                 # 添加领地
                 if args[0] == "add":
                     try:
@@ -756,7 +804,6 @@ class Territory(Plugin):
                         else:
                             sender.send_error_message("领地不存在")
                     except Exception as e:
-                        print(e)
                         sender.send_error_message(e)
                         return
                     
@@ -773,9 +820,45 @@ class Territory(Plugin):
                         sender.send_message(f"{ColorFormat.YELLOW}{msg}")
                     else:
                         sender.send_error_message(msg)
+
+                
+                # 领地转让
+                if args[0] == "transfer":
+                    tty_name = args[1]
+                    everyone = self.list_tty_everyone(tty_name)
+                    if everyone == None:
+                        sender.send_error_message("领地不存在或错误的命令")
+                        return
+                    # 检测权限
+                    if not sender.name == everyone['owner']:
+                        sender.send_error_message("你没有转让此领地的权限,只有领地主人能转让")
+                        return
+                    online_players_name = []
+                    for online_players in self.server.online_players:
+                        online_players_name.append(online_players.name)
+                    # 新主人玩家在线
+                    if args[2] in online_players_name:
+                        # 正常情况
+                        status,msg = self.change_tty_owner(tty_name,sender.name,args[2])
+                        if status == True:
+                            sender.send_message(f"{ColorFormat.YELLOW}{msg}")
+                            self.server.get_player(args[2]).send_message(f"{ColorFormat.YELLOW}{msg}")
+                        else:
+                            sender.send_error_message(msg)
+                    # 不在线
+                    else:
+                        # 正常情况
+                        status,msg = self.change_tty_owner(tty_name,sender.name,args[2])
+                        if status == True:
+                            sender.send_message(f"{ColorFormat.YELLOW}{msg}")
+                        else:
+                            sender.send_error_message(msg)
                     
 
             elif len(args) == 1:
+                if not args[0]:
+                    sender.send_error_message("缺失参数")
+                    return
                 # 列出领地
                 if args[0] == "list":
                     tty_list = self.list_player_tty(sender.name)
@@ -798,6 +881,9 @@ class Territory(Plugin):
                 if args[0] == "help":
                     sender.send_message("新建领地--/tty add 领地边角坐标1 领地边角坐标2\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n")
             elif len(args) == 2:
+                if not args[0] or not args[1]:
+                    sender.send_error_message("缺失参数")
+                    return
                 # 删除领地
                 if args[0] == "del":
                     tty_name = args[1]
@@ -839,6 +925,9 @@ class Territory(Plugin):
                         return
             
             elif len(args) == 4:
+                if not args[0] or not args[1] or not args[2] or not args[3]:
+                    sender.send_error_message("缺失参数")
+                    return
                 # 设置领地权限
                 if args[0] == "set":
                     # 检查领地主人
@@ -1041,9 +1130,6 @@ class Territory(Plugin):
                         # 设置权限菜单
                         def set_permis():
                             tty_list = self.list_tty_op(sender.name)
-                            if tty_list == None:
-                                sender.send_error_message("未查找到领地")
-                                return
                             
                             # 权限子菜单
                             def man_tty_sub_menu(sender,json_str:str):
@@ -1094,6 +1180,9 @@ class Territory(Plugin):
                             
                             # 权限主菜单
                             def on_click(sender):
+                                if tty_list == None:
+                                    sender.send_error_message("未查找到领地")
+                                    return
                                 options = []
                                 for tty in tty_list:
                                     ttyname = tty['name']
@@ -1112,9 +1201,6 @@ class Territory(Plugin):
                         # 删除领地成员菜单
                         def del_tty_member():
                             tty_list = self.list_tty_op(sender.name)
-                            if tty_list == None:
-                                sender.send_error_message("未查找到领地")
-                                return
                             
                             # 删除领地成员子菜单
                             def del_tty_member_sub_menu(sender,json_str:str):
@@ -1147,6 +1233,9 @@ class Territory(Plugin):
                             
                             # 删除领地成员主菜单
                             def on_click(sender):
+                                if tty_list == None:
+                                    sender.send_error_message("未查找到领地")
+                                    return
                                 options = []
                                 for tty in tty_list:
                                     ttyname = tty['name']
@@ -1165,9 +1254,6 @@ class Territory(Plugin):
                         # 添加领地成员菜单
                         def add_tty_member():
                             tty_list = self.list_tty_op(sender.name)
-                            if tty_list == None:
-                                sender.send_error_message("未查找到领地")
-                                return
                             
                             # 添加领地成员子菜单
                             def add_tty_member_sub_menu(sender,json_str:str):
@@ -1205,6 +1291,9 @@ class Territory(Plugin):
                             
                             # 添加领地成员主菜单
                             def on_click(sender):
+                                if tty_list == None:
+                                    sender.send_error_message("未查找到领地")
+                                    return
                                 options = []
                                 for tty in tty_list:
                                     ttyname = tty['name']
@@ -1225,9 +1314,6 @@ class Territory(Plugin):
                         # 删除领地管理员菜单
                         def del_tty_manager():
                             tty_list = self.list_player_tty(sender.name)
-                            if tty_list == None:
-                                sender.send_error_message("未查找到领地")
-                                return
                             
                             # 删除领地管理员子菜单
                             def del_tty_manager_sub_menu(sender,json_str:str):
@@ -1260,6 +1346,9 @@ class Territory(Plugin):
                             
                             # 删除领地管理员主菜单
                             def on_click(sender):
+                                if tty_list == None:
+                                    sender.send_error_message("未查找到领地")
+                                    return
                                 options = []
                                 for tty in tty_list:
                                     ttyname = tty['name']
@@ -1278,9 +1367,6 @@ class Territory(Plugin):
                         # 添加领地管理员菜单
                         def add_tty_manager():
                             tty_list = self.list_player_tty(sender.name)
-                            if tty_list == None:
-                                sender.send_error_message("未查找到领地")
-                                return
                             
                             # 添加领地管理员子菜单
                             def add_tty_manager_sub_menu(sender,json_str:str):
@@ -1320,6 +1406,9 @@ class Territory(Plugin):
                             
                             # 添加领地管理员主菜单
                             def on_click(sender):
+                                if tty_list == None:
+                                    sender.send_error_message("未查找到领地")
+                                    return
                                 options = []
                                 for tty in tty_list:
                                     ttyname = tty['name']
@@ -1339,9 +1428,6 @@ class Territory(Plugin):
                         
                         def set_tp_tty():
                             tty_list = self.list_tty_op(sender.name)
-                            if tty_list == None:
-                                sender.send_error_message("未查找到领地")
-                                return
                             
                             def run_set_tp_tty(sender,json_str:str):
                                 try:
@@ -1352,6 +1438,9 @@ class Territory(Plugin):
                                 except:
                                     sender.send_error_message("未知的错误")
                             def on_click(sender):
+                                if tty_list == None:
+                                    sender.send_error_message("未查找到领地")
+                                    return
                                 option = []
                                 for idx, tty in enumerate(tty_list, start=1):
                                     ttyname = tty['name']
@@ -1368,6 +1457,39 @@ class Territory(Plugin):
                                 sender.send_form(set_tp_tty_form)
                             return on_click
                         
+                        # 领地转让菜单
+                        
+                        def transfer_tty():
+                            tty_list = self.list_player_tty(sender.name)
+                            
+                            def run_trunsfer_tty(sender,json_str:str):
+                                try:
+                                    index = int(json.loads(json_str)[0])
+                                    new_owner_name = json.loads(json_str)[1]
+                                    ttyname = tty_list[index]['name']
+                                    sender.perform_command(f'territory transfer {ttyname} "{new_owner_name}"')
+                                except:
+                                    sender.send_error_message("未知的错误")
+                            def on_click(sender):
+                                if tty_list == None:
+                                    sender.send_error_message("未查找到领地")
+                                    return
+                                option = []
+                                for idx, tty in enumerate(tty_list, start=1):
+                                    ttyname = tty['name']
+                                    option.append(ttyname)
+                                transfer_tty_form = ModalForm(
+                                    title=f"{ColorFormat.DARK_PURPLE}§l转让领地",
+                                    controls=[
+                                        Dropdown(label="§l选择要转让的领地",options=option),
+                                        TextInput(label="§l接收领地的玩家名")
+                                    ],
+                                    on_submit=run_trunsfer_tty,
+                                    on_close=man_tty_main_menu
+                                )
+                                sender.send_form(transfer_tty_form)
+                            return on_click
+                        
                         set_permis_button = ActionForm.Button(text="§l管理自己管理的领地权限",on_click=set_permis())
                         del_member_button = ActionForm.Button(text="§l删除自己管理的领地成员",on_click=del_tty_member())
                         add_member_button = ActionForm.Button(text="§l添加自己管理的领地成员",on_click=add_tty_member())
@@ -1376,10 +1498,12 @@ class Territory(Plugin):
                         add_manager_button = ActionForm.Button(text="§l添加自己领地的领地管理员",on_click=add_tty_manager())
                         
                         set_tp_button = ActionForm.Button(text="§l设置自己管理的领地的传送点",on_click=set_tp_tty())
+
+                        transfer_button = ActionForm.Button(text="§l将自己的领地转让给其他玩家",on_click=transfer_tty())
                         
                         main_menu = ActionForm(
-                            title="§l领地管理界面(施工中)",
-                            buttons=[set_permis_button,set_tp_button,add_member_button,del_member_button,add_manager_button,del_manager_button],
+                            title=f"{ColorFormat.DARK_PURPLE}§l领地管理界面",
+                            buttons=[set_permis_button,set_tp_button,add_member_button,del_member_button,add_manager_button,del_manager_button,transfer_button],
                             on_close=run_command(com="tty")
                         )
                         sender.send_form(main_menu)
@@ -1399,7 +1523,7 @@ class Territory(Plugin):
                 list_tty_button = ActionForm.Button(text="§l§5列出自己的全部领地",icon="textures/ui/infobulb",on_click=run_command(com="tty list"))
                 # 发送菜单
                 form = ActionForm(
-                    title=f"{ColorFormat.DARK_PURPLE}§l领地菜单(开发版,图形界面还在赶工)",
+                    title=f"{ColorFormat.DARK_PURPLE}§lTerritory领地菜单",
                     buttons=[create_tty_button,rename_tty_button,tp_tty_button,tp_all_tty_button,man_tty_button,list_tty_button,help_tty_button]
                 )
                 sender.send_form(form)
