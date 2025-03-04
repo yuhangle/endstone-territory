@@ -1077,7 +1077,7 @@ class Territory(Plugin):
                     )
                     sender.send_form(list_form)
                 if args[0] == "help":
-                    sender.send_message("新建领地--/tty add 领地边角坐标1 领地边角坐标2\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n")
+                    sender.send_message("新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n")
             elif len(args) == 2:
                 if not args[0] or not args[1]:
                     sender.send_error_message("缺失参数")
@@ -1227,13 +1227,41 @@ class Territory(Plugin):
                         create_tty_form = ModalForm(
                             title=f"{ColorFormat.DARK_PURPLE}§l新建领地",
                             controls=[
-                                TextInput(label="§l输入领地边角坐标1"),
-                                TextInput(label="§l输入领地边角坐标2")
+                                TextInput(label="§l输入领地边角坐标1 格式示例: 114 5 14"),
+                                TextInput(label="§l输入领地边角坐标2 格式示例: 191 98 10"),
+                                Label(text="三维领地为立方体,需要领地的两个对角坐标,并注意高度需要覆盖领地")
                             ],
                             on_submit=run_create_tty,
                             on_close=run_command(com="tty")
                         )
                         sender.send_form(create_tty_form)
+                    return on_click
+                
+                # 创建子领地功能
+                def create_sub_tty():
+                    def run_create_sub_tty(sender,json_str:str):
+                        try:
+                            fst_pos1 = json.loads(json_str)[0]
+                            fst_pos2 = json.loads(json_str)[1]
+                            pos1 = tuple(int(float(x)) for x in fst_pos1.split())
+                            pos2 = tuple(int(float(x)) for x in fst_pos2.split())
+                            sender.perform_command(f"territory add_sub {pos1[0]} {pos1[1]} {pos1[2]} {pos2[0]} {pos2[1]} {pos2[2]}")
+                        except:
+                            sender.send_error_message("错误的坐标!")
+                            return
+
+                    def on_click(sender):
+                        create_sub_tty_form = ModalForm(
+                            title=f"{ColorFormat.DARK_PURPLE}§l新建子领地",
+                            controls=[
+                                TextInput(label="§l输入子领地边角坐标1 格式示例: 114 5 14"),
+                                TextInput(label="§l输入子领地边角坐标2 格式示例: 191 98 10"),
+                                Label(text="子领地需要在父领地之内创建,不能超出父领地,只有父领地的所有者和管理员有权限创建")
+                            ],
+                            on_submit=run_create_sub_tty,
+                            on_close=run_command(com="tty")
+                        )
+                        sender.send_form(create_sub_tty_form)
                     return on_click
                 
                 # 重命名领地功能
@@ -1592,7 +1620,7 @@ class Territory(Plugin):
                                     add_manager_tsm_form = ModalForm(
                                         title=f"§l添加领地管理员到领地 {ttyname} 中",
                                         controls=[
-                                            Label("§l领地管理员有领地权限设置、成员管理、领地传送点设置的权限,请把握好人选"),
+                                            Label("§l领地管理员有领地权限设置、成员管理、领地传送点设置、创建子领地的权限,请把握好人选"),
                                             Dropdown(label="§l选择要添加的在线玩家",options=online_player_list),
                                             TextInput(label="§l添加不在线的玩家",placeholder="只要这里写了一个字都会以此为输入值")
                                         ],
@@ -1688,20 +1716,54 @@ class Territory(Plugin):
                                 sender.send_form(transfer_tty_form)
                             return on_click
                         
-                        set_permis_button = ActionForm.Button(text="§l管理自己管理的领地权限",on_click=set_permis())
-                        del_member_button = ActionForm.Button(text="§l删除自己管理的领地成员",on_click=del_tty_member())
-                        add_member_button = ActionForm.Button(text="§l添加自己管理的领地成员",on_click=add_tty_member())
+                        # 领地删除菜单
                         
-                        del_manager_button = ActionForm.Button(text="§l删除自己领地的领地管理员",on_click=del_tty_manager())
-                        add_manager_button = ActionForm.Button(text="§l添加自己领地的领地管理员",on_click=add_tty_manager())
+                        def del_tty():
+                            tty_list = self.list_player_tty(sender.name)
+                            
+                            def run_del_tty(sender,json_str:str):
+                                try:
+                                    index = int(json.loads(json_str)[0])
+                                    ttyname = tty_list[index]['name']
+                                    sender.perform_command(f'territory del "{ttyname}"')
+                                except:
+                                    sender.send_error_message("未知的错误")
+                            def on_click(sender):
+                                if tty_list == None:
+                                    sender.send_error_message("未查找到领地")
+                                    return
+                                option = []
+                                for idx, tty in enumerate(tty_list, start=1):
+                                    ttyname = tty['name']
+                                    option.append(ttyname)
+                                del_tty_form = ModalForm(
+                                    title=f"{ColorFormat.DARK_PURPLE}§l转让领地",
+                                    controls=[
+                                        Dropdown(label="§l选择要删除的领地",options=option),
+                                        Label(text="§l§4删除领地不可恢复!")
+                                    ],
+                                    on_submit=run_del_tty,
+                                    on_close=man_tty_main_menu
+                                )
+                                sender.send_form(del_tty_form)
+                            return on_click
                         
-                        set_tp_button = ActionForm.Button(text="§l设置自己管理的领地的传送点",on_click=set_tp_tty())
+                        set_permis_button = ActionForm.Button(text="§l§1管理自己管理的领地权限",icon="textures/ui/accessibility_glyph_color",on_click=set_permis())
+                        del_member_button = ActionForm.Button(text="§l§1删除自己管理的领地成员",icon="textures/ui/permissions_member_star",on_click=del_tty_member())
+                        add_member_button = ActionForm.Button(text="§l§1添加自己管理的领地成员",icon="textures/ui/permissions_member_star_hover",on_click=add_tty_member())
+                        
+                        del_manager_button = ActionForm.Button(text="§l§1删除自己领地的领地管理员",icon="textures/ui/permissions_op_crown",on_click=del_tty_manager())
+                        add_manager_button = ActionForm.Button(text="§l§1添加自己领地的领地管理员",icon="textures/ui/permissions_op_crown_hover",on_click=add_tty_manager())
+                        
+                        set_tp_button = ActionForm.Button(text="§l§1设置自己管理的领地的传送点",icon="textures/ui/csb_purchase_warning",on_click=set_tp_tty())
 
-                        transfer_button = ActionForm.Button(text="§l将自己的领地转让给其他玩家",on_click=transfer_tty())
+                        transfer_button = ActionForm.Button(text="§l§1将自己的领地转让给其他玩家",icon="textures/ui/trade_icon",on_click=transfer_tty())
+
+                        del_button = ActionForm.Button(text="§l§4删除自己的领地",icon="textures/ui/book_trash_default",on_click=del_tty())
                         
                         main_menu = ActionForm(
                             title=f"{ColorFormat.DARK_PURPLE}§l领地管理界面",
-                            buttons=[set_permis_button,set_tp_button,add_member_button,del_member_button,add_manager_button,del_manager_button,transfer_button],
+                            buttons=[set_permis_button,set_tp_button,add_member_button,del_member_button,add_manager_button,del_manager_button,transfer_button,del_button],
                             on_close=run_command(com="tty")
                         )
                         sender.send_form(main_menu)
@@ -1713,6 +1775,7 @@ class Territory(Plugin):
                     return com_on_click
                 # 创建按钮
                 create_tty_button = ActionForm.Button(text="§l§5创建领地",icon="textures/ui/color_plus",on_click=create_tty())
+                create_sub_tty_button = ActionForm.Button(text="§l§5创建子领地",icon="textures/ui/copy",on_click=create_sub_tty())
                 rename_tty_button = ActionForm.Button(text="§l§5重命名领地",icon="textures/ui/book_edit_default",on_click=rename_tty())
                 tp_tty_button = ActionForm.Button(text="§l§5传送自己及已加入的领地",icon="textures/ui/csb_purchase_warning",on_click=tp_tty())
                 tp_all_tty_button = ActionForm.Button(text="§l§5传送全部领地",icon="textures/ui/default_world",on_click=tp_all_tty())
@@ -1722,7 +1785,7 @@ class Territory(Plugin):
                 # 发送菜单
                 form = ActionForm(
                     title=f"{ColorFormat.DARK_PURPLE}§lTerritory领地菜单",
-                    buttons=[create_tty_button,rename_tty_button,tp_tty_button,tp_all_tty_button,man_tty_button,list_tty_button,help_tty_button]
+                    buttons=[create_tty_button,create_sub_tty_button,rename_tty_button,tp_tty_button,tp_all_tty_button,man_tty_button,list_tty_button,help_tty_button]
                 )
                 sender.send_form(form)
                         
