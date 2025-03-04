@@ -22,29 +22,82 @@ Territory领地插件是使用Python开发的运行在endstone插件加载器上
 
 **命令列表**
 
+打开领地菜单
+
+```shell
+/tty
+```
+
 新建领地
-`/tty add 领地边角坐标1 领地边角坐标2`
+
+```shell
+/tty add 领地边角坐标1 领地边角坐标2
+```
 
 列出领地
-`/tty list`
+
+```shell
+/tty list
+```
 
 删除领地
-`/tty del 领地名`
+
+```shell
+/tty del 领地名
+```
 
 重命名领地
-`/tty rename 旧领地名 新领地名`
+
+```shell
+/tty rename 旧领地名 新领地名
+```
 
 设置领地权限
-`/tty set 权限名 权限值 领地名`
+
+```shell
+/tty set 权限名 权限值 领地名
+```
 
 设置领地管理员
-`/tty manager add|remove(添加|删除) 玩家名 领地名`
+
+```shell
+/tty manager add|remove(添加|删除) 玩家名 领地名
+```
 
 设置领地成员
-`/tty member add|remove(添加|删除) 玩家名 领地名`
+
+```shell
+/tty member add|remove(添加|删除) 玩家名 领地名
+```
 
 设置领地传送点
-`/tty settp 领地传送坐标 领地名`
+
+```bash
+/tty settp 领地传送坐标 领地名
+```
 
 传送领地
-`/tty tp 领地名`
+
+```bash
+/tty tp 领地名
+```
+
+**管理员命令**
+
+删除领地
+
+```bash
+/optty del 领地名
+```
+
+删除玩家的全部领地
+
+```bash
+/optty delall 玩家名
+```
+
+重载领地数据和配置
+
+```bash
+/reloadtty
+```
