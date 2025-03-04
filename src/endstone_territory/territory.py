@@ -865,6 +865,7 @@ class Territory(Plugin):
         global all_tty
         self.logger.info("on_enable is called!")
         self.logger.info(f"{ColorFormat.YELLOW}Territory领地插件已启用 版本{self.server.plugin_manager.get_plugin("territory")._get_description().version}")
+        self.logger.info(f"{ColorFormat.YELLOW}插件项目地址: https://github.com/yuhangle/endstone-territory")
         self.register_events(self)
         self.read_config()
         # 插件加载时获取一次全部领地信息
