@@ -71,7 +71,8 @@ class Territory(Plugin):
                     if_tp INTEGER,
                     if_build INTEGER,
                     if_bomb INTEGER,
-                    dim INTEGER
+                    dim INTEGER,
+                    father_tty TEXT
                 )
             ''')
             self.conn.commit()
@@ -87,8 +88,8 @@ class Territory(Plugin):
         """
         with self.cursor() as cur:
             cur.execute('''
-            INSERT INTO territories (name, pos1_x, pos1_y, pos1_z, pos2_x, pos2_y, pos2_z, tppos_x, tppos_y, tppos_z, owner, manager, member, if_jiaohu, if_break, if_tp, if_build, if_bomb, dim)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO territories (name, pos1_x, pos1_y, pos1_z, pos2_x, pos2_y, pos2_z, tppos_x, tppos_y, tppos_z, owner, manager, member, if_jiaohu, if_break, if_tp, if_build, if_bomb, dim, father_tty)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', data_to_write)
     
     # 读取配置文件
@@ -123,7 +124,7 @@ class Territory(Plugin):
         """
         with self.cursor() as cur:
             cur.execute('''
-            SELECT name, pos1_x, pos1_y, pos1_z, pos2_x, pos2_y, pos2_z, tppos_x, tppos_y, tppos_z, owner, manager, member, if_jiaohu, if_break, if_tp, if_build, if_bomb, dim 
+            SELECT name, pos1_x, pos1_y, pos1_z, pos2_x, pos2_y, pos2_z, tppos_x, tppos_y, tppos_z, owner, manager, member, if_jiaohu, if_break, if_tp, if_build, if_bomb, dim ,father_tty 
             FROM territories
             ''')
             rows = cur.fetchall()
@@ -140,7 +141,8 @@ class Territory(Plugin):
                 'if_tp': bool(row[15]),
                 'if_build': bool(row[16]),
                 'if_bomb': bool(row[17]),
-                'dim': row[18]
+                'dim': row[18],
+                'father_tty': row[19]
             } for row in rows]
     
     # 根据名字读取领地信息的函数        
@@ -274,11 +276,119 @@ class Territory(Plugin):
         else:
             # 以当前时间作为领地名
             current_time = datetime.now().strftime("%Y%m%d%H%M%S")
-            new_ttydata = (current_time,pos1[0],pos1[1],pos1[2],pos2[0],pos2[1],pos2[2],tppos[0],tppos[1],tppos[2],player_name,"","",False,False,False,False,False,dim)
+            new_ttydata = (current_time,pos1[0],pos1[1],pos1[2],pos2[0],pos2[1],pos2[2],tppos[0],tppos[1],tppos[2],player_name,"","",False,False,False,False,False,dim,"")
             self.write_to_database(new_ttydata)
             self.server.get_player(player_name).send_message("成功添加领地")
             # 更新全局数据
             all_tty = self.read_all_territories()
+
+    # 玩家增加子领地函数
+    def player_add_child_tty(self,player_name,pos1,pos2,tppos,dim):
+        """
+        player_name: 玩家名
+        pos1: 领地坐标1
+        pos2: 领地坐标2
+        tppos: 领地传送点
+        dim: 领地维度
+        """
+        global all_tty
+        
+        if self.check_tty_num(player_name) >= max_tty_num:
+            self.server.get_player(player_name).send_error_message("你的领地数量已达到上限,无法增加新的领地")
+            return
+        if self.is_point_in_cube(tppos,pos1,pos2) == False:
+            self.server.get_player(player_name).send_error_message("你当前所在的位置不在你要添加的领地上!禁止远程施法")
+            return
+        # 父领地检查
+        father_tty_info = self.list_true_father_tty(player_name,(pos1,pos2),dim)
+        if father_tty_info[0] == False:
+            self.server.get_player(player_name).send_error_message(father_tty_info[1])
+            return
+        else:
+            # 以当前时间和父领地名作为领地名
+            current_time = datetime.now().strftime("%Y%m%d%H%M%S")
+            child_tty_name = f"{father_tty_info[1]}_{current_time}"
+            new_ttydata = (child_tty_name,pos1[0],pos1[1],pos1[2],pos2[0],pos2[1],pos2[2],tppos[0],tppos[1],tppos[2],player_name,"","",False,False,False,False,False,dim,father_tty_info[1])
+            self.write_to_database(new_ttydata)
+            self.server.get_player(player_name).send_message(f"成功添加子领地,归属于父领地{father_tty_info[1]}")
+            # 更新全局数据
+            all_tty = self.read_all_territories()
+
+    def is_subset_cube(self, cube1, cube2):
+        """
+        判断一个立方体是否为另一个立方体的子集。
+
+        参数：
+            cube1: 第一个立方体的对角坐标，格式为 ((x1, y1, z1), (x2, y2, z2))。
+            cube2: 第二个立方体的对角坐标，格式为 ((x1, y1, z1), (x2, y2, z2))。
+
+        返回：
+            如果 cube1 是 cube2 的子集，则返回 True，否则返回 False。
+        """
+
+        # 获取立方体 1 的最小和最大坐标
+        cube1_min_x = min(cube1[0][0], cube1[1][0])
+        cube1_max_x = max(cube1[0][0], cube1[1][0])
+        cube1_min_y = min(cube1[0][1], cube1[1][1])
+        cube1_max_y = max(cube1[0][1], cube1[1][1])
+        cube1_min_z = min(cube1[0][2], cube1[1][2])
+        cube1_max_z = max(cube1[0][2], cube1[1][2])
+
+        # 获取立方体 2 的最小和最大坐标
+        cube2_min_x = min(cube2[0][0], cube2[1][0])
+        cube2_max_x = max(cube2[0][0], cube2[1][0])
+        cube2_min_y = min(cube2[0][1], cube2[1][1])
+        cube2_max_y = max(cube2[0][1], cube2[1][1])
+        cube2_min_z = min(cube2[0][2], cube2[1][2])
+        cube2_max_z = max(cube2[0][2], cube2[1][2])
+
+        # 判断 cube1 是否在 cube2 的范围内
+        if (cube1_min_x >= cube2_min_x and cube1_max_x <= cube2_max_x and
+                cube1_min_y >= cube2_min_y and cube1_max_y <= cube2_max_y and
+                cube1_min_z >= cube2_min_z and cube1_max_z <= cube2_max_z):
+            return True
+        else:
+            return False
+        
+    # 列出符合子领地条件的父领地
+    def list_true_father_tty(self,player_name,child_cube,child_dim):
+        """
+        用于列出符合领地条件的父领地
+        
+        参数:
+            player_name: 创建子领地的玩家名
+            child_cube: 子领地坐标元组((x1,y1,z1),(x2,y2,z2))
+            child_dim: 子领地的维度
+        返回:
+            成功:(True,领地名)
+            失败:(False,错误信息)
+        """
+        true_tty_info = []
+        for tty_info in all_tty:
+            tty_owner = tty_info['owner']
+            tty_manager = tty_info['manager']
+            pos1 = tty_info['pos1']
+            pos2 = tty_info['pos2']
+            dim = tty_info['dim']
+            tty_name = tty_info['name']
+            # 玩家为领地主或领地管理员
+            if player_name == tty_owner or player_name in tty_manager:
+                # 领地维度相同
+                if child_dim == dim:
+                    # 检查全包围领地
+                    if self.is_subset_cube(child_cube,(pos1,pos2)) == True:
+                        true_tty_info.append(tty_name)
+        if len(true_tty_info) > 1:
+            msg = f"无法在子领地内创建子领地"
+            return False,msg
+        if true_tty_info == []:
+            msg = f"未查找到符合条件的父领地,子领地创建失败"
+            return False,msg
+        if len(true_tty_info) == 1:
+            return True,true_tty_info[0]
+        else:
+            msg = f"未知错误"
+            return False,msg
     
     # 列出玩家领地函数
     def list_player_tty(self,player_name):
@@ -309,6 +419,15 @@ class Territory(Plugin):
         
         try:
             with self.cursor() as cur:
+                # 查找所有 father_tty 为 tty_name 的领地
+                cur.execute('SELECT name FROM territories WHERE father_tty=?', (tty_name,))
+                related_territories = cur.fetchall()
+
+                # 如果存在相关领地，则更新其 father_tty 为空字符串
+                if related_territories:
+                    for related_tty in related_territories:
+                        cur.execute('UPDATE territories SET father_tty=? WHERE name=?', ('', related_tty[0]))
+
                 # 执行删除操作
                 cur.execute('DELETE FROM territories WHERE name=?', (tty_name,))
                 if cur.rowcount > 0:
@@ -342,6 +461,15 @@ class Territory(Plugin):
 
             # 执行重命名操作
             with self.cursor() as cur:
+                # 查找所有 father_tty 为 旧父领地名的领地
+                cur.execute('SELECT name FROM territories WHERE father_tty=?', (oldname,))
+                related_territories = cur.fetchall()
+
+                # 如果存在相关领地，则更新其 father_tty 为新的父领地名
+                if related_territories:
+                    for related_tty in related_territories:
+                        cur.execute('UPDATE territories SET father_tty=? WHERE name=?', (newname, related_tty[0]))
+
                 cur.execute('UPDATE territories SET name=? WHERE name=?', (newname, oldname))
                 if cur.rowcount > 0:
                     msg = f"已重命名领地: 从 {oldname} 到 {newname}"
@@ -647,27 +775,25 @@ class Territory(Plugin):
         """
         用于对在线玩家进行领地提示的函数
         """
+
+        # 遍历全部玩家
         for online_player in self.server.online_players:
-            player_pos = (int(online_player.location.x),int(online_player.location.y),int(online_player.location.z))
+            player_pos = (int(online_player.location.x), int(online_player.location.y), int(online_player.location.z))
             player_dim = online_player.location.dimension.name
             player_name = online_player.name
-            # 检查玩家是否在领地上
+            
             for row in all_tty:
-                # 检查维度
-                if row['dim'] == player_dim:
-                    # 检查坐标
-                    if self.is_point_in_cube(player_pos,row['pos1'],row['pos2']) == True:
+                if row['dim'] == player_dim and row['father_tty'] != '':  # 检查子领地
+                    if self.is_point_in_cube(player_pos, row['pos1'], row['pos2']):
+                        msg = f"你现在正在 {row['owner']} 的子领地 {row['name']} 上"
+                        self.server.get_player(player_name).send_tip(msg)
+
+                elif row['dim'] == player_dim and row['father_tty'] == '':  # 检查父领地
+                    if self.is_point_in_cube(player_pos, row['pos1'], row['pos2']):
                         msg = f"你现在正在 {row['owner']} 的领地 {row['name']} 上"
                         self.server.get_player(player_name).send_tip(msg)
                         
-    def _run_tips_in_thread(self):
-        """
-        在新的线程中运行 tips_online_players 函数。
-        """
-        # 向玩家发送tip时发生过一次崩溃，可能是endstone的问题，在某种情况下发送tip会导致崩溃，具体情况不明，暂时不用后台线程
-        thread = threading.Thread(target=self.tips_online_players)
-        thread.daemon = True  # 设置为守护线程，这样当主线程结束时，该线程也会结束
-        thread.start()
+                        
         
     # 用于获取在线玩家列表的函数
     def get_online_player_list(self):
@@ -698,6 +824,36 @@ class Territory(Plugin):
             return None
         else:
             return member_tty_list
+        
+    # 列出与坐标点重合的全部领地的函数
+    def list_in_tty(self,pos,dim):
+        """
+        用于列出与坐标点重合的全部领地的函数
+        
+        参数:
+            pos: 点坐标
+            dim: 点维度
+        返回:
+            in_tty: 包含领地名0、交互权限1、破坏权限2、放置权限3、爆炸权限4、领地成员5、领地主6的元组的列表
+        """
+        # 初始化领地列表
+        in_tty = []
+        for row in all_tty:
+            # 维度匹配
+            if row['dim'] == dim:
+                # 坐标匹配
+                if self.is_point_in_cube(pos,row['pos1'],row['pos2']) == True:
+                    # 子领地
+                    if not row['father_tty'] == "":
+                        # 清空领地列表,仅保留子领地
+                        in_tty = []
+                        in_tty.append((row['name'],row['if_jiaohu'],row['if_break'],row['if_build'],row['if_bomb'],(row['owner'].split(',') + row['manager'].split(',') + row['member'].split(',')),row['owner']))
+                        return in_tty
+                    # 非子领地
+                    else:
+                        in_tty.append((row['name'],row['if_jiaohu'],row['if_break'],row['if_build'],row['if_bomb'],(row['owner'].split(',') + row['manager'].split(',') + row['member'].split(',')),row['owner']))
+        return in_tty
+
     
     
     def on_load(self) -> None:
@@ -727,6 +883,7 @@ class Territory(Plugin):
             "description": "领地命令--用法:",
             "usages": [
                 "/territory (add)<opt: optadd> [pos: pos] [pos: pos]",
+                "/territory (add_sub)<opt: optadd_sub> [pos: pos] [pos: pos]",
                 "/territory (list)<opt: optlist>",
                 "/territory (del)<opt: optdel> <msg: message>",
                 "/territory (rename)<opt: optrename> <msg: message> <msg: message>",
@@ -745,6 +902,7 @@ class Territory(Plugin):
             "description": "领地命令--用法:",
             "usages": [
                 "/tty (add)<opt: optadd2> [pos: pos] [pos: pos]",
+                "/tty (add_sub)<opt: optadd_sub2> [pos: pos] [pos: pos]",
                 "/tty (list)<opt: optlist2>",
                 "/tty (del)<opt: optdel2> <msg: message>",
                 "/tty (rename)<opt: optrename2> <msg: message> <msg: message>",
@@ -808,7 +966,21 @@ class Territory(Plugin):
                         dim = self.server.get_player(sender.name).location.dimension.name
                         self.player_add_tty(sender.name,pos1,pos2,tppos,dim)
                     except Exception as e:
-                        print(e)
+                        sender.send_error_message(e)
+                        return
+                # 添加子领地
+                if args[0] == "add_sub":
+                    try:
+                        if "~" in args[1] or "~" in args[2]:
+                            sender.send_error_message("请勿使用~来代表坐标,插件无法解析")
+                            return
+                        pos1 = tuple(map(float, args[1].split()))
+                        pos2 = tuple(map(float, args[2].split()))
+                        tppos = (int(self.server.get_player(sender.name).location.x),int(self.server.get_player(sender.name).location.y),int(self.server.get_player(sender.name).location.z))
+                        dim = self.server.get_player(sender.name).location.dimension.name
+                        self.player_add_child_tty(sender.name,pos1,pos2,tppos,dim)
+                    except Exception as e:
+                        sender.send_error_message(e)
                         return
                 # 重命名领地
                 if args[0] == "rename":
@@ -1610,20 +1782,19 @@ class Territory(Plugin):
         player_name = event.player.name
         block_dim = event.block.location.dimension.name
         block_pos = (int(event.block.location.x),int(event.block.location.y),int(event.block.location.z))
-        for row in all_tty:
-            # 维度匹配
-            if row['dim'] == block_dim:
-                # 不允许破坏
-                if row['if_break'] == 0:
-                    # 坐标匹配
-                    if self.is_point_in_cube(block_pos,row['pos1'],row['pos2']) == True:
-                        # 检查身份
-                        if player_name not in (row['owner'].split(',') + row['manager'].split(',') + row['member'].split(',')):
-                            event.is_cancelled = True
-                            self.server.get_player(player_name).send_message(f"你不能破坏{row['owner']}的领地 {row['name']} 上的方块")
-                            return
-                        else:
-                            return
+        in_tty_list = self.list_in_tty(block_pos,block_dim)
+        # 不在任何领地上
+        if in_tty_list == []:
+            return
+        # 领地上
+        if len(in_tty_list) == 1:
+            if in_tty_list[0][1] == 0:
+                if player_name not in in_tty_list[0][5]:
+                    event.is_cancelled = True
+                    self.server.get_player(player_name).send_message(f"你不能破坏{in_tty_list[0][6]}的领地 {in_tty_list[0][0]} 上的方块")
+                return
+            else:
+                return
                     
     # 防交互
     @event_handler
@@ -1631,20 +1802,19 @@ class Territory(Plugin):
         player_name = event.player.name
         block_dim = event.block.location.dimension.name
         block_pos = (int(event.block.location.x),int(event.block.location.y),int(event.block.location.z))
-        for row in all_tty:
-            # 维度匹配
-            if row['dim'] == block_dim:
-                # 不允许交互
-                if row['if_jiaohu'] == 0:
-                    # 坐标匹配
-                    if self.is_point_in_cube(block_pos,row['pos1'],row['pos2']) == True:
-                        # 检查身份
-                        if player_name not in (row['owner'].split(',') + row['manager'].split(',') + row['member'].split(',')):
-                            event.is_cancelled = True
-                            self.server.get_player(player_name).send_message(f"你不能在{row['owner']}的领地 {row['name']} 上交互")
-                            return
-                        else:
-                            return
+        in_tty_list = self.list_in_tty(block_pos,block_dim)
+        # 不在任何领地上
+        if in_tty_list == []:
+            return
+        # 领地上
+        if len(in_tty_list) == 1:
+            if in_tty_list[0][1] == 0:
+                if player_name not in in_tty_list[0][5]:
+                    event.is_cancelled = True
+                    self.server.get_player(player_name).send_message(f"你不能在{in_tty_list[0][6]}的领地 {in_tty_list[0][0]} 上交互")
+                return
+            else:
+                return
                     
     # 防方块放置
     @event_handler
@@ -1652,53 +1822,53 @@ class Territory(Plugin):
         player_name = event.player.name
         block_dim = event.block.location.dimension.name
         block_pos = (int(event.block.location.x),int(event.block.location.y),int(event.block.location.z))
-        for row in all_tty:
-            # 维度匹配
-            if row['dim'] == block_dim:
-                # 不允许防置
-                if row['if_build'] == 0:
-                    # 坐标匹配
-                    if self.is_point_in_cube(block_pos,row['pos1'],row['pos2']) == True:
-                        # 检查身份
-                        if player_name not in (row['owner'].split(',') + row['manager'].split(',') + row['member'].split(',')):
-                            event.is_cancelled = True
-                            self.server.get_player(player_name).send_message(f"你不能在{row['owner']}的领地 {row['name']} 上放置方块")
-                            return
-                        else:
-                            return
+        in_tty_list = self.list_in_tty(block_pos,block_dim)
+        # 不在任何领地上
+        if in_tty_list == []:
+            return
+        # 领地上
+        if len(in_tty_list) == 1:
+            if in_tty_list[0][3] == 0:
+                if player_name not in in_tty_list[0][5]:
+                    event.is_cancelled = True
+                    self.server.get_player(player_name).send_message(f"你不能在{in_tty_list[0][6]}的领地 {in_tty_list[0][0]} 上放置方块")
+                return
+            else:
+                return
     
     # 防生物爆炸
     @event_handler
     def bomb_event(self,event:ActorExplodeEvent):
         actor_dim = event.actor.location.dimension.name
         actor_pos = (int(event.actor.location.x),int(event.actor.location.y),int(event.actor.location.z))
-        for row in all_tty:
-            # 维度匹配
-            if row['dim'] == actor_dim:
-                # 不允许生物爆炸
-                if row['if_bomb'] == 0:
-                    # 坐标匹配
-                    if self.is_point_in_cube(actor_pos,row['pos1'],row['pos2']) == True:
-                        event.is_cancelled = True
-                        return
+        in_tty_list = self.list_in_tty(actor_pos,actor_dim)
+        # 不在任何领地上
+        if in_tty_list == []:
+            return
+        # 领地上
+        if len(in_tty_list) == 1:
+            if in_tty_list[0][4] == 0:
+                event.is_cancelled = True
+                return
+            else:
+                return
                     
     # 防玩家与生物交互
     @event_handler
     def player_jiaohu_shengwu_event(self,event:PlayerInteractActorEvent):
         player_name = event.player.name
-        player_dim = event.player.location.dimension.name
-        player_pos = (int(event.player.location.x),int(event.player.location.y),int(event.player.location.z))
-        for row in all_tty:
-            # 维度匹配
-            if row['dim'] == player_dim:
-                # 不允许交互
-                if row['if_jiaohu'] == 0:
-                    # 坐标匹配
-                    if self.is_point_in_cube(player_pos,row['pos1'],row['pos2']) == True:
-                        # 检查身份
-                        if player_name not in (row['owner'].split(',') + row['manager'].split(',') + row['member'].split(',')):
-                            event.is_cancelled = True
-                            self.server.get_player(player_name).send_message(f"你不能在{row['owner']}的领地 {row['name']} 上交互")
-                            return
-                        else:
-                            return
+        actor_dim = event.actor.location.dimension.name
+        actor_pos = (int(event.actor.location.x),int(event.actor.location.y),int(event.actor.location.z))
+        in_tty_list = self.list_in_tty(actor_pos,actor_dim)
+        # 不在任何领地上
+        if in_tty_list == []:
+            return
+        # 领地上
+        if len(in_tty_list) == 1:
+            if in_tty_list[0][1] == 0:
+                if player_name not in in_tty_list[0][5]:
+                    event.is_cancelled = True
+                    self.server.get_player(player_name).send_message(f"你不能在{in_tty_list[0][6]}的领地 {in_tty_list[0][0]} 上交互")
+                return
+            else:
+                return

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "endstone_territory"
-version = "0.0.4dev6"
+version = "0.0.4dev7"
 description = "一个三维领地插件,使用sqlite数据库储存数据,支持领地传送、领地防生物爆炸、防破坏等功能"
 authors = [
     { name = "yuhang", email = "yuhang2006@hotmail.com" },
