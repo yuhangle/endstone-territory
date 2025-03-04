@@ -16,6 +16,7 @@ from endstone.form import ModalForm,Dropdown,Label,ActionForm,TextInput,Slider,M
 tty_data = "plugins/territory"
 land_data = "plugins/territory/landban.json"
 db_file = "plugins/territory/territory_data.db"
+config_file = "plugins/territory/config.json"
 if not os.path.exists(tty_data):
     os.mkdir(tty_data)
 
@@ -90,6 +91,28 @@ class Territory(Plugin):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', data_to_write)
     
+    # 读取配置文件
+    def read_config(self):
+        """
+        读取配置文件的函数
+        """
+        global max_tty_num
+        if not os.path.exists(config_file):
+            de_config = {"player_max_tty_num": 20}
+            with open(config_file, 'w', encoding='utf-8') as file:  # 指定编码为 UTF-8
+                json.dump(de_config, file, ensure_ascii=False, indent=4)
+
+            self.server.logger.info("未检测到配置文件,已自动创建")
+            max_tty_num = 20
+        else:
+            with open(config_file,"r", encoding='utf-8') as file:
+                tty_config = json.load(file)
+            try:
+                max_tty_num = int(tty_config["player_max_tty_num"])
+            except:
+                self.server.logger.error("配置文件异常,使用默认配置")
+                max_tty_num = 20
+
     # 读取全部领地
     def read_all_territories(self):
         """
@@ -239,7 +262,7 @@ class Territory(Plugin):
         """
         global all_tty
         
-        if self.check_tty_num(player_name) >= 114:
+        if self.check_tty_num(player_name) >= max_tty_num:
             self.server.get_player(player_name).send_error_message("你的领地数量已达到上限,无法增加新的领地")
             return
         if self.is_territory_overlapping(pos1,pos2,dim) == True:
@@ -480,7 +503,9 @@ class Territory(Plugin):
         new_owner_name: 新主人玩家名
         """
         global all_tty
-        
+        if self.check_tty_num(new_owner_name) >= max_tty_num:
+            msg = f"玩家 {new_owner_name} 的领地数量已达到上限,无法增加新的领地,转让领地失败"
+            return False,msg
         try:        
             with self.cursor() as cur:
                 # 获取当前成员列表
@@ -685,6 +710,7 @@ class Territory(Plugin):
         self.logger.info("on_enable is called!")
         self.logger.info(f"{ColorFormat.YELLOW}Territory领地插件已启用 版本{self.server.plugin_manager.get_plugin("territory")._get_description().version}")
         self.register_events(self)
+        self.read_config()
         # 插件加载时获取一次全部领地信息
         all_tty = self.read_all_territories()
         # 启动周期后台任务
@@ -1532,6 +1558,7 @@ class Territory(Plugin):
         elif command.name == "reloadtty":
             # 更新全局领地信息
             all_tty = self.read_all_territories()
+            self.read_config()
             if isinstance(sender,Player):
                 sender.send_message(f"{ColorFormat.YELLOW}已重载领地数据")
             else:
