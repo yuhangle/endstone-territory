@@ -1219,7 +1219,7 @@ class Territory(Plugin):
                             fst_pos2 = json.loads(json_str)[1]
                             pos1 = tuple(int(float(x)) for x in fst_pos1.split())
                             pos2 = tuple(int(float(x)) for x in fst_pos2.split())
-                            sender.perform_command(f"territory add {pos1[0]} {pos1[1]} {pos1[2]} {pos2[0]} {pos2[1]} {pos2[2]}")
+                            sender.perform_command(f"tty add {pos1[0]} {pos1[1]} {pos1[2]} {pos2[0]} {pos2[1]} {pos2[2]}")
                         except:
                             sender.send_error_message("错误的坐标!")
                             return
@@ -1246,7 +1246,7 @@ class Territory(Plugin):
                             fst_pos2 = json.loads(json_str)[1]
                             pos1 = tuple(int(float(x)) for x in fst_pos1.split())
                             pos2 = tuple(int(float(x)) for x in fst_pos2.split())
-                            sender.perform_command(f"territory add_sub {pos1[0]} {pos1[1]} {pos1[2]} {pos2[0]} {pos2[1]} {pos2[2]}")
+                            sender.perform_command(f"tty add_sub {pos1[0]} {pos1[1]} {pos1[2]} {pos2[0]} {pos2[1]} {pos2[2]}")
                         except:
                             sender.send_error_message("错误的坐标!")
                             return
@@ -1274,7 +1274,7 @@ class Territory(Plugin):
                             index = int(json.loads(json_str)[0])
                             newname = json.loads(json_str)[1]
                             oldname = tty_list[index]['name']
-                            sender.perform_command(f'territory rename "{oldname}" "{newname}"')
+                            sender.perform_command(f'tty rename "{oldname}" "{newname}"')
                         except:
                             sender.send_error_message("未知的错误")
                     def on_click(sender):
@@ -1306,7 +1306,7 @@ class Territory(Plugin):
                         try:
                             index = int(json.loads(json_str)[0])
                             ttyname = tty_list[index]['name']
-                            sender.perform_command(f'territory tp "{ttyname}"')
+                            sender.perform_command(f'tty tp "{ttyname}"')
                         except:
                             sender.send_error_message("未知的错误")
                     
@@ -1335,7 +1335,7 @@ class Territory(Plugin):
                     def run_tp_all_tty(sender,json_str:str):
                         try:
                             ttyname = json.loads(json_str)[0]
-                            sender.perform_command(f'territory tp "{ttyname}"')
+                            sender.perform_command(f'tty tp "{ttyname}"')
                         except:
                             sender.send_error_message("未知的错误")
                     
@@ -1373,19 +1373,19 @@ class Territory(Plugin):
                                     permis = json.loads(json_str)
                                     if not if_jiaohu_status == permis[0] or not if_break_status == permis[1] or not if_tp_status == permis[2] or not if_build_status == permis[3] or not if_bomb_status == permis[4]:
                                         if not if_jiaohu_status == permis[0]:
-                                            sender.perform_command(f'territory set if_jiaohu {str(permis[0]).lower()} "{ttyname}"')
+                                            sender.perform_command(f'tty set if_jiaohu {str(permis[0]).lower()} "{ttyname}"')
                                             
                                         if not if_break_status == permis[1]:
-                                            sender.perform_command(f'territory set if_break {str(permis[1]).lower()} "{ttyname}"')
+                                            sender.perform_command(f'tty set if_break {str(permis[1]).lower()} "{ttyname}"')
                                             
                                         if not if_tp_status == permis[2]:
-                                            sender.perform_command(f'territory set if_tp {str(permis[2]).lower()} "{ttyname}"')
+                                            sender.perform_command(f'tty set if_tp {str(permis[2]).lower()} "{ttyname}"')
                                             
                                         if not if_build_status == permis[3]:
-                                            sender.perform_command(f'territory set if_build {str(permis[3]).lower()} "{ttyname}"')
+                                            sender.perform_command(f'tty set if_build {str(permis[3]).lower()} "{ttyname}"')
                                             
                                         if not if_bomb_status == permis[4]:
-                                            sender.perform_command(f'territory set if_bomb {str(permis[4]).lower()} "{ttyname}"')
+                                            sender.perform_command(f'tty set if_bomb {str(permis[4]).lower()} "{ttyname}"')
                                     else:
                                         sender.send_error_message("你未更改领地权限,领地权限不会变化")
                                 
@@ -1440,7 +1440,7 @@ class Territory(Plugin):
                                 def run_del_member_tsm(sender,json_str:str):
                                     index = int(json.loads(json_str)[0])
                                     del_member_name = tty_member_list[index]
-                                    sender.perform_command(f'territory member remove "{del_member_name}" "{ttyname}"')
+                                    sender.perform_command(f'tty member remove "{del_member_name}" "{ttyname}"')
 
                                 
                                 def del_member_tsm_on_click(sender):
@@ -1497,10 +1497,10 @@ class Territory(Plugin):
                                     leave_player = input_json[1]
                                     # 离线玩家为空时采用在线玩家
                                     if leave_player == "":
-                                        sender.perform_command(f'territory member add "{add_member_name}" "{ttyname}"')
+                                        sender.perform_command(f'tty member add "{add_member_name}" "{ttyname}"')
                                     # 离线玩家不为空时采用离线玩家
                                     else:
-                                        sender.perform_command(f'territory member add "{leave_player}" "{ttyname}"')
+                                        sender.perform_command(f'tty member add "{leave_player}" "{ttyname}"')
 
                                 
                                 def add_member_tsm_on_click(sender):
@@ -1553,7 +1553,7 @@ class Territory(Plugin):
                                 def run_del_manager_tsm(sender,json_str:str):
                                     index = int(json.loads(json_str)[0])
                                     del_manager_name = tty_manager_list[index]
-                                    sender.perform_command(f'territory manager remove "{del_manager_name}" "{ttyname}"')
+                                    sender.perform_command(f'tty manager remove "{del_manager_name}" "{ttyname}"')
 
                                 
                                 def del_manager_tsm_on_click(sender):
@@ -1611,10 +1611,10 @@ class Territory(Plugin):
                                     leave_player = input_json[2]
                                     # 离线玩家为空时采用在线玩家
                                     if leave_player == "":
-                                        sender.perform_command(f'territory manager add "{add_manager_name}" "{ttyname}"')
+                                        sender.perform_command(f'tty manager add "{add_manager_name}" "{ttyname}"')
                                     # 离线玩家不为空时采用离线玩家
                                     else:
-                                        sender.perform_command(f'territory manager add "{leave_player}" "{ttyname}"')
+                                        sender.perform_command(f'tty manager add "{leave_player}" "{ttyname}"')
 
                                 
                                 def add_manager_tsm_on_click(sender):
@@ -1661,7 +1661,7 @@ class Territory(Plugin):
                                     index = int(json.loads(json_str)[0])
                                     tppos = json.loads(json_str)[1]
                                     ttyname = tty_list[index]['name']
-                                    sender.perform_command(f'territory settp {tppos} "{ttyname}"')
+                                    sender.perform_command(f'tty settp {tppos} "{ttyname}"')
                                 except:
                                     sender.send_error_message("未知的错误")
                             def on_click(sender):
@@ -1694,7 +1694,7 @@ class Territory(Plugin):
                                     index = int(json.loads(json_str)[0])
                                     new_owner_name = json.loads(json_str)[1]
                                     ttyname = tty_list[index]['name']
-                                    sender.perform_command(f'territory transfer {ttyname} "{new_owner_name}"')
+                                    sender.perform_command(f'tty transfer {ttyname} "{new_owner_name}"')
                                 except:
                                     sender.send_error_message("未知的错误")
                             def on_click(sender):
@@ -1726,7 +1726,7 @@ class Territory(Plugin):
                                 try:
                                     index = int(json.loads(json_str)[0])
                                     ttyname = tty_list[index]['name']
-                                    sender.perform_command(f'territory del "{ttyname}"')
+                                    sender.perform_command(f'tty del "{ttyname}"')
                                 except:
                                     sender.send_error_message("未知的错误")
                             def on_click(sender):
@@ -1781,7 +1781,7 @@ class Territory(Plugin):
                 tp_tty_button = ActionForm.Button(text="§l§5传送自己及已加入的领地",icon="textures/ui/csb_purchase_warning",on_click=tp_tty())
                 tp_all_tty_button = ActionForm.Button(text="§l§5传送全部领地",icon="textures/ui/default_world",on_click=tp_all_tty())
                 man_tty_button = ActionForm.Button(text="§l§5管理领地",icon="textures/ui/icon_setting",on_click=man_tty())
-                help_tty_button = ActionForm.Button(text="§l§5查看领地帮助",icon="textures/ui/Feedback",on_click=run_command(com="territory help"))
+                help_tty_button = ActionForm.Button(text="§l§5查看领地帮助",icon="textures/ui/Feedback",on_click=run_command(com="tty help"))
                 list_tty_button = ActionForm.Button(text="§l§5列出自己的全部领地",icon="textures/ui/infobulb",on_click=run_command(com="tty list"))
                 # 发送菜单
                 form = ActionForm(
