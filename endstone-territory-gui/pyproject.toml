@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "endstone_territory_gui"
+version = "0.2.0"
+description = "Territory图型界面"
+authors = [
+    { name = "yuhang", email = "yuhang2006@hotmail.com" },
+]
+keywords = ["endstone", "plugin", "territory"]
+[project.urls]
+Homepage = "https://github.com/yuhangle/endstone-territory"
+[project.entry-points."endstone"]
+territory_gui = "endstone_territory_gui:Territory_gui"
