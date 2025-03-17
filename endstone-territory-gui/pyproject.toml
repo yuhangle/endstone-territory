@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "endstone_territory_gui"
-version = "0.2.0"
+version = "0.2.1"
 description = "Territory图型界面"
 authors = [
     { name = "yuhang", email = "yuhang2006@hotmail.com" },
