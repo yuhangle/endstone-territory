@@ -1,136 +1,156 @@
-# Territory领地插件
-> 插件尚在开发中，运行时间较短，功能正常，bug未知，欢迎反馈
-## 介绍
+# Territory Plugin
 
-Territory领地插件是使用C++开发的运行在endstone插件加载器上的三维领地插件,不依赖经济类插件,玩家可免费创建领地；使用sqlite数据库储存领地数据,支持防交互、防破坏方块、防放置方块、防实体爆炸、防外人对领地内实体一般伤害、领地传送、成员管理、添加领地管理员等
+> The plugin is still under development, feedback is welcome.
 
-Territory插件支持子领地,子领地可由父领地主人和父领地管理员在父领地内创建,子领地权限和人员与父领地相互独立,子领地受子领地所有者完全控制,不受父领地控制,父领地被删除后,子领地失去父领地标签成为独立领地,不会随父领地一并删除
+[简体中文](README_zh-CN.md)  
 
-## 特点
+## Introduction
 
-Territory插件本体在0.1.0版本后使用C++开发，性能更好，响应更快；使用SQlite储存领地数据，无需额外配置，开箱即用。
+The Territory plugin is a 3D territory management plugin developed in C++ for the endstone plugin loader.  It uses an SQLite database to store territory data and supports features such as anti-interaction, anti-block breaking, anti-block placement, anti-entity explosion, preventing general damage to entities within the territory from outsiders, territory teleportation, member management, and adding territory administrators.You can use it to protect buildings of players on endstone server.
 
-## 如何使用
+The Territory plugin supports sub-territories, which can be created within a parent territory by the parent territory owner and administrators. Sub-territory permissions and members are independent from the parent territory. Sub-territories are fully controlled by their owners and are not controlled by the parent territory. If a parent territory is deleted, its sub-territories will lose their parent territory tag and become independent territories, and will not be deleted along with the parent territory.
 
-> 安装&配置
+## Features
 
-插件分为图形菜单与插件本体两个插件，图形菜单插件使用Python编写，不具备本体功能；插件本体无需图形菜单插件即可运行。
+The core of the Territory plugin has been developed in C++ since version 0.1.0, resulting in better performance and faster response times. It uses SQLite to store territory data, requiring no additional configuration and making it ready to use out of the box.
 
-**安装Endstone**
+## How to use
 
-此步请查看endstone文档
+> Install&Config
 
-**下载&安装Territory插件**
+The plugin is divided into two parts: a graphical menu plugin and the core plugin. The graphical menu plugin is written in Python and does not possess the core functionality. The core plugin can run independently without the graphical menu plugin.
 
-> Windows平台
+**Install Endstone**
 
-前往Releases处下载最新版本的插件本体dll文件和领地菜单插件whl文件,然后放在服务端目录的plugins文件夹里
+Please refer to the endstone documentation for this step.
 
-> Linux平台
+**Download & Install Territory Plugin**
 
-前往Releases处下载最新版本的插件本体so文件和领地菜单插件whl文件,然后放在服务端目录的plugins文件夹里
+> Windows
 
-**配置**
+Go to Releases to download the latest version of the core plugin DLL file and the territory menu plugin WHL file, and then place them in the plugins folder of the server directory.
 
-首次运行插件后将自动在plugins目录创建territoty文件夹,里面包含配置文件config.json和领地数据库文件territory_data.db
-配置文件的默认配置如下:
+> Linux
+
+Go to Releases to download the latest version of the core plugin SO file and the territory menu plugin WHL file, and then place them in the plugins folder of the server directory.
+
+**Config**
+
+After running the plugin for the first time, a "territory" folder will be automatically created in the plugins directory. This folder contains the configuration file "config.json" and the territory database file "territory_data.db".
+
+The default configuration of the configuration file is as follows:
+
 ```bash
 {
     "player_max_tty_num": 20,
     "actor_fire_attack_protect": true
 }
 ```
-player_max_tty_num 为玩家可拥有的领地的最大值,默认为20个
 
-actor_fire_attack_protect 为是否开启生物火焰保护,默认开启;由于玩家对生物的直接攻击插件可以拦截，但是当玩家武器存在火焰附加附魔时,附魔效果依然会作用在生物身上造成杀伤导致保护不全;配置文件中开启生物火焰保护后,无权限玩家将无法对领地内生物造成包括火焰附加在内的任何伤害,但同时生物也将免疫部分火焰伤害
+player_max_tty_num represents the maximum number of territories a player can own, with a default value of 20.
 
+actor_fire_attack_protect determines whether to enable entity fire protection, which is enabled by default. While the plugin can intercept direct player attacks on entities, the fire aspect enchantment on a player's weapon will still affect entities, causing damage and resulting in incomplete protection. Enabling entity fire protection in the configuration file prevents unauthorized players from dealing any damage to entities within the territory, including fire aspect damage. However, this also makes entities immune to some fire damage.
 
-> 命令用法和领地使用管理
+> Command Usage and Territory Management
 
-**命令列表**
+**Command list**
 
-打开领地菜单
+Open territory menu
 
 ```shell
 /ttygui
 ```
 
-新建领地
+Create New Territory
 
 ```shell
-/tty add 领地边角坐标1 领地边角坐标2
+/tty add Territory-corner-coordinate-1 Territory-corner-coordinate-2
 ```
 
-新建子领地
+Create New Sub_Territory
 
 ```shell
-/tty add_sub 子领地边角坐标1 子领地边角坐标2
+/tty add_sub Sub-Territory-corner-coordinate-1 Sub-Territory-corner-coordinate-2>
 ```
 
-列出领地
+List Territory
 
 ```shell
 /tty list
 ```
 
-删除领地
+Delete Territory
 
 ```shell
-/tty del 领地名
+/tty del territory-name
 ```
 
-重命名领地
+Rename Terriory
 
 ```shell
-/tty rename 旧领地名 新领地名
+/tty rename old-name new-name
 ```
 
-设置领地权限
+Set Territory Permissions
 
 ```shell
-/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名
+/tty set permission(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) true|false territory-name
 ```
-其中权限名分别代表:是否允许外人领地内交互、是否允许外人领地内破坏、是否允许外人传送至领地、是否允许外人领地内放置、是否允许领地内实体爆炸、是否允许外人对实体攻击
 
-设置领地管理员
+**Where the permission names respectively represent:**
+
+- Whether to allow outsiders to interact within the territory.
+- Whether to allow outsiders to destroy within the territory.
+- Whether to allow outsiders to teleport to the territory.
+- Whether to allow outsiders to place within the territory.
+- Whether to allow entity explosions within the territory.
+- Whether to allow outsiders to attack entities.
+
+Set Territory Administrators
 
 ```shell
-/tty manager add|remove(添加|删除) 玩家名 领地名
+/tty manager add|remove player-name territory-name
 ```
 
-设置领地成员
+Set Terrtory Members
 
 ```shell
-/tty member add|remove(添加|删除) 玩家名 领地名
+/tty member add|remove player-name territory-name
 ```
 
-设置领地传送点
+Set Territory Teleport Point
 
 ```bash
-/tty settp 领地传送坐标 领地名
+/tty settp Territory-teleport-coordinates Territory-name
 ```
 
-传送领地
+Teleport to Territory
 
 ```bash
-/tty tp 领地名
+/tty tp territory-name
 ```
 
-**管理员命令**
+**Administrator Commands**
 
-删除领地
+Delete Territory
 
 ```bash
-/optty del 领地名
+/optty del territory-name
 ```
 
-删除玩家的全部领地
+Delete All Territories of a Player
 
 ```bash
-/optty del_all 玩家名
+/optty del_all player-name
 ```
 
-重载领地数据和配置
+Set Territory Permissions for a Player
+
+```bash
+/optty set permission(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) true|false territory-name
+```
+
+Reload Territory Data and Configuration
 
 ```bash
 /optty reload
