@@ -3,14 +3,14 @@
 //
 #include "territory.h"
 
-ENDSTONE_PLUGIN("territory", "0.2.0", Territory)
+ENDSTONE_PLUGIN("territory", "0.2.1", Territory)
 {
     description = "a territory plugin for endstone with C++";
     website = "https://github.com/yuhangle/endstone-territory";
     authors = {"yuhang2006 <yuhang2006@hotmail.com>"};
 
     command("tty")
-            .description("Territory命令")
+            .description("Territory command")
             .usages("/tty (add)[opt: opt_add] [pos: pos] [pos: pos]",
                     "/tty (add_sub)[opt: opt_addsub] [pos: pos] [pos: pos]",
                     "/tty (list)[opt: opt_list]",
@@ -27,9 +27,10 @@ ENDSTONE_PLUGIN("territory", "0.2.0", Territory)
             .permissions("territory.command.member");
 
     command("optty")
-            .description("Territory管理员命令")
+            .description("Territory op command")
             .usages("/optty (del)[opt: opt_op_del] [msg: message]",
                     "/optty (del_all)[opt: opt_op_del_all] <player: target>",
+                    "/optty (set)<opt: opt_op_setper> (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage)<opt: opt_op_permission> <bool: bool> <msg: message>",
                     "/optty (reload)[opt: opt_reloadtty]"
             )
             .permissions("territory.command.op");

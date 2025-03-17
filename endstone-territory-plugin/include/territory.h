@@ -30,10 +30,12 @@
 #include <endstone/event/player/player_interact_actor_event.h>
 #include <endstone/event/actor/actor_damage_event.h>
 #include <endstone/command/command_sender_wrapper.h>
+#include "translate.h"
 
 using json = nlohmann::json;
 using namespace std;
 namespace fs = std::filesystem;
+translate_tty LangTty;
 
 //数据文件路径
 std::string data_path = "plugins/territory";
@@ -119,14 +121,14 @@ public:
         };
 
         if (!(std::filesystem::exists(data_path))) {
-            getLogger().info("Territory数据目录未找到,已自动创建");
+            getLogger().info(LangTty.getLocal("Territory数据目录未找到,已自动创建"));
             std::filesystem::create_directory("plugins/territory");
             if (!(std::filesystem::exists("plugins/territory/config.json"))) {
                 std::ofstream file(config_path);
                 if (file.is_open()) {
                     file << df_config.dump(4);
                     file.close();
-                    getLogger().info("配置文件已创建");
+                    getLogger().info(LangTty.getLocal("配置文件已创建"));
                 }
             }
         } else if (std::filesystem::exists(data_path)) {
@@ -135,7 +137,7 @@ public:
                 if (file.is_open()) {
                     file << df_config.dump(4);
                     file.close();
-                    getLogger().info("配置文件已创建");
+                    getLogger().info(LangTty.getLocal("配置文件已创建"));
                 }
             } else {
                 bool need_update = false;
@@ -149,7 +151,7 @@ public:
                 for (auto& [key, value] : df_config.items()) {
                     if (!loaded_config.contains(key)) {
                         loaded_config[key] = value;
-                        getLogger().info("配置项 '{}' 已根据默认配置进行更新", key);
+                        getLogger().info(LangTty.getLocal("配置项 '{}' 已根据默认配置进行更新"), key);
                         need_update = true;
                     }
                 }
@@ -160,7 +162,7 @@ public:
                     if (outfile.is_open()) {
                         outfile << loaded_config.dump(4);
                         outfile.close();
-                        getLogger().info("配置文件已完成更新");
+                        getLogger().info(LangTty.getLocal("配置文件已完成更新"));
                     }
                 }
             }
@@ -172,7 +174,7 @@ public:
         sqlite3* db;
         int rc = sqlite3_open(db_file.c_str(), &db);
         if (rc) {
-            getLogger().error("无法打开数据库: ",sqlite3_errmsg(db));
+            getLogger().error(LangTty.getLocal("无法打开数据库: "),sqlite3_errmsg(db));
             return rc;
         }
         const char* sql = "CREATE TABLE IF NOT EXISTS territories ("
@@ -310,7 +312,7 @@ public:
         char* errMsg = nullptr;
         rc = sqlite3_exec(db, sql.c_str(), 0, 0, &errMsg);
         if (rc != SQLITE_OK) {
-            getLogger().error("插入数据失败: ",errMsg);
+            getLogger().error(LangTty.getLocal("插入数据失败: "),errMsg);
             sqlite3_free(errMsg);
             sqlite3_close(db);
             return rc;
@@ -356,7 +358,7 @@ public:
             all_tty[data.name] = data;
         }
         if (rc != SQLITE_DONE) {
-            getLogger().error("读取数据失败: ",sqlite3_errmsg(db));
+            getLogger().error(LangTty.getLocal("读取数据失败: "),sqlite3_errmsg(db));
         }
         sqlite3_finalize(stmt);
         sqlite3_close(db);
@@ -474,18 +476,17 @@ public:
     void player_add_tty(std::string player_name, Point3D pos1, Point3D pos2, Point3D tppos, std::string dim) {
         // 检查玩家领地数量是否达到上限
         if (check_tty_num(player_name) >= max_tty_num) {
-            getServer().getPlayer(player_name)->sendErrorMessage("你的领地数量已达到上限,无法增加新的领地");
-            //server.get_player(player_name).send_error_message("你的领地数量已达到上限,无法增加新的领地");
+            getServer().getPlayer(player_name)->sendErrorMessage(LangTty.getLocal("你的领地数量已达到上限,无法增加新的领地"));
             return;
         }
         // 检查新领地是否与其他领地重叠
         if (isTerritoryOverlapping(pos1, pos2, dim)) {
-            getServer().getPlayer(player_name)->sendErrorMessage("此区域与其他玩家领地重叠");
+            getServer().getPlayer(player_name)->sendErrorMessage(LangTty.getLocal("此区域与其他玩家领地重叠"));
             return;
         }
         // 检查传送点是否在领地内
         if (!isPointInCube(tppos, pos1, pos2)) {
-            getServer().getPlayer(player_name)->sendErrorMessage("你当前所在的位置不在你要添加的领地上!禁止远程施法");
+            getServer().getPlayer(player_name)->sendErrorMessage(LangTty.getLocal("你当前所在的位置不在你要添加的领地上!禁止远程施法"));
             return;
         } else {
             // 使用当前时间作为领地名
@@ -505,7 +506,7 @@ public:
                        player_name, "", "", false, false, false, false, false,false, dim, "");
 
             // 向玩家发送成功消息
-            getServer().getPlayer(player_name)->sendMessage("成功添加领地");
+            getServer().getPlayer(player_name)->sendMessage(LangTty.getLocal("成功添加领地"));
 
             // 更新全局数据
             readAllTerritories();
@@ -570,13 +571,13 @@ public:
         }
 
         if (trueTTYInfo.size() > 1) {
-            return {false, "无法在子领地内创建子领地"};
+            return {false, LangTty.getLocal("无法在子领地内创建子领地")};
         } else if (trueTTYInfo.empty()) {
-            return {false, "未查找到符合条件的父领地, 子领地创建失败"};
+            return {false, LangTty.getLocal("未查找到符合条件的父领地, 子领地创建失败")};
         } else if (trueTTYInfo.size() == 1) {
             return {true, trueTTYInfo.front()};
         } else {
-            return {false, "未知错误"};
+            return {false, LangTty.getLocal("未知错误")};
         }
     }
 
@@ -588,13 +589,13 @@ public:
                                                    const std::string& dim) {
         // 检查玩家领地数量是否已达上限
         if (check_tty_num(playername) >= max_tty_num) {
-            getServer().getPlayer(playername)->sendErrorMessage("你的领地数量已达到上限,无法增加新的领地");
+            getServer().getPlayer(playername)->sendErrorMessage(LangTty.getLocal("你的领地数量已达到上限,无法增加新的领地"));
             return {false, ""};
         }
 
         // 检查传送点是否在领地内
         if (!isPointInCube(tppos, pos1, pos2)) {
-            getServer().getPlayer(playername)->sendErrorMessage("你当前所在的位置不在你要添加的领地上!禁止远程施法");
+            getServer().getPlayer(playername)->sendErrorMessage(LangTty.getLocal("你当前所在的位置不在你要添加的领地上!禁止远程施法"));
             return {false, ""};
         }
 
@@ -628,7 +629,7 @@ public:
                            get<0>(pos2),get<1>(pos2),get<2>(pos2),
                            get<0>(tppos),get<1>(tppos),get<2>(tppos),playername,"","",
                            false,false,false,false,false,false,dim,fatherTTYInfo.second);
-            getServer().getPlayer(playername)->sendMessage("成功添加子领地,归属于父领地" + fatherTTYInfo.second);
+            getServer().getPlayer(playername)->sendMessage(LangTty.getLocal("成功添加子领地,归属于父领地") + fatherTTYInfo.second);
             // 更新全局数据
             readAllTerritories();
             return {true, childTTYName};
@@ -692,10 +693,10 @@ public:
                     std::string msg;
                     if (!current_father_territory.empty()) {
                         // 进入子领地
-                        msg = "§2[领地] §r欢迎来到" + selectedTerritory->owner + " 的子领地 " + current_territory;
+                        msg = LangTty.getLocal("§2[领地] §r欢迎来到 ") + selectedTerritory->owner + LangTty.getLocal(" 的子领地 ") + current_territory;
                     } else {
                         // 进入普通领地
-                        msg = "§2[领地] §r欢迎来到" + selectedTerritory->owner + " 的领地 " + current_territory;
+                        msg = LangTty.getLocal("§2[领地] §r欢迎来到 ") + selectedTerritory->owner + LangTty.getLocal(" 的领地 ") + current_territory;
                     }
                     auto pEntity = getServer().getPlayer(player_name);
                     if (pEntity != nullptr) {
@@ -710,7 +711,7 @@ public:
             } else {
                 // 玩家不在任何领地内，若之前记录了领地，则说明是离开领地行为，发送离开提示
                 if (!previous_territory.empty()) {
-                    std::string msg = "§2[领地] §r您已离开领地 " + previous_territory + ", 欢迎下次再来";
+                    std::string msg = LangTty.getLocal("§2[领地] §r您已离开领地 ") + previous_territory + LangTty.getLocal(", 欢迎下次再来");
                     auto pEntity = getServer().getPlayer(player_name);
                     if (pEntity != nullptr) {
                         //pEntity->sendToast("  ", msg);
@@ -897,7 +898,7 @@ public:
         int count = sqlite3_column_int(stmtCount, 0);
         sqlite3_finalize(stmtCount);
         if (count > 0) {
-            std::string msg = "无法重命名领地: 新名字 " + newname + " 已存在";
+            std::string msg = LangTty.getLocal("无法重命名领地: 新名字 ") + newname + LangTty.getLocal(" 已存在");
             sqlite3_close(db);
             return {false, msg};
         }
@@ -1019,11 +1020,11 @@ public:
 
         // 3. 返回结果并更新全局缓存
         if (affectedRows > 0) {
-            std::string msg = "已重命名领地: 从 " + oldname + " 到 " + newname;
+            std::string msg = LangTty.getLocal("已重命名领地: 从 ") + oldname + LangTty.getLocal(" 到 ") + newname;
             readAllTerritories();
             return {true, msg};
         } else {
-            std::string msg = "尝试重命名领地但未找到: " + oldname;
+            std::string msg = LangTty.getLocal("尝试重命名领地但未找到: ") + oldname;
             return {false, msg};
         }
     }
@@ -1205,7 +1206,7 @@ public:
         // 检查权限名是否合法
         if (std::find(allowed_permissions.begin(), allowed_permissions.end(), permission) ==
             allowed_permissions.end()) {
-            std::string msg = "无效的权限名: " + permission;
+            std::string msg = LangTty.getLocal("无效的权限名: ") + permission;
             return {false, msg};
         }
 
@@ -1266,12 +1267,12 @@ public:
         sqlite3_close(db);
 
         if (affectedRows > 0) {
-            std::string msg = "已更新领地 " + ttyname + " 的权限 " + permission + " 为 " + std::to_string(value);
+            std::string msg = LangTty.getLocal("已更新领地 ") + ttyname + LangTty.getLocal(" 的权限 ") + permission + LangTty.getLocal(" 为 ") + std::to_string(value);
             // 更新全局领地信息
             readAllTerritories();
             return {true, msg};
         } else {
-            std::string msg = "尝试更新领地权限但未找到领地: " + ttyname;
+            std::string msg = LangTty.getLocal("尝试更新领地权限但未找到领地: ") + ttyname;
             return {false, msg};
         }
     }
@@ -1334,7 +1335,7 @@ public:
 
         rc = sqlite3_step(stmtSelect);
         if (rc != SQLITE_ROW) {
-            std::string msg = "尝试更改领地成员但未找到领地: " + ttyname;
+            std::string msg = LangTty.getLocal("尝试更改领地成员但未找到领地: ") + ttyname;
             sqlite3_finalize(stmtSelect);
             sqlite3_close(db);
             return {false, msg};
@@ -1358,10 +1359,10 @@ public:
             // 添加操作：若不存在则添加
             if (std::find(currentMembers.begin(), currentMembers.end(), player_name) == currentMembers.end()) {
                 currentMembers.push_back(player_name);
-                msg = "已添加成员到领地: " + player_name + " -> " + ttyname;
+                msg = LangTty.getLocal("已添加成员到领地: ") + player_name + " -> " + ttyname;
                 needUpdate = true;
             } else {
-                msg = "无需变更成员: " + player_name + " 在领地 " + ttyname + " 中的状态未改变";
+                msg = LangTty.getLocal("无需变更成员: ") + player_name + LangTty.getLocal(" 在领地 ") + ttyname + LangTty.getLocal(" 中的状态未改变");
                 sqlite3_close(db);
                 return {true, msg};  // 状态未改变，视为成功
             }
@@ -1370,10 +1371,10 @@ public:
             auto it = std::find(currentMembers.begin(), currentMembers.end(), player_name);
             if (it != currentMembers.end()) {
                 currentMembers.erase(it);
-                msg = "已从领地中移除成员: " + player_name + " <- " + ttyname;
+                msg = LangTty.getLocal("已从领地中移除成员: ") + player_name + " <- " + ttyname;
                 needUpdate = true;
             } else {
-                msg = "无需变更成员: " + player_name + " 在领地 " + ttyname + " 中的状态未改变";
+                msg = LangTty.getLocal("无需变更成员: ") + player_name + LangTty.getLocal(" 在领地 ") + ttyname + LangTty.getLocal(" 中的状态未改变");
                 sqlite3_close(db);
                 return {true, msg};  // 状态未改变，视为成功
             }
@@ -1427,7 +1428,7 @@ public:
             readAllTerritories();
             return {true, msg};
         } else {
-            return {false, "更新领地成员时发生未知错误: " + ttyname};
+            return {false, LangTty.getLocal("更新领地成员时发生未知错误: ") + ttyname};
         }
     }
 
@@ -1443,7 +1444,7 @@ public:
                                                   const std::string &new_owner_name) {
         // 1. 检查新领地主人的领地数量是否达到上限
         if (check_tty_num(new_owner_name) >= max_tty_num) {
-            std::string msg = "玩家 " + new_owner_name + " 的领地数量已达到上限, 无法增加新的领地, 转让领地失败";
+            std::string msg = LangTty.getLocal("玩家 ") + new_owner_name + LangTty.getLocal(" 的领地数量已达到上限, 无法增加新的领地, 转让领地失败");
             return {false, msg};
         }
 
@@ -1477,7 +1478,7 @@ public:
         }
         rc = sqlite3_step(stmtSelect);
         if (rc != SQLITE_ROW) {
-            std::string msg = "尝试更改领地主人但未找到领地: " + ttyname;
+            std::string msg = LangTty.getLocal("尝试更改领地主人但未找到领地: ") + ttyname;
             sqlite3_finalize(stmtSelect);
             sqlite3_close(db);
             return {false, msg};
@@ -1491,7 +1492,7 @@ public:
         if (current_owner == old_owner_name && current_owner != new_owner_name) {
             // 准备更新为新主人
             current_owner = new_owner_name;
-            std::string msg = "领地转让成功, 领地主人已由 " + old_owner_name + " 变更为 " + new_owner_name;
+            std::string msg = LangTty.getLocal("领地转让成功, 领地主人已由 ") + old_owner_name + LangTty.getLocal(" 变更为 ") + new_owner_name;
 
             // 5. 执行更新操作
             std::string updateQuery = "UPDATE territories SET owner=? WHERE name=?";
@@ -1540,7 +1541,7 @@ public:
             }
         } else {
             sqlite3_close(db);
-            std::string msg = "领地转让失败, 请检查是否为领地主人以及转让对象是否合规";
+            std::string msg = LangTty.getLocal("领地转让失败, 请检查是否为领地主人以及转让对象是否合规");
             return {false, msg};
         }
     }
@@ -1591,7 +1592,7 @@ public:
 
         rc = sqlite3_step(stmtSelect);
         if (rc != SQLITE_ROW) {
-            std::string msg = "尝试更改领地管理员但未找到领地: " + ttyname;
+            std::string msg = LangTty.getLocal("尝试更改领地管理员但未找到领地: ") + ttyname;
             sqlite3_finalize(stmtSelect);
             sqlite3_close(db);
             return {false, msg};
@@ -1613,14 +1614,14 @@ public:
 
         if (action == "add" && std::find(currentManagers.begin(), currentManagers.end(), player_name) == currentManagers.end()) {
             currentManagers.push_back(player_name);
-            msg = "已添加领地管理员到领地: " + player_name + " -> " + ttyname;
+            msg = LangTty.getLocal("已添加领地管理员到领地: ") + player_name + " -> " + ttyname;
             needUpdate = true;
         } else if (action == "remove" && std::find(currentManagers.begin(), currentManagers.end(), player_name) != currentManagers.end()) {
             currentManagers.erase(std::remove(currentManagers.begin(), currentManagers.end(), player_name), currentManagers.end());
-            msg = "已从领地中移除领地管理员: " + player_name + " <- " + ttyname;
+            msg = LangTty.getLocal("已从领地中移除领地管理员: ") + player_name + " <- " + ttyname;
             needUpdate = true;
         } else {
-            msg = "无需变更领地管理员: " + player_name + " 在领地 " + ttyname + " 中的状态未改变";
+            msg = LangTty.getLocal("无需变更领地管理员: ") + player_name + LangTty.getLocal(" 在领地 ") + ttyname + LangTty.getLocal(" 中的状态未改变");
             sqlite3_close(db);
             return {true, msg};  // 状态未变，但视为成功
         }
@@ -1673,7 +1674,7 @@ public:
             readAllTerritories();
             return {true, msg};
         } else {
-            return {false, "更新领地管理员时发生未知错误: " + ttyname};
+            return {false, LangTty.getLocal("更新领地管理员时发生未知错误: ") + ttyname};
         }
     }
 
@@ -1701,13 +1702,13 @@ public:
             if (territory.name == ttyname) {
                 // 维度检查
                 if (territory.dim != dim) {
-                    std::string msg = "你当前所在的维度(" + dim + ")与领地维度(" + territory.dim + ")不匹配, 无法设置领地传送点";
+                    std::string msg = LangTty.getLocal("你当前所在的维度(") + dim + LangTty.getLocal(")与领地维度(") + territory.dim + LangTty.getLocal(")不匹配, 无法设置领地传送点");
                     return {false, msg};
                 }
                 // 坐标检查
                 if (!isPointInCube(tppos, territory.pos1, territory.pos2)) {
                     std::string pos_str = pointToString(tppos);
-                    std::string msg = "无法接受的坐标" + pos_str + ", 领地传送点不能位于领地之外!";
+                    std::string msg = LangTty.getLocal("无法接受的坐标") + pos_str + LangTty.getLocal(", 领地传送点不能位于领地之外!");
                     return {false, msg};
                 }
                 // 检查通过则退出循环
@@ -1789,12 +1790,12 @@ public:
 
         if (affectedRows > 0) {
             std::string pos_str = pointToString(tppos);
-            std::string msg = "已更新领地 " + ttyname + " 的传送点为 " + pos_str;
+            std::string msg = LangTty.getLocal("已更新领地 ") + ttyname + LangTty.getLocal(" 的传送点为 ") + pos_str;
             // 更新全局领地信息缓存
             readAllTerritories();
             return {true, msg};
         } else {
-            std::string msg = "尝试更新领地传送点但未找到领地: " + ttyname;
+            std::string msg = LangTty.getLocal("尝试更新领地传送点但未找到领地: ") + ttyname;
             return {false, msg};
         }
     }
@@ -1811,21 +1812,32 @@ public:
     void onEnable() override
     {
         getLogger().info("onEnable is called");
-        auto enable_msg = endstone::ColorFormat::Yellow + "Territory插件已启用, Version: " + getServer().getPluginManager().getPlugin("territory")->getDescription().getVersion();
+
+        string boot_logo_msg = R"(
+___________                 .__  __
+\__    ___/_________________|__|/  |_  ___________ ___.__.
+  |    |_/ __ \_  __ \_  __ \  \   __\/  _ \_  __ <   |  |
+  |    |\  ___/|  | \/|  | \/  ||  | (  <_> )  | \/\___  |
+  |____| \___  >__|   |__|  |__||__|  \____/|__|   / ____|
+             \/                                    \/
+)";
+
+        getLogger().info(boot_logo_msg);
+        auto enable_msg = endstone::ColorFormat::Yellow + LangTty.getLocal("Territory插件已启用, Version: ") + getServer().getPluginManager().getPlugin("territory")->getDescription().getVersion();
         json json_msg = read_config();
         try {
             if (!json_msg.contains("error")) {
                 max_tty_num = json_msg["player_max_tty_num"];
                 actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
             } else {
-                getLogger().error("配置文件错误,使用默认配置");
+                getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置"));
                 max_tty_num = 20;
                 actor_fire_attack_protect = true;
             }
         } catch (const std::exception& e) {
             max_tty_num = 20;
             actor_fire_attack_protect = true;
-            getLogger().error("配置文件错误,使用默认配置");
+            getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置"));
         }
         //注册事件监听
         registerEvent(&Territory::onBlockBreak, *this);
@@ -1836,7 +1848,8 @@ public:
         registerEvent(&Territory::onActorhit, *this);
 
         getLogger().info(enable_msg);
-        getLogger().info(endstone::ColorFormat::Yellow + "请确保您的endstone版本为0.6.2及以上,否则将发生崩溃");
+        getLogger().info(endstone::ColorFormat::Yellow + "Project address: https://github.com/yuhangle/endstone-territory");
+        getLogger().info(endstone::ColorFormat::Yellow + LangTty.getLocal("请确保您的endstone版本为0.6.2及以上,否则将发生崩溃"));
         //数据库读取
         readAllTerritories();
         //周期执行
@@ -1849,14 +1862,18 @@ public:
         getLogger().info("onDisable is called");
     }
 
-    bool onCommand(endstone::CommandSender &sender, const endstone::Command &command, const std::vector<std::string> &args) override
-    {
+    bool onCommand(endstone::CommandSender &sender, const endstone::Command &command, const std::vector<std::string> &args) override {
         if (command.getName() == "tty")
             if (sender.asPlayer() == nullptr) {
-                getLogger().error("无法在服务端使用tty命令!");
+                getLogger().error(LangTty.getLocal("无法在服务端使用tty命令!"));
             } else {
                 if (args.empty()) {
-                    sender.sendMessage("安装Territory_gui插件后即可使用/ttygui命令打开图形界面菜单");
+                    if (getServer().getPluginManager().getPlugin("territory_gui")) {
+                        sender.asPlayer()->performCommand("ttygui");
+                    } else {
+                        sender.sendMessage(
+                                LangTty.getLocal("安装Territory_gui插件后即可使用/ttygui命令打开图形界面菜单"));
+                    }
                 } else {
                     if (args[0] == "add") {
                         try {
@@ -1899,18 +1916,27 @@ public:
                             string player_name = sender.getName();
                             auto territories = list_player_tty(player_name);
                             if (territories.empty()) {
-                                sender.sendErrorMessage("你没有领地");
+                                sender.sendErrorMessage(LangTty.getLocal("你没有领地"));
                             } else {
                                 std::string output_item = "";
                                 for (size_t idx = 0; idx < territories.size(); ++idx) {
-                                    const auto& tty = territories[idx];
-                                    output_item += std::to_string(idx + 1) + ". 领地名称: " + tty.name + "\n位置范围: " +
-                                            to_string(get<0>(tty.pos1)) + " " + to_string(get<1>(tty.pos1)) + " " + to_string(get<2>(tty.pos1))
-                                            + " 到 " + to_string(get<0>(tty.pos2)) + " " + to_string(get<1>(tty.pos2)) + " " + to_string(get<2>(tty.pos2))
-                                            + "\n传送点位置: " + to_string(get<0>(tty.tppos)) + " " + to_string(get<1>(tty.tppos)) + " " + to_string(get<2>(tty.tppos))
-                                            + "\n维度: " + tty.dim + "\n是否允许玩家交互: " + (tty.if_jiaohu ? "是" : "否") + "\n是否允许玩家破坏: " + (tty.if_break ? "是" : "否")
-                                            + "\n是否允许外人传送: " + (tty.if_tp ? "是" : "否") + "\n是否允许放置方块: " + (tty.if_build ? "是" : "否") + "\n是否允许实体爆炸: "
-                                            + (tty.if_bomb ? "是" : "否") + "\n是否允许实体伤害: " + (tty.if_damage ? "是" : "否") + "\n领地管理员: " + tty.manager + "\n领地成员: ";
+                                    const auto &tty = territories[idx];
+                                    output_item +=
+                                            std::to_string(idx + 1) + LangTty.getLocal(". 领地名称: ") + tty.name + LangTty.getLocal("\n位置范围: ") +
+                                            to_string(get<0>(tty.pos1)) + " " + to_string(get<1>(tty.pos1)) + " " +
+                                            to_string(get<2>(tty.pos1))
+                                            + LangTty.getLocal(" 到 ") + to_string(get<0>(tty.pos2)) + " " + to_string(get<1>(tty.pos2)) +
+                                            " " + to_string(get<2>(tty.pos2))
+                                            + LangTty.getLocal("\n传送点位置: ") + to_string(get<0>(tty.tppos)) + " " +
+                                            to_string(get<1>(tty.tppos)) + " " + to_string(get<2>(tty.tppos))
+                                            + LangTty.getLocal("\n维度: ") + tty.dim + LangTty.getLocal("\n是否允许玩家交互: ") +
+                                            (tty.if_jiaohu ? LangTty.getLocal("是") : LangTty.getLocal("否")) + LangTty.getLocal("\n是否允许玩家破坏: ") +
+                                            (tty.if_break ? LangTty.getLocal("是") : LangTty.getLocal("否"))
+                                            + LangTty.getLocal("\n是否允许外人传送: ") + (tty.if_tp ? LangTty.getLocal("是") : LangTty.getLocal("否")) +
+                                            LangTty.getLocal("\n是否允许放置方块: ") + (tty.if_build ? LangTty.getLocal("是") : LangTty.getLocal("否")) + LangTty.getLocal("\n是否允许实体爆炸: ")
+                                            + (tty.if_bomb ? "是" : "否") + LangTty.getLocal("\n是否允许实体伤害: ") +
+                                            (tty.if_damage ? "是" : "否") + LangTty.getLocal("\n领地管理员: ") + tty.manager +
+                                            LangTty.getLocal("\n领地成员: ");
                                     output_item += "\n----------------\n";
                                 }
                                 getServer().getPlayer(sender.getName())->sendMessage(output_item);
@@ -1923,22 +1949,22 @@ public:
                             string player_name = sender.getName();
                             if (args[1] != "") {
                                 if (read_territory_by_name(args[1]) != nullptr) {
-                                    if (check_tty_owner(args[1],player_name) == true) {
+                                    if (check_tty_owner(args[1], player_name) == true) {
                                         if (del_player_tty(args[1])) {
-                                            sender.sendMessage("已成功删除领地");
+                                            sender.sendMessage(LangTty.getLocal("已成功删除领地"));
                                         } else {
-                                            sender.sendErrorMessage("删除领地失败");
+                                            sender.sendErrorMessage(LangTty.getLocal("删除领地失败"));
                                         }
                                     } else {
-                                        sender.sendErrorMessage("你没有权限删除此领地");
+                                        sender.sendErrorMessage(LangTty.getLocal("你没有权限删除此领地"));
                                     }
                                 } else {
-                                    sender.sendErrorMessage("未知的领地");
+                                    sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 }
 
 
                             } else {
-                                sender.sendErrorMessage("缺少参数");
+                                sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
                             }
                         } catch (const std::runtime_error &e) {
                             sender.sendErrorMessage(e.what());
@@ -1947,9 +1973,9 @@ public:
                         try {
                             string player_name = sender.getName();
                             string tty_name = args[1];
-                            TerritoryData* tty_data = read_territory_by_name(tty_name);
+                            TerritoryData *tty_data = read_territory_by_name(tty_name);
                             if (tty_data == nullptr) {
-                                sender.sendErrorMessage("未知的领地");
+                                sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                             } else {
                                 if (args[1] != "" && args[2] != "") {
                                     if (check_tty_owner(args[1], player_name) == true) {
@@ -1960,11 +1986,10 @@ public:
                                             sender.sendErrorMessage(status_msg.second);
                                         }
                                     } else {
-                                        sender.sendErrorMessage("你没有权限重命名此领地");
+                                        sender.sendErrorMessage(LangTty.getLocal("你没有权限重命名此领地"));
                                     }
-                                }
-                                else {
-                                    sender.sendErrorMessage("缺少参数");
+                                } else {
+                                    sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
                                 }
                             }
                         } catch (const std::runtime_error &e) {
@@ -1973,31 +1998,31 @@ public:
                     } else if (args[0] == "set") {
                         try {
                             string player_name = sender.getName();
-                            if (args[1] != ""&& args[2] != ""&& args[3] != "") {
+                            if (args[1] != "" && args[2] != "" && args[3] != "") {
                                 string tty_name = args[3];
-                                TerritoryData* tty_data = read_territory_by_name(tty_name);
+                                TerritoryData *tty_data = read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
-                                    sender.sendErrorMessage("未知的领地");
+                                    sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
-                                    if (check_tty_op(tty_name,player_name) == true) {
+                                    if (check_tty_op(tty_name, player_name) == true) {
                                         int per_val;
                                         if (args[2] == "true") {
                                             per_val = 1;
                                         } else {
                                             per_val = 0;
                                         }
-                                        pair status_msg = change_tty_permissions(tty_name,args[1],per_val);
+                                        pair status_msg = change_tty_permissions(tty_name, args[1], per_val);
                                         if (status_msg.first) {
                                             sender.sendMessage(status_msg.second);
                                         } else {
                                             sender.sendErrorMessage(status_msg.second);
                                         }
                                     } else {
-                                        sender.sendErrorMessage("你没有权限变更此领地");
+                                        sender.sendErrorMessage(LangTty.getLocal("你没有权限变更此领地"));
                                     }
                                 }
                             } else {
-                                sender.sendErrorMessage("缺少参数");
+                                sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
                             }
                         } catch (const std::runtime_error &e) {
                             sender.sendErrorMessage(e.what());
@@ -2005,13 +2030,13 @@ public:
                     } else if (args[0] == "member") {
                         try {
                             string player_name = sender.getName();
-                            if (args[1] != ""&& args[2] != ""&& args[3] != "") {
+                            if (args[1] != "" && args[2] != "" && args[3] != "") {
                                 string tty_name = args[3];
-                                TerritoryData* tty_data = read_territory_by_name(tty_name);
+                                TerritoryData *tty_data = read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
-                                    sender.sendErrorMessage("未知的领地");
+                                    sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
-                                    if (check_tty_op(tty_name,player_name) == true) {
+                                    if (check_tty_op(tty_name, player_name) == true) {
                                         if (args[1] == "add") {
                                             pair status_msg = change_tty_member(tty_name, "add", args[2]);
                                             if (status_msg.first) {
@@ -2028,11 +2053,11 @@ public:
                                             }
                                         }
                                     } else {
-                                        sender.sendErrorMessage("你没有权限变更此领地");
+                                        sender.sendErrorMessage(LangTty.getLocal("你没有权限变更此领地"));
                                     }
                                 }
                             } else {
-                                sender.sendErrorMessage("缺少参数");
+                                sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
                             }
                         } catch (const std::runtime_error &e) {
                             sender.sendErrorMessage(e.what());
@@ -2040,13 +2065,13 @@ public:
                     } else if (args[0] == "manager") {
                         try {
                             string player_name = sender.getName();
-                            if (args[1] != ""&& args[2] != ""&& args[3] != "") {
+                            if (args[1] != "" && args[2] != "" && args[3] != "") {
                                 string tty_name = args[3];
-                                TerritoryData* tty_data = read_territory_by_name(tty_name);
+                                TerritoryData *tty_data = read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
-                                    sender.sendErrorMessage("未知的领地");
+                                    sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
-                                    if (check_tty_owner(tty_name,player_name) == true) {
+                                    if (check_tty_owner(tty_name, player_name) == true) {
                                         if (args[1] == "add") {
                                             pair status_msg = change_tty_manager(tty_name, "add", args[2]);
                                             if (status_msg.first) {
@@ -2063,18 +2088,18 @@ public:
                                             }
                                         }
                                     } else {
-                                        sender.sendErrorMessage("你没有权限变更此领地");
+                                        sender.sendErrorMessage(LangTty.getLocal("你没有权限变更此领地"));
                                     }
                                 }
                             } else {
-                                sender.sendErrorMessage("缺少参数");
+                                sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
                             }
                         } catch (const std::runtime_error &e) {
                             sender.sendErrorMessage(e.what());
                         }
                     } else if (args[0] == "settp") {
                         try {
-                            if (args[1] != ""&& args[2] != "") {
+                            if (args[1] != "" && args[2] != "") {
                                 string player_name = sender.getName();
                                 string tty_name = args[2];
                                 string dim = getServer().getPlayer(
@@ -2088,10 +2113,10 @@ public:
                                         sender.sendErrorMessage(status_msg.second);
                                     }
                                 } else {
-                                    sender.sendErrorMessage("你没有权限变更此领地");
+                                    sender.sendErrorMessage(LangTty.getLocal("你没有权限变更此领地"));
                                 }
                             } else {
-                                sender.sendErrorMessage("缺少参数");
+                                sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
                             }
                         } catch (const std::runtime_error &e) {
                             sender.sendErrorMessage(e.what());
@@ -2099,25 +2124,25 @@ public:
                     } else if (args[0] == "transfer") {
                         try {
                             string player_name = sender.getName();
-                            if (args[1] != ""&& args[2] != "") {
+                            if (args[1] != "" && args[2] != "") {
                                 string tty_name = args[1];
-                                TerritoryData* tty_data = read_territory_by_name(tty_name);
+                                TerritoryData *tty_data = read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
-                                    sender.sendErrorMessage("未知的领地");
+                                    sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
-                                    if (check_tty_owner(tty_name,player_name) == true) {
-                                        pair status_msg = change_tty_owner(tty_name,player_name,args[2]);
+                                    if (check_tty_owner(tty_name, player_name) == true) {
+                                        pair status_msg = change_tty_owner(tty_name, player_name, args[2]);
                                         if (status_msg.first) {
                                             sender.sendMessage(status_msg.second);
                                         } else {
                                             sender.sendErrorMessage(status_msg.second);
                                         }
                                     } else {
-                                        sender.sendErrorMessage("你没有权限变更此领地");
+                                        sender.sendErrorMessage(LangTty.getLocal("你没有权限变更此领地"));
                                     }
                                 }
                             } else {
-                                sender.sendErrorMessage("缺少参数");
+                                sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
                             }
                         } catch (const std::runtime_error &e) {
                             sender.sendErrorMessage(e.what());
@@ -2127,31 +2152,35 @@ public:
                             if (args[1] != "") {
                                 string player_name = sender.getName();
                                 string tty_name = args[1];
-                                TerritoryData* tty_info = read_territory_by_name(tty_name);
+                                TerritoryData *tty_info = read_territory_by_name(tty_name);
                                 if (tty_info != nullptr) {
                                     if (tty_info->if_tp) {
                                         auto player = getServer().getPlayer(player_name);
                                         auto tty_Dim = getServer().getLevel()->getDimension(tty_info->dim);
-                                        endstone::Location loc(tty_Dim,static_cast<float>(get<0>(tty_info->tppos)),
-                                                               static_cast<float>(get<1>(tty_info->tppos)),static_cast<float>(get<2>(tty_info->tppos)),
-                                                               0.0,0.0);
+                                        endstone::Location loc(tty_Dim, static_cast<float>(get<0>(tty_info->tppos)),
+                                                               static_cast<float>(get<1>(tty_info->tppos)),
+                                                               static_cast<float>(get<2>(tty_info->tppos)),
+                                                               0.0, 0.0);
 
                                         player->teleport(loc);
-                                    } else if (tty_info->member.find(player_name) != std::string::npos || tty_info->manager.find(player_name) != std::string::npos || player_name == tty_info->owner) {
+                                    } else if (tty_info->member.find(player_name) != std::string::npos ||
+                                               tty_info->manager.find(player_name) != std::string::npos ||
+                                               player_name == tty_info->owner) {
                                         auto player = getServer().getPlayer(player_name);
                                         auto tty_Dim = getServer().getLevel()->getDimension(tty_info->dim);
-                                        endstone::Location loc(tty_Dim,static_cast<float>(get<0>(tty_info->tppos)),
-                                                               static_cast<float>(get<1>(tty_info->tppos)),static_cast<float>(get<2>(tty_info->tppos)),
-                                                               0.0,0.0);
+                                        endstone::Location loc(tty_Dim, static_cast<float>(get<0>(tty_info->tppos)),
+                                                               static_cast<float>(get<1>(tty_info->tppos)),
+                                                               static_cast<float>(get<2>(tty_info->tppos)),
+                                                               0.0, 0.0);
                                         player->teleport(loc);
                                     } else {
-                                        sender.sendErrorMessage("你没有传送到此领地的权限");
+                                        sender.sendErrorMessage(LangTty.getLocal("你没有传送到此领地的权限"));
                                     }
                                 } else {
-                                    sender.sendErrorMessage("未知的领地");
+                                    sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 }
                             } else {
-                                sender.sendErrorMessage("缺少参数");
+                                sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
                             }
                         } catch (const std::runtime_error &e) {
                             sender.sendErrorMessage(e.what());
@@ -2159,7 +2188,7 @@ public:
                     } else if (args[0] == "help") {
                         try {
                             string player_name = sender.getName();
-                            string help_info = "新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n";
+                            string help_info = LangTty.getLocal("新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n");
                             sender.sendMessage(help_info);
                         } catch (const std::runtime_error &e) {
                             sender.sendErrorMessage(e.what());
@@ -2167,39 +2196,44 @@ public:
                     }
                 }
             }
-        else if (command.getName() == "optty")
+        else if (command.getName() == "optty") {
             if (sender.asPlayer() == nullptr) {
+                if (args.empty()) {
+                    getLogger().error(LangTty.getLocal("缺少参数"));
+                    return false;
+                }
                 if (args[0] == "del") {
                     if (args[1] != "") {
                         if (read_territory_by_name(args[1]) != nullptr) {
                             if (del_player_tty(args[1])) {
-                                getLogger().info("已删除领地");
+                                getLogger().info(LangTty.getLocal("已删除领地"));
                             } else {
-                                getLogger().error("领地删除失败");
+                                getLogger().error(LangTty.getLocal("领地删除失败"));
                             }
                         } else {
-                            getLogger().error("未知的领地");
+                            getLogger().error(LangTty.getLocal("未知的领地"));
                         }
                     } else {
-                        getLogger().error("缺少参数");
+                        getLogger().error(LangTty.getLocal("缺少参数"));
                     }
-                }  else if (args[0] == "del_all") {
+                } else if (args[0] == "del_all") {
                     if (args[1] != "") {
                         auto tty_info = list_player_tty(args[1]);
                         if (tty_info.empty()) {
-                            getLogger().error("该玩家没有领地");
+                            getLogger().error(LangTty.getLocal("该玩家没有领地"));
                         } else {
-                            getLogger().info("正在删除玩家 "+ args[1] + " 的全部领地");
-                            for (const auto&the_tty: tty_info) {
+                            getLogger().info(
+                                    LangTty.getLocal("正在删除玩家 ") + args[1] + LangTty.getLocal(" 的全部领地"));
+                            for (const auto &the_tty: tty_info) {
                                 if (del_player_tty(the_tty.name)) {
-                                    getLogger().info("成功删除领地: "+the_tty.name);
+                                    getLogger().info(LangTty.getLocal("成功删除领地: ") + the_tty.name);
                                 } else {
-                                    getLogger().error("删除领地失败: "+the_tty.name);
+                                    getLogger().error(LangTty.getLocal("删除领地失败: ") + the_tty.name);
                                 }
                             }
                         }
                     } else {
-                        getLogger().error("缺少参数");
+                        getLogger().error(LangTty.getLocal("缺少参数"));
                     }
                 } else if (args[0] == "reload") {
                     readAllTerritories();
@@ -2209,67 +2243,131 @@ public:
                             max_tty_num = json_msg["player_max_tty_num"];
                             actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
                         } else {
-                            getLogger().error("配置文件错误,使用默认配置");
+                            getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置"));
                             max_tty_num = 20;
                             actor_fire_attack_protect = true;
                         }
-                    } catch (const std::exception& e) {
+                    } catch (const std::exception &e) {
                         max_tty_num = 20;
                         actor_fire_attack_protect = true;
-                        getLogger().error("配置文件错误,使用默认配置");
+                        getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置"));
                     }
-                    getLogger().info("重载领地配置和数据完成");
-                }
-            else if (args[0] == "del") {
-                if (args[1] != "") {
-                    if (read_territory_by_name(args[1]) != nullptr) {
-                        if (del_player_tty(args[1])) {
-                            sender.sendMessage("已删除领地");
+                    getLogger().info(LangTty.getLocal("重载领地配置和数据完成"));
+                } else if (args[0] == "set") {
+                    try {
+                        string player_name = sender.getName();
+                        if (args[1] != "" && args[2] != "" && args[3] != "") {
+                            string tty_name = args[3];
+                            TerritoryData *tty_data = read_territory_by_name(tty_name);
+                            if (tty_data == nullptr) {
+                                getLogger().error(LangTty.getLocal("未知的领地"));
+                            } else {
+                                int per_val;
+                                if (args[2] == "true") {
+                                    per_val = 1;
+                                } else {
+                                    per_val = 0;
+                                }
+                                pair status_msg = change_tty_permissions(tty_name, args[1], per_val);
+                                if (status_msg.first) {
+                                    getLogger().info(status_msg.second);
+                                } else {
+                                    getLogger().error(status_msg.second);
+                                }
+                            }
                         } else {
-                            sender.sendErrorMessage("领地删除失败");
+                            getLogger().error(LangTty.getLocal("缺少参数"));
+                        }
+                    } catch (const std::runtime_error &e) {
+                        getLogger().error(e.what());
+                    }
+                }
+                //玩家部分
+            } else {
+                if (args.empty()) {
+                    sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
+                    return false;
+                }
+                if (args[0] == "del") {
+                    if (args[1] != "") {
+                        if (read_territory_by_name(args[1]) != nullptr) {
+                            if (del_player_tty(args[1])) {
+                                sender.sendMessage(LangTty.getLocal("已删除领地"));
+                            } else {
+                                sender.sendErrorMessage(LangTty.getLocal("领地删除失败"));
+                            }
+                        } else {
+                            sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                         }
                     } else {
-                        sender.sendErrorMessage("未知的领地");
+                        sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
                     }
-                } else {
-                    sender.sendErrorMessage("缺少参数");
-                }
-            }  else if (args[0] == "del_all") {
-                if (args[1] != "") {
-                    auto tty_info = list_player_tty(args[1]);
-                    if (tty_info.empty()) {
-                        sender.sendErrorMessage("该玩家没有领地");
-                    } else {
-                        sender.sendMessage("正在删除玩家 "+ args[1] + " 的全部领地");
-                        for (const auto&the_tty: tty_info) {
-                            if (del_player_tty(the_tty.name)) {
-                                sender.sendMessage("成功删除领地: "+the_tty.name);
-                            } else {
-                                sender.sendErrorMessage("删除领地失败: "+the_tty.name);
+                } else if (args[0] == "del_all") {
+                    if (args[1] != "") {
+                        auto tty_info = list_player_tty(args[1]);
+                        if (tty_info.empty()) {
+                            sender.sendErrorMessage(LangTty.getLocal("该玩家没有领地"));
+                        } else {
+                            sender.sendMessage(
+                                    LangTty.getLocal("正在删除玩家 ") + args[1] + LangTty.getLocal(" 的全部领地"));
+                            for (const auto &the_tty: tty_info) {
+                                if (del_player_tty(the_tty.name)) {
+                                    sender.sendMessage(LangTty.getLocal("成功删除领地: ") + the_tty.name);
+                                } else {
+                                    sender.sendErrorMessage("删除领地失败: " + the_tty.name);
+                                }
                             }
                         }
-                    }
-                } else {
-                    sender.sendErrorMessage("缺少参数");
-                }
-            } else if (args[0] == "reload") {
-                readAllTerritories();
-                json json_msg = read_config();
-                try {
-                    if (!json_msg.contains("error")) {
-                        max_tty_num = json_msg["player_max_tty_num"];
-                        actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
                     } else {
-                        sender.sendErrorMessage("配置文件错误,使用默认配置");
+                        sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
+                    }
+                } else if (args[0] == "reload") {
+                    readAllTerritories();
+                    json json_msg = read_config();
+                    try {
+                        if (!json_msg.contains("error")) {
+                            max_tty_num = json_msg["player_max_tty_num"];
+                            actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
+                        } else {
+                            sender.sendErrorMessage(LangTty.getLocal("配置文件错误,使用默认配置"));
+                            max_tty_num = 20;
+                            actor_fire_attack_protect = true;
+                        }
+                    } catch (const std::exception &e) {
                         max_tty_num = 20;
                         actor_fire_attack_protect = true;
+                        sender.sendErrorMessage(LangTty.getLocal("配置文件错误,使用默认配置"));
                     }
-                } catch (const std::exception& e) {
-                    max_tty_num = 20;
-                    actor_fire_attack_protect = true;
-                    sender.sendErrorMessage("配置文件错误,使用默认配置");
+                    sender.sendMessage(LangTty.getLocal("重载领地配置和数据完成"));
+                } else if (args[0] == "set") {
+                    try {
+                        string player_name = sender.getName();
+                        if (args[1] != "" && args[2] != "" && args[3] != "") {
+                            string tty_name = args[3];
+                            TerritoryData *tty_data = read_territory_by_name(tty_name);
+                            if (tty_data == nullptr) {
+                                sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
+                            } else {
+                                int per_val;
+                                if (args[2] == "true") {
+                                    per_val = 1;
+                                } else {
+                                    per_val = 0;
+                                }
+                                pair status_msg = change_tty_permissions(tty_name, args[1], per_val);
+                                if (status_msg.first) {
+                                    sender.sendMessage(status_msg.second);
+                                } else {
+                                    sender.sendErrorMessage(status_msg.second);
+                                }
+                            }
+                        } else {
+                            sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
+                        }
+                    } catch (const std::runtime_error &e) {
+                        sender.sendErrorMessage(e.what());
+                    }
                 }
-                sender.sendMessage("重载领地配置和数据完成");
             }
         }
         return true;
@@ -2288,7 +2386,7 @@ public:
                 if (!(info.if_break)) {
                     if (find(info.members.begin(),info.members.end(),player_name) == info.members.end()) {
                         event.setCancelled(true);
-                        event.getPlayer().sendErrorMessage("你没有在此领地上破坏的权限");
+                        event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上破坏的权限"));
                         return;
                     }
                 }
@@ -2309,7 +2407,7 @@ public:
                 if (!(info.if_build)) {
                     if (find(info.members.begin(),info.members.end(),player_name) == info.members.end()) {
                         event.setCancelled(true);
-                        event.getPlayer().sendErrorMessage("你没有在此领地上放置的权限");
+                        event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上放置的权限"));
                         return;
                     }
                 }
@@ -2330,7 +2428,7 @@ public:
                 if (!(info.if_jiaohu)) {
                     if (find(info.members.begin(),info.members.end(),player_name) == info.members.end()) {
                         event.setCancelled(true);
-                        event.getPlayer().sendErrorMessage("你没有在此领地上交互的权限");
+                        event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上交互的权限"));
                         return;
                     }
                 }
@@ -2351,7 +2449,7 @@ public:
                 if (!(info.if_jiaohu)) {
                     if (find(info.members.begin(),info.members.end(),player_name) == info.members.end()) {
                         event.setCancelled(true);
-                        event.getPlayer().sendErrorMessage("你没有在此领地上交互的权限");
+                        event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上交互的权限"));
                         return;
                     }
                 }
@@ -2390,7 +2488,7 @@ public:
                     // 玩家导致伤害
                     if (actor_or_player && actor_or_player->getType() == "minecraft:player") {
                         if (find(info.members.begin(),info.members.end(),actor_or_player->getName()) == info.members.end()) {
-                            actor_or_player->sendErrorMessage("你没有在此领地上伤害的权限");
+                            actor_or_player->sendErrorMessage(LangTty.getLocal("你没有在此领地上伤害的权限"));
                             event.setCancelled(true);
                         }
                         //火焰攻击类伤害
