@@ -34,6 +34,12 @@ Go to Releases to download the latest version of the core plugin DLL file and th
 
 Go to Releases to download the latest version of the core plugin SO file and the territory menu plugin WHL file, and then place them in the plugins folder of the server directory.
 
+**Language**
+
+The default language of this plugin is Chinese. If you need to switch to another language, please download the corresponding lang.json file for your desired language from the language directory in this plugin's GitHub repository, place it in the /plugins/territory folder on your server, and then restart the server to apply the language settings.
+
+
+
 **Config**
 
 After running the plugin for the first time, a "territory" folder will be automatically created in the plugins directory. This folder contains the configuration file "config.json" and the territory database file "territory_data.db".
