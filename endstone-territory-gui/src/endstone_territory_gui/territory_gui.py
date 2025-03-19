@@ -312,7 +312,7 @@ class Territory_gui(Plugin):
                             pos2 = tuple(int(float(x)) for x in fst_pos2.split())
                             sender.perform_command(f"tty add_sub {pos1[0]} {pos1[1]} {pos1[2]} {pos2[0]} {pos2[1]} {pos2[2]}")
                         except:
-                            sender.send_error_message({self.getLocal('错误的坐标!')})
+                            sender.send_error_message(self.getLocal('错误的坐标!'))
                             return
 
                     def on_click(sender):
@@ -340,11 +340,11 @@ class Territory_gui(Plugin):
                             oldname = tty_list[index]['name']
                             sender.perform_command(f'tty rename "{oldname}" "{newname}"')
                         except:
-                            sender.send_error_message({self.getLocal('未知的错误')})
+                            sender.send_error_message(self.getLocal('未知的错误'))
                     def on_click(sender):
                         #  按钮按下时及时检测领地存在
                         if tty_list == None:
-                            sender.send_error_message({self.getLocal('未查找到领地')})
+                            sender.send_error_message(self.getLocal('未查找到领地'))
                             return
                         option = []
                         for idx, tty in enumerate(tty_list, start=1):
@@ -372,12 +372,12 @@ class Territory_gui(Plugin):
                             ttyname = tty_list[index]['name']
                             sender.perform_command(f'tty tp "{ttyname}"')
                         except:
-                            sender.send_error_message({self.getLocal('未知的错误')})
+                            sender.send_error_message(self.getLocal('未知的错误'))
                     
                     def on_click(sender):
                         #  按钮按下时及时检测领地存在
                         if tty_list == None:
-                            sender.send_error_message({self.getLocal('未查找到领地')})
+                            sender.send_error_message(self.getLocal('未查找到领地'))
                             return
                         option = []
                         for tty in tty_list:
@@ -401,7 +401,7 @@ class Territory_gui(Plugin):
                             ttyname = json.loads(json_str)[0]
                             sender.perform_command(f'tty tp "{ttyname}"')
                         except:
-                            sender.send_error_message({self.getLocal('未知的错误')})
+                            sender.send_error_message(self.getLocal('未知的错误'))
                     
                     def on_click(sender):
                         tp_all_tty_form = ModalForm(
@@ -455,7 +455,7 @@ class Territory_gui(Plugin):
                                         if not if_damage_status == permis[5]:
                                             sender.perform_command(f'tty set if_damage {str(permis[5]).lower()} "{ttyname}"')
                                     else:
-                                        sender.send_error_message({self.getLocal('你未更改领地权限,领地权限不会变化')})
+                                        sender.send_error_message(self.getLocal('你未更改领地权限,领地权限不会变化'))
                                 
                                 def mtsm_on_click(sender):
                                     mtsm_form = ModalForm(
@@ -477,7 +477,7 @@ class Territory_gui(Plugin):
                             # 权限主菜单
                             def on_click(sender):
                                 if tty_list == None:
-                                    sender.send_error_message({self.getLocal('未查找到领地')})
+                                    sender.send_error_message(self.getLocal('未查找到领地'))
                                     return
                                 options = []
                                 for tty in tty_list:
@@ -530,7 +530,7 @@ class Territory_gui(Plugin):
                             # 删除领地成员主菜单
                             def on_click(sender):
                                 if tty_list == None:
-                                    sender.send_error_message({self.getLocal('未查找到领地')})
+                                    sender.send_error_message(self.getLocal('未查找到领地'))
                                     return
                                 options = []
                                 for tty in tty_list:
@@ -588,7 +588,7 @@ class Territory_gui(Plugin):
                             # 添加领地成员主菜单
                             def on_click(sender):
                                 if tty_list == None:
-                                    sender.send_error_message({self.getLocal('未查找到领地')})
+                                    sender.send_error_message(self.getLocal('未查找到领地'))
                                     return
                                 options = []
                                 for tty in tty_list:
@@ -643,7 +643,7 @@ class Territory_gui(Plugin):
                             # 删除领地管理员主菜单
                             def on_click(sender):
                                 if tty_list == None:
-                                    sender.send_error_message({self.getLocal('未查找到领地')})
+                                    sender.send_error_message(self.getLocal('未查找到领地'))
                                     return
                                 options = []
                                 for tty in tty_list:
@@ -690,7 +690,7 @@ class Territory_gui(Plugin):
                                     add_manager_tsm_form = ModalForm(
                                         title=f"{self.getLocal('§l添加领地管理员到领地')} {ttyname} {self.getLocal('中')}",
                                         controls=[
-                                            Label({self.getLocal('§l领地管理员有领地权限设置、成员管理、领地传送点设置、创建子领地的权限,请把握好人选')}),
+                                            Label(self.getLocal('§l领地管理员有领地权限设置、成员管理、领地传送点设置、创建子领地的权限,请把握好人选')),
                                             Dropdown(label=self.getLocal('§l选择要添加的在线玩家'),options=online_player_list),
                                             TextInput(label=self.getLocal('§l添加不在线的玩家'),placeholder=self.getLocal('只要这里写了一个字都会以此为输入值'))
                                         ],
@@ -703,7 +703,7 @@ class Territory_gui(Plugin):
                             # 添加领地管理员主菜单
                             def on_click(sender):
                                 if tty_list == None:
-                                    sender.send_error_message({self.getLocal('未查找到领地')})
+                                    sender.send_error_message(self.getLocal('未查找到领地'))
                                     return
                                 options = []
                                 for tty in tty_list:
@@ -732,10 +732,10 @@ class Territory_gui(Plugin):
                                     ttyname = tty_list[index]['name']
                                     sender.perform_command(f'tty settp {tppos} "{ttyname}"')
                                 except:
-                                    sender.send_error_message({self.getLocal('未知的错误')})
+                                    sender.send_error_message(self.getLocal('未知的错误'))
                             def on_click(sender):
                                 if tty_list == None:
-                                    sender.send_error_message({self.getLocal('未查找到领地')})
+                                    sender.send_error_message(self.getLocal('未查找到领地'))
                                     return
                                 option = []
                                 for idx, tty in enumerate(tty_list, start=1):
@@ -765,10 +765,10 @@ class Territory_gui(Plugin):
                                     ttyname = tty_list[index]['name']
                                     sender.perform_command(f'tty transfer {ttyname} "{new_owner_name}"')
                                 except:
-                                    sender.send_error_message({self.getLocal('未知的错误')})
+                                    sender.send_error_message(self.getLocal('未知的错误'))
                             def on_click(sender):
                                 if tty_list == None:
-                                    sender.send_error_message({self.getLocal('未查找到领地')})
+                                    sender.send_error_message(self.getLocal('未查找到领地'))
                                     return
                                 option = []
                                 for idx, tty in enumerate(tty_list, start=1):
@@ -797,10 +797,10 @@ class Territory_gui(Plugin):
                                     ttyname = tty_list[index]['name']
                                     sender.perform_command(f'tty del "{ttyname}"')
                                 except:
-                                    sender.send_error_message({self.getLocal('未知的错误')})
+                                    sender.send_error_message(self.getLocal('未知的错误'))
                             def on_click(sender):
                                 if tty_list == None:
-                                    sender.send_error_message({self.getLocal('未查找到领地')})
+                                    sender.send_error_message(self.getLocal('未查找到领地'))
                                     return
                                 option = []
                                 for idx, tty in enumerate(tty_list, start=1):
@@ -847,7 +847,7 @@ class Territory_gui(Plugin):
                     def run_list_click(sender):
                         tty_list = self.list_player_tty(sender.name)
                         if tty_list == None:
-                            sender.send_error_message({self.getLocal('你没有领地')})
+                            sender.send_error_message(self.getLocal('你没有领地'))
                             return
                         
                         output_item = ""
