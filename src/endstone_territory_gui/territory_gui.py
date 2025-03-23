@@ -853,7 +853,7 @@ class Territory_gui(Plugin):
                         output_item = ""
                         for idx, tty in enumerate(tty_list, start=1):
                             # 简化输出，只展示关键信息
-                            message = ColorFormat.YELLOW+idx+self.getLocal('. 领地名称: ')+tty['name']+self.getLocal('\n位置范围: ')+tty['pos1']+self.getLocal(' 到 ')+tty['pos2']+self.getLocal('\n传送点位置: ')+tty['tppos']+self.getLocal('\n维度: ')+tty['dim']+self.getLocal('\n是否允许玩家交互: ')+tty['if_jiaohu']+self.getLocal('\n是否允许玩家破坏: ')+tty['if_break']+self.getLocal('\n是否允许外人传送: ')+tty['if_tp']+self.getLocal('\n是否允许放置方块: ')+tty['if_build']+self.getLocal('\n是否允许实体爆炸: ')+tty['if_bomb']+self.getLocal('\n是否允许实体伤害: ')+tty['if_damage']+self.getLocal('\n领地管理员: ')+tty['manager']+self.getLocal('\n领地成员: ')+tty['member']+"\n"
+                            message = ColorFormat.YELLOW+str(idx)+self.getLocal('. 领地名称: ')+str(tty['name'])+self.getLocal('\n位置范围: ') + "\n" + str(tty['pos1'])+self.getLocal(' 到 ') + str(tty['pos2']) + self.getLocal('\n传送点位置: ') + "\n" + str(tty['tppos'])+self.getLocal('\n维度: ') + str(tty['dim']) + self.getLocal('\n是否允许玩家交互: ') + str(tty['if_jiaohu'])+self.getLocal('\n是否允许玩家破坏: ')+str(tty['if_break'])+self.getLocal('\n是否允许外人传送: ')+str(tty['if_tp'])+self.getLocal('\n是否允许放置方块: ')+str(tty['if_build'])+self.getLocal('\n是否允许实体爆炸: ')+str(tty['if_bomb'])+self.getLocal('\n是否允许实体伤害: ')+str(tty['if_damage'])+self.getLocal('\n领地管理员: ')+tty['manager']+self.getLocal('\n领地成员: ')+tty['member']+"\n"
                             output_item += message + "-" * 20 + "\n"
                         list_form = ActionForm(
                             title=self.getLocal('§l领地列表'),
