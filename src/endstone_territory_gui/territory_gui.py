@@ -58,6 +58,17 @@ class Territory_gui(Plugin):
             if cur:
                 cur.close()
 
+    def close(self):
+        """关闭到SQLite数据库的连接。"""
+        if self.conn:
+            try:
+                self.conn.close()
+                self.logger.info('Closing database successfully')
+            except sqlite3.Error as e:
+                self.logger.error(f"Database close error: {e}")
+            finally:
+                self.conn = None
+
     def calculate_file_hash(self,file_path, hash_algorithm='md5'):
         """计算给定文件的哈希值"""
         hash_obj = hashlib.new(hash_algorithm)
@@ -228,6 +239,7 @@ class Territory_gui(Plugin):
 
     def on_disable(self) -> None:
         self.logger.info("on_disable is called!")
+        self.close()
 
     try:
         command_descriping = lang["领地菜单命令"]
