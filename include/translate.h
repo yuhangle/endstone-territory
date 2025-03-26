@@ -20,13 +20,14 @@ public:
     }
 
     // 加载语言资源文件
-    void loadLanguage() {
+    std::pair<bool,std::string> loadLanguage() {
         std::ifstream file("plugins/territory/lang.json");
         if (file.is_open()) {
             languageResource = json::parse(file);
             file.close();
+            return {true,"lang.json is normal"};
         } else {
-            std::cerr << "you can download land.json from github to change territory plugin language" << std::endl;
+            return {false,"you can download lang.json from github to change territory plugin language"};
         }
     }
 
