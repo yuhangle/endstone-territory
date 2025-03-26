@@ -3,7 +3,7 @@
 //
 #include "territory.h"
 
-ENDSTONE_PLUGIN("territory", "0.2.1", Territory)
+ENDSTONE_PLUGIN("territory", "0.2.2", Territory)
 {
     description = "a territory plugin for endstone with C++";
     website = "https://github.com/yuhangle/endstone-territory";
@@ -14,14 +14,14 @@ ENDSTONE_PLUGIN("territory", "0.2.1", Territory)
             .usages("/tty (add)[opt: opt_add] [pos: pos] [pos: pos]",
                     "/tty (add_sub)[opt: opt_addsub] [pos: pos] [pos: pos]",
                     "/tty (list)[opt: opt_list]",
-                    "/tty (del)[opt: opt_del] [msg: message]",
-                    "/tty (rename)[opt: opt_rename] [msg: message] [msg: message]",
-                    "/tty (set)<opt: opt_setper> (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage)<opt: opt_permission> <bool: bool> <msg: message>",
-                    "/tty (member)<opt: opt_member> (add|remove)<opt: opt_mem> <player: target> <msg: message>",
-                    "/tty (manager)<opt: opt_manager> (add|remove)<opt: opt_man> <player: target> <msg: message>",
-                    "/tty (settp)<opt: opt_settp> [pos: pos] <msg: message>",
-                    "/tty (transfer)<opt: opt_transfer> <msg: message> <msg: message>",
-                    "/tty (tp)<opt: opt_tp> <msg: message>",
+                    "/tty (del)[opt: opt_del] [territory: message]",
+                    "/tty (rename)[opt: opt_rename] [old_name: message] [new_name: message]",
+                    "/tty (set)<opt: opt_setper> (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage)<opt: opt_permission> <bool: bool> <territory: message>",
+                    "/tty (member)<opt: opt_member> (add|remove)<opt: opt_mem> <player: target> <territory: message>",
+                    "/tty (manager)<opt: opt_manager> (add|remove)<opt: opt_man> <player: target> <territory: message>",
+                    "/tty (settp)<opt: opt_settp> [pos: pos] <territory: message>",
+                    "/tty (transfer)<opt: opt_transfer> <territory: message> <player: target>",
+                    "/tty (tp)<opt: opt_tp> <territory: message>",
                     "/tty (help)<opt: opt_help>"
                     )
             .permissions("territory.command.member");
