@@ -54,7 +54,6 @@
     "尝试更新领地传送点但未找到领地: ": "Attempted to update territory teleport point but territory not found: ",
     "Territory插件已启用, Version: ": "Territory plugin enabled, Version: ",
     "配置文件错误,使用默认配置": "Configuration file error, using default configuration",
-    "请确保您的endstone版本为0.6.2及以上,否则将发生崩溃": "Please ensure your endstone version is 0.6.2 or above, otherwise a crash will occur",
     "无法在服务端使用tty命令!": "Cannot use tty command on the server!",
     "安装Territory_gui插件后即可使用/ttygui命令打开图形界面菜单": "After installing the Territory_gui plugin, you can use the /ttygui command to open the graphical menu",
     "你没有领地": "You do not have a territory",
