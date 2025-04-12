@@ -54,6 +54,7 @@
     "尝试更新领地传送点但未找到领地: ": "Attempted to update territory teleport point but territory not found: ",
     "Territory插件已启用, Version: ": "Territory plugin enabled, Version: ",
     "配置文件错误,使用默认配置": "Configuration file error, using default configuration",
+    "请确保您的endstone版本为0.6.2及以上,否则将发生崩溃": "Please ensure your endstone version is 0.6.2 or above, otherwise a crash will occur",
     "无法在服务端使用tty命令!": "Cannot use tty command on the server!",
     "安装Territory_gui插件后即可使用/ttygui命令打开图形界面菜单": "After installing the Territory_gui plugin, you can use the /ttygui command to open the graphical menu",
     "你没有领地": "You do not have a territory",
@@ -61,7 +62,7 @@
     "\n位置范围: ": "\nPosition range: ",
     "\n传送点位置: ": "\nTeleport point location: ",
     "\n维度: ": "\nDimension: ",
-    "\n是否允许玩家交互: ": "nIs player interaction allowed: ",
+    "\n是否允许玩家交互: ": "\nIs player interaction allowed: ",
     "是": "Yes",
     "否": "No",
     "\n是否允许玩家破坏: ": "\nIs player breaking allowed: ",
@@ -177,5 +178,12 @@
     "§l删除领地": "Delete territory",
     "§l新名字": "New name",
     "领地菜单命令": "Territory menu command",
-    "成功连接到数据库": "Successfully connect to database"
+    "成功连接到数据库": "Successfully connect to database",
+    "经济配置错误,检查umoney插件是否安装,或者价格是否大于0;领地价格依然保持默认": "Wrong economic configuration, check if the umoney plugin is installed, or if the price is greater than 0; The territory price remains the same",
+    "你的资产不足以设置此大小的领地,设置此领地所需要的资金为:": "You don't have enough money to set up a territory of this size, and the money required to set up this territory are:",
+    "设置领地已扣费:": "Set up a territory charged:",
+    "无法设置领地为一个点": "It is not possible to set a territory to a point",
+    "你的领地大小超过所能创建的最大面积,无法创建": "Your territory is larger than the maximum area you can create and can't be created",
+    "无法在世界之外设置领地": "It is not possible to set a territory outside of the world",
+    "您的领地已被删除,以当前价格返还资金:": "Your territory has been deleted and the money are returned at the current price:"
 }
