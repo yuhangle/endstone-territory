@@ -30,7 +30,7 @@ def read_lang() -> bool:
 
 read_lang()
 class Territory_gui(Plugin):
-    api_version = "0.6"
+    api_version = "0.7"
 
     # 连接数据库函数
     def connect(self):
@@ -178,7 +178,7 @@ class Territory_gui(Plugin):
             all_tty = self.read_all_territories()
         member_tty_list = []
         for row in all_tty:
-            if player_name == row['owner'] or player_name == row['manager'] or player_name == row['member']:
+            if player_name == row['owner'] or player_name in row['manager'].split(',') or player_name in row['member'].split(','):
                 member_tty_list.append(row)
             
         if member_tty_list == []:
@@ -198,7 +198,7 @@ class Territory_gui(Plugin):
             all_tty = self.read_all_territories()
         op_tty_list = []
         for row in all_tty:
-            if player_name == row['owner'] or player_name == row['manager']:
+            if player_name == row['owner'] or player_name in row['manager'].split(','):
                 op_tty_list.append(row)
             
         if op_tty_list == []:
@@ -230,16 +230,20 @@ class Territory_gui(Plugin):
         try:
             tty_version = self.server.plugin_manager.get_plugin("territory")._get_description().version
             tty_gui_version = self.server.plugin_manager.get_plugin("territory_gui")._get_description().version
-            self.server.logger.info(f"{self.getLocal('Territory插件版本')}{tty_version},{self.getLocal('图形菜单版本')}{tty_gui_version}")
-            self.connect()  # 确保在加载时连接数据库
-            all_tty = self.read_all_territories()
         except:
             self.server.logger.error(self.getLocal('未检测到Territory插件本体,插件拒绝加载'))
             self.server.plugin_manager.disable_plugin(self)
+            return
+        self.server.logger.info(f"{self.getLocal('Territory插件版本')}{tty_version},{self.getLocal('图形菜单版本')}{tty_gui_version}")
+        self.connect()  # 确保在加载时连接数据库
+        all_tty = self.read_all_territories()
 
     def on_disable(self) -> None:
         self.logger.info("on_disable is called!")
-        self.close()
+        try:
+            self.close()
+        except: 
+            pass
 
     try:
         command_descriping = lang["领地菜单命令"]
@@ -686,10 +690,10 @@ class Territory_gui(Plugin):
                                 # 执行领地管理员更改
                                 def run_add_manager_tsm(sender,json_str:str):
                                     input_json = json.loads(json_str)
-                                    print(input_json)
-                                    index = int(input_json[1])
+                                    #print(input_json)
+                                    index = int(input_json[0])
                                     add_manager_name = online_player_list[index]
-                                    leave_player = input_json[2]
+                                    leave_player = input_json[1]
                                     # 离线玩家为空时采用在线玩家
                                     if leave_player == "":
                                         sender.perform_command(f'tty manager add "{add_manager_name}" "{ttyname}"')
