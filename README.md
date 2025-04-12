@@ -1,8 +1,8 @@
-# Territory Plugin
+![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=Territory%20Plugin&textBg=false&desc=About%20A%20three-dimensional%20territory%20plugin%20developed%20for%20Endstone%20&descAlignY=70&fontColor=802e82&reversal=false)
 
 > The plugin is still under development, feedback is welcome.
 
-[简体中文](README_zh-CN.md)  
+[简体中文](README_zh-CN.md)
 
 ## Introduction
 
@@ -10,9 +10,11 @@ The Territory plugin is a 3D territory management plugin developed in C++ for th
 
 The Territory plugin supports sub-territories, which can be created within a parent territory by the parent territory owner and administrators. Sub-territory permissions and members are independent from the parent territory. Sub-territories are fully controlled by their owners and are not controlled by the parent territory. If a parent territory is deleted, its sub-territories will lose their parent territory tag and become independent territories, and will not be deleted along with the parent territory.
 
+The Territory plugin supports the integration of the umoney plugin as an economic system, with the economy being disabled by default. After enabling the economy in the configuration file, creating a territory will charge players based on the territory's area multiplied by the unit price. Deleting a territory will refund the player at the current price.
+
 ## Features
 
-The core of the Territory plugin has been developed in C++ since version 0.1.0, resulting in better performance and faster response times. It uses SQLite to store territory data, requiring no additional configuration and making it ready to use out of the box.
+The core of territory plugin is developed using C++ and utilizes SQLite for storing territory data, theoretically offering better performance.
 
 ## How to use
 
@@ -38,8 +40,6 @@ Go to Releases to download the latest version of the core plugin SO file and the
 
 The default language of this plugin is Chinese. If you need to switch to another language, please download the corresponding lang.json file for your desired language from the language directory in this plugin's GitHub repository, place it in the /plugins/territory folder on your server, and then restart the server to apply the language settings.
 
-
-
 **Config**
 
 After running the plugin for the first time, a "territory" folder will be automatically created in the plugins directory. This folder contains the configuration file "config.json" and the territory database file "territory_data.db".
@@ -48,14 +48,23 @@ The default configuration of the configuration file is as follows:
 
 ```bash
 {
+    "actor_fire_attack_protect": true,
+    "max_tty_area": 4000000,
+    "money_with_umoney": false,
     "player_max_tty_num": 20,
-    "actor_fire_attack_protect": true
+    "price": 1
 }
 ```
 
-player_max_tty_num represents the maximum number of territories a player can own, with a default value of 20.
+`actor_fire_attack_protect` indicates whether to enable creature fire protection, which is enabled by default. While the plugin can intercept direct attacks from players on creatures, if a player's weapon has a fire aspect enchantment, the enchantment effect will still apply to the creatures, causing damage and resulting in incomplete protection. After enabling creature fire protection in the configuration file, unauthorized players will be unable to inflict any damage, including fire aspect damage, on creatures within the territory. However, creatures will also gain immunity to some fire damage.
 
-actor_fire_attack_protect determines whether to enable entity fire protection, which is enabled by default. While the plugin can intercept direct player attacks on entities, the fire aspect enchantment on a player's weapon will still affect entities, causing damage and resulting in incomplete protection. Enabling entity fire protection in the configuration file prevents unauthorized players from dealing any damage to entities within the territory, including fire aspect damage. However, this also makes entities immune to some fire damage.
+`max_tty_area` represents the maximum area for a player-created territory, with a default of 4,000,000 units (2000x2000). Territories exceeding this size cannot be created.
+
+`money_with_umoney` indicates whether to use the umoney plugin as the economy system, which is disabled by default. When enabled, creating territories will incur charges to the player through the economic system provided by the umoney plugin.
+
+`player_max_tty_num` is the maximum number of territories a player can own, with a default value of 20.
+
+`price` is the price per unit area of territory, with a default value of 1. When the economy is enabled, this value serves as the price per unit area of territory for calculating the total territory cost.
 
 > Command Usage and Territory Management
 
