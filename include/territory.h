@@ -31,6 +31,8 @@
 #include <endstone/event/actor/actor_damage_event.h>
 #include <endstone/command/command_sender_wrapper.h>
 #include "translate.h"
+#include <random>
+#include <iomanip>
 
 using json = nlohmann::json;
 using namespace std;
@@ -41,9 +43,13 @@ translate_tty LangTty;
 std::string data_path = "plugins/territory";
 std::string config_path = "plugins/territory/config.json";
 const std::string db_file = "plugins/territory/territory_data.db";
+const std::string umoney_file = "plugins/umoney/money.json";
 
 int max_tty_num;
 bool actor_fire_attack_protect;
+bool money_with_umoney;
+int price;
+int max_tty_area;
 
 //定义领地数据结构
 struct TerritoryData {
@@ -117,7 +123,10 @@ public:
     void datafile_check() {
         json df_config = {
                 {"player_max_tty_num", 20},
-                {"actor_fire_attack_protect", true}
+                {"actor_fire_attack_protect", true},
+                {"money_with_umoney", false},
+                {"price", 1},
+                {"max_tty_area",4000000}
         };
 
         if (!(std::filesystem::exists(data_path))) {
@@ -440,23 +449,16 @@ public:
         // 构造表示新领地范围的 pair
         auto new_tty = std::make_pair(new_pos1, new_pos2);
 
-        // 遍历所有已存在的领地数据
-        for (const auto &entry: all_tty) {
-            const TerritoryData &data = entry.second;
-            // 取出已存领地的坐标和维度
-            const auto &existing_pos1 = data.pos1;
-            const auto &existing_pos2 = data.pos2;
-            const std::string &existing_dim = data.dim;
+        return std::any_of(all_tty.cbegin(), all_tty.cend(),
+                           [&](const auto& entry) {
+                               const TerritoryData& data = entry.second;
+                               const auto& existing_pos1 = data.pos1;
+                               const auto& existing_pos2 = data.pos2;
+                               const std::string& existing_dim = data.dim;
 
-            // 先判断在空间上是否重合
-            if (is_overlapping(new_tty, std::make_pair(existing_pos1, existing_pos2))) {
-                // 若重合，再检查维度是否相同
-                if (new_dim == existing_dim) {
-                    return true;
-                }
-            }
-        }
-        return false;
+                               return is_overlapping(new_tty, std::make_pair(existing_pos1, existing_pos2)) &&
+                                      (new_dim == existing_dim);
+                           });
     }
 
     // 检查玩家拥有领地数量的函数
@@ -472,11 +474,22 @@ public:
         }
         return tty_num;
     }
-//添加领地函数
+    //添加领地函数
     void player_add_tty(const std::string& player_name, Point3D pos1, Point3D pos2, Point3D tppos, const std::string& dim) {
+        int area = get_tty_area(int(std::get<0>(pos1)),int(std::get<2>(pos1)),int(std::get<0>(pos2)),int(std::get<2>(pos2)));
+        //检查领地大小
+        if (area >= max_tty_area && max_tty_area != -1) {
+            getServer().getPlayer(player_name)->sendErrorMessage(LangTty.getLocal("你的领地大小超过所能创建的最大面积,无法创建"));
+            return;
+        }
         // 检查玩家领地数量是否达到上限
         if (check_tty_num(player_name) >= max_tty_num) {
             getServer().getPlayer(player_name)->sendErrorMessage(LangTty.getLocal("你的领地数量已达到上限,无法增加新的领地"));
+            return;
+        }
+        //检查领地是否为一个点
+        if (pos1 == pos2) {
+            getServer().getPlayer(player_name)->sendErrorMessage(LangTty.getLocal("无法设置领地为一个点"));
             return;
         }
         // 检查新领地是否与其他领地重叠
@@ -488,13 +501,43 @@ public:
         if (!isPointInCube(tppos, pos1, pos2)) {
             getServer().getPlayer(player_name)->sendErrorMessage(LangTty.getLocal("你当前所在的位置不在你要添加的领地上!禁止远程施法"));
             return;
-        } else {
+        }
+        else {
+            //检查是否启用经济以及资产是否足够
+            if (money_with_umoney) {
+                int money = umoney_get_player_moeny(player_name);
+                int value = area * price;
+                if (money >= value) {
+                    umoney_change_player_money(player_name,-value);
+                    getServer().getPlayer(player_name)->sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
+                } else {
+                    getServer().getPlayer(player_name)->sendErrorMessage(LangTty.getLocal("你的资产不足以设置此大小的领地,设置此领地所需要的资金为:") +
+                                                                                 to_string(value));
+                    return;
+                }
+            }
             // 使用当前时间作为领地名
             // 使用当前时间和父领地名作为新领地名
             auto now = std::chrono::system_clock::now();
             std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
             std::stringstream ss;
-            ss << std::put_time(std::localtime(&now_time_t), "%Y%m%d%H%M%S");
+#ifdef _WIN32
+            // Windows
+            struct tm timeinfo{};
+            if (localtime_s(&timeinfo, &now_time_t) == 0) {
+                ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
+            } else {
+                ss << generateUUID();
+            }
+#else
+            // Linux
+            struct tm timeinfo{};
+            if (localtime_r(&now_time_t, &timeinfo) != nullptr) {
+                ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
+            } else {
+                ss << generateUUID();
+            }
+#endif
             std::time_t current_time = std::chrono::system_clock::to_time_t(now);
             std::string name = ss.str();
 
@@ -587,12 +630,22 @@ public:
                                                    const Point3D& pos2,
                                                    const Point3D& tppos,
                                                    const std::string& dim) {
+        int area = get_tty_area(int(std::get<0>(pos1)),int(std::get<2>(pos1)),int(std::get<0>(pos2)),int(std::get<2>(pos2)));
+        //检查领地大小
+        if (area >= max_tty_area && max_tty_area != -1) {
+            getServer().getPlayer(playername)->sendErrorMessage(LangTty.getLocal("你的领地大小超过所能创建的最大面积,无法创建"));
+            return{false,""};
+        }
         // 检查玩家领地数量是否已达上限
         if (check_tty_num(playername) >= max_tty_num) {
             getServer().getPlayer(playername)->sendErrorMessage(LangTty.getLocal("你的领地数量已达到上限,无法增加新的领地"));
             return {false, ""};
         }
-
+        //检查领地是否为一个点
+        if (pos1 == pos2) {
+            getServer().getPlayer(playername)->sendErrorMessage(LangTty.getLocal("无法设置领地为一个点"));
+            return {false,""};
+        }
         // 检查传送点是否在领地内
         if (!isPointInCube(tppos, pos1, pos2)) {
             getServer().getPlayer(playername)->sendErrorMessage(LangTty.getLocal("你当前所在的位置不在你要添加的领地上!禁止远程施法"));
@@ -605,11 +658,40 @@ public:
             getServer().getPlayer(playername)->sendErrorMessage(fatherTTYInfo.second);
             return {false, ""};
         } else {
+            //检查是否启用经济以及资产是否足够
+            if (money_with_umoney) {
+                int money = umoney_get_player_moeny(playername);
+                int value = area * price;
+                if (money >= value) {
+                    umoney_change_player_money(playername,-value);
+                    getServer().getPlayer(playername)->sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
+                } else {
+                    getServer().getPlayer(playername)->sendErrorMessage(LangTty.getLocal("你的资产不足以设置此大小的领地,设置此领地所需要的资金为:") +
+                                                                         to_string(value));
+                    return {false,""};
+                }
+            }
             // 使用当前时间和父领地名作为新领地名
             auto now = std::chrono::system_clock::now();
             std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
             std::stringstream ss;
-            ss << std::put_time(std::localtime(&now_time_t), "%Y%m%d%H%M%S");
+#ifdef _WIN32
+            // Windows
+            struct tm timeinfo{};
+            if (localtime_s(&timeinfo, &now_time_t) == 0) {
+                ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
+            } else {
+                ss << generateUUID();
+            }
+#else
+            // Linux
+            struct tm timeinfo{};
+            if (localtime_r(&now_time_t, &timeinfo) != nullptr) {
+                ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
+            } else {
+                ss << generateUUID();
+            }
+#endif
 
             std::string childTTYName = fatherTTYInfo.second + "_" + ss.str();
 
@@ -851,6 +933,15 @@ public:
 
         // --- 4. 如果删除成功，则更新全局缓存 ---
         if (affectedRows > 0) {
+            if (money_with_umoney) {
+                auto tty_data = read_territory_by_name(tty_name);
+                int area = get_tty_area(int(get<0>(tty_data->pos1)),int(get<2>(tty_data->pos1)),int(get<0>(tty_data->pos2)),int(get<2>(tty_data->pos2)));
+                umoney_change_player_money(tty_data->owner,area*price);
+                auto the_player = getServer().getPlayer(tty_data->owner);
+                if (the_player) {
+                    the_player->sendMessage(LangTty.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(area*price));
+                }
+            }
             readAllTerritories();
             return true;
         } else {
@@ -1800,6 +1891,115 @@ public:
         }
     }
 
+    //UUID生成
+    static std::string generateUUID() {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(0, 15);
+        const char hex_chars[] = "0123456789abcdef";
+
+        std::stringstream ss;
+        for (int i = 0; i < 8; ++i) ss << hex_chars[dis(gen)];
+        ss << "-";
+        for (int i = 0; i < 4; ++i) ss << hex_chars[dis(gen)];
+        ss << "-4"; // UUID version 4
+        for (int i = 0; i < 3; ++i) ss << hex_chars[dis(gen)];
+        ss << "-";
+        ss << hex_chars[8 + dis(gen) % 4]; // Variant 10xx
+        for (int i = 0; i < 3; ++i) ss << hex_chars[dis(gen)];
+        ss << "-";
+        for (int i = 0; i < 12; ++i) ss << hex_chars[dis(gen)];
+
+        return ss.str();
+    }
+
+    //接入umoney
+
+    //检查插件存在
+    bool umoney_check_exists() {
+        if (getServer().getPluginManager().getPlugin("umoney")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    //获取玩家资金
+    static int umoney_get_player_moeny(const std::string& player_name) {
+        std::ifstream f(umoney_file);
+        if (!f.is_open()) {
+            std::cerr << "Error: Could not open file: " << umoney_file << std::endl;
+            return -1; // 返回一个错误值表示文件无法打开
+        }
+
+        try {
+            json data = json::parse(f);
+            if (data.contains(player_name)) {
+                return data[player_name].get<int>();
+            } else {
+                std::cerr << "Warning: Player '" << player_name << "' not found in the data." << std::endl;
+                return 0; // 返回 0 表示玩家不存在或没有资金记录
+            }
+        } catch (const json::parse_error& e) {
+            std::cerr << "Error: JSON parse error in file '" << umoney_file << "': " << e.what() << std::endl;
+            return -1; // 返回一个错误值表示 JSON 解析失败
+        }
+
+        return -1;
+    }
+//更改玩家资金
+    static bool umoney_change_player_money(const std::string& player_name, const int money) {
+        std::ifstream ifs(umoney_file);
+        if (!ifs.is_open()) {
+            std::cerr << "Error: Could not open file for reading: " << umoney_file << std::endl;
+            return false;
+        }
+
+        try {
+            json data = json::parse(ifs);
+            ifs.close(); // 关闭读取流
+
+            if (data.contains(player_name)) {
+                data[player_name] = data[player_name].get<int>() + money;
+            } else {
+                // 如果玩家不存在，则创建一个新记录
+                data[player_name] = money;
+            }
+
+            std::ofstream ofs(umoney_file);
+            if (!ofs.is_open()) {
+                std::cerr << "Error: Could not open file for writing: " << umoney_file << std::endl;
+                return false;
+            }
+            ofs << data.dump(4); // 将修改后的 JSON 写回文件
+            ofs.close();
+
+            return true;
+
+        } catch (const json::parse_error& e) {
+            std::cerr << "Error: JSON parse error in file '" << umoney_file << "': " << e.what() << std::endl;
+            return false;
+        } catch (const std::exception& e) {
+            std::cerr << "Error: An unexpected error occurred: " << e.what() << std::endl;
+            return false;
+        }
+
+        return false;
+    }
+
+    //计算面积
+    static int get_tty_area(const int x1,const int z1,const int x2,const int z2) {
+        // 计算矩形的宽度和高度
+        int width = abs(x2 - x1);
+        int height = abs(z2 - z1);
+
+        // 计算面积
+        int area = width * height;
+
+        // 返回面积
+        return area;
+    }
+
+
     //插件初始化
     void onLoad() override
     {
@@ -1831,14 +2031,34 @@ ___________                 .__  __
             if (!json_msg.contains("error")) {
                 max_tty_num = json_msg["player_max_tty_num"];
                 actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
+                max_tty_area = json_msg["max_tty_area"];
+                if (json_msg["money_with_umoney"]) {
+                    if (json_msg["money_with_umoney"] && umoney_check_exists() && json_msg["price"] >0) {
+                        money_with_umoney = true;
+                        price = json_msg["price"];
+                    } else {
+                        money_with_umoney = false;
+                        price = 1;
+                        getLogger().error(LangTty.getLocal("经济配置错误,检查umoney插件是否安装,或者价格是否大于0;领地价格依然保持默认"));
+                    }
+                } else {
+                    money_with_umoney = false;
+                    price = 1;
+                }
             } else {
                 getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置"));
                 max_tty_num = 20;
                 actor_fire_attack_protect = true;
+                money_with_umoney = false;
+                price = 1;
+                max_tty_area = 4000000;
             }
         } catch (const std::exception& e) {
             max_tty_num = 20;
             actor_fire_attack_protect = true;
+            money_with_umoney = false;
+            price = 1;
+            max_tty_area = 4000000;
             getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置"));
         }
         //注册事件监听
@@ -1851,7 +2071,6 @@ ___________                 .__  __
 
         getLogger().info(enable_msg);
         getLogger().info(endstone::ColorFormat::Yellow + "Project address: https://github.com/yuhangle/endstone-territory");
-        //getLogger().info(endstone::ColorFormat::Yellow + LangTty.getLocal("请确保您的endstone版本为0.6.2及以上,否则将发生崩溃"));
         //数据库读取
         readAllTerritories();
         //周期执行
@@ -1870,6 +2089,7 @@ ___________                 .__  __
                 getLogger().error(LangTty.getLocal("无法在服务端使用tty命令!"));
             } else {
                 if (args.empty()) {
+                    //菜单
                     if (getServer().getPluginManager().getPlugin("territory_gui")) {
                         sender.asPlayer()->performCommand("ttygui");
                     } else {
@@ -1889,6 +2109,10 @@ ___________                 .__  __
                             Point3D pos1 = pos_to_tuple(args[1]);
                             //领地位置2
                             Point3D pos2 = pos_to_tuple(args[2]);
+                            if (get<1>(pos1) > 320 || get<1>(pos1) < -64 || get<1>(pos2) > 320 || get<1>(pos2) < -64) {
+                                sender.sendErrorMessage(LangTty.getLocal("无法在世界之外设置领地"));
+                                return false;
+                            }
                             //维度
                             string dim = getServer().getPlayer(player_name)->getLocation().getDimension()->getName();
                             player_add_tty(player_name, pos1, pos2, tppos, dim);
@@ -1907,6 +2131,10 @@ ___________                 .__  __
                             Point3D pos1 = pos_to_tuple(args[1]);
                             //领地位置2
                             Point3D pos2 = pos_to_tuple(args[2]);
+                            if (get<1>(pos1) > 320 || get<1>(pos1) < -64 || get<1>(pos2) > 320 || get<1>(pos2) < -64) {
+                                sender.sendErrorMessage(LangTty.getLocal("无法在世界之外设置领地"));
+                                return false;
+                            }
                             //维度
                             string dim = getServer().getPlayer(player_name)->getLocation().getDimension()->getName();
                             player_add_sub_tty(player_name, pos1, pos2, tppos, dim);
@@ -2244,14 +2472,34 @@ ___________                 .__  __
                         if (!json_msg.contains("error")) {
                             max_tty_num = json_msg["player_max_tty_num"];
                             actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
+                            max_tty_area = json_msg["max_tty_area"];
+                            if (json_msg["money_with_umoney"]) {
+                                if (json_msg["money_with_umoney"] && umoney_check_exists() && json_msg["price"] >0) {
+                                    money_with_umoney = true;
+                                    price = json_msg["price"];
+                                } else {
+                                    money_with_umoney = false;
+                                    price = 1;
+                                    getLogger().error(LangTty.getLocal("经济配置错误,检查umoney插件是否安装,或者价格是否大于0;领地价格依然保持默认"));
+                                }
+                            } else {
+                                money_with_umoney = false;
+                                price = 1;
+                            }
                         } else {
                             getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置"));
                             max_tty_num = 20;
                             actor_fire_attack_protect = true;
+                            money_with_umoney = false;
+                            price = 1;
+                            max_tty_area = 4000000;
                         }
-                    } catch (const std::exception &e) {
+                    } catch (const std::exception& e) {
                         max_tty_num = 20;
                         actor_fire_attack_protect = true;
+                        money_with_umoney = false;
+                        price = 1;
+                        max_tty_area = 4000000;
                         getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置"));
                     }
                     getLogger().info(LangTty.getLocal("重载领地配置和数据完成"));
@@ -2330,14 +2578,34 @@ ___________                 .__  __
                         if (!json_msg.contains("error")) {
                             max_tty_num = json_msg["player_max_tty_num"];
                             actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
+                            max_tty_area = json_msg["max_tty_area"];
+                            if (json_msg["money_with_umoney"]) {
+                                if (json_msg["money_with_umoney"] && umoney_check_exists() && json_msg["price"] >0) {
+                                    money_with_umoney = true;
+                                    price = json_msg["price"];
+                                } else {
+                                    money_with_umoney = false;
+                                    price = 1;
+                                    sender.sendErrorMessage(LangTty.getLocal("经济配置错误,检查umoney插件是否安装,或者价格是否大于0;领地价格依然保持默认"));
+                                }
+                            } else {
+                                money_with_umoney = false;
+                                price = 1;
+                            }
                         } else {
                             sender.sendErrorMessage(LangTty.getLocal("配置文件错误,使用默认配置"));
                             max_tty_num = 20;
                             actor_fire_attack_protect = true;
+                            money_with_umoney = false;
+                            price = 1;
+                            max_tty_area = 4000000;
                         }
-                    } catch (const std::exception &e) {
+                    } catch (const std::exception& e) {
                         max_tty_num = 20;
                         actor_fire_attack_protect = true;
+                        money_with_umoney = false;
+                        price = 1;
+                        max_tty_area = 4000000;
                         sender.sendErrorMessage(LangTty.getLocal("配置文件错误,使用默认配置"));
                     }
                     sender.sendMessage(LangTty.getLocal("重载领地配置和数据完成"));
@@ -2373,8 +2641,9 @@ ___________                 .__  __
             }
         }
         return true;
-    }
+}
 
+// 事件监听
     //方块破坏监听
     void onBlockBreak(endstone::BlockBreakEvent& event)
     {
@@ -2497,7 +2766,7 @@ ___________                 .__  __
                     } else if (event.getDamageSource().getType() == "fire_tick") {
                         //非玩家实体才免疫
                         if (!(event.getActor().getType() == "minecraft:player")) {
-                            if (actor_fire_attack_protect == true) {
+                            if (actor_fire_attack_protect) {
                                 event.setCancelled(true);
                             }
                         }
