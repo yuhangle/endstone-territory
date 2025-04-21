@@ -1947,13 +1947,18 @@ public:
         return -1;
     }
 //更改玩家资金
-    static bool umoney_change_player_money(const std::string& player_name, const int money) {
+    bool umoney_change_player_money(const std::string& player_name, const int money) {
         std::ifstream ifs(umoney_file);
         if (!ifs.is_open()) {
             std::cerr << "Error: Could not open file for reading: " << umoney_file << std::endl;
             return false;
         }
-
+        //优先使用money_connect插件的命令操作umoney
+        if (getServer().getPluginManager().getPlugin("money_connect")) {
+            string command = "myct umoney change \"" + player_name + "\" " + to_string(money);
+            return getServer().dispatchCommand(getServer().getCommandSender(),command);
+        }
+        //未能使用money_connect,直接数据操作
         try {
             json data = json::parse(ifs);
             ifs.close(); // 关闭读取流
