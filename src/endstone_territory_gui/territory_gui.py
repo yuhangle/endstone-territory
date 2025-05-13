@@ -691,9 +691,9 @@ class Territory_gui(Plugin):
                                 def run_add_manager_tsm(sender,json_str:str):
                                     input_json = json.loads(json_str)
                                     #print(input_json)
-                                    index = int(input_json[0])
+                                    index = int(input_json[1])
                                     add_manager_name = online_player_list[index]
-                                    leave_player = input_json[1]
+                                    leave_player = input_json[2]
                                     # 离线玩家为空时采用在线玩家
                                     if leave_player == "":
                                         sender.perform_command(f'tty manager add "{add_manager_name}" "{ttyname}"')
