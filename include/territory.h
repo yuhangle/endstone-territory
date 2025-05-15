@@ -506,7 +506,7 @@ public:
         else {
             //检查是否启用经济以及资产是否足够
             if (money_with_umoney) {
-                int money = umoney_get_player_moeny(player_name);
+                int money = umoney_get_player_money(player_name);
                 int value = area * price;
                 if (money >= value) {
                     (void)umoney_change_player_money(player_name,-value);
@@ -661,7 +661,7 @@ public:
         } else {
             //检查是否启用经济以及资产是否足够
             if (money_with_umoney) {
-                int money = umoney_get_player_moeny(playername);
+                int money = umoney_get_player_money(playername);
                 int value = area * price;
                 if (money >= value) {
                     (void)umoney_change_player_money(playername,-value);
@@ -1920,7 +1920,7 @@ public:
         }
     }
     //获取玩家资金
-    static int umoney_get_player_moeny(const std::string& player_name) {
+    static int umoney_get_player_money(const std::string& player_name) {
         std::ifstream f(umoney_file);
         if (!f.is_open()) {
             std::cerr << "Error: Could not open file: " << umoney_file << std::endl;

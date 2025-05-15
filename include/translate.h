@@ -5,7 +5,6 @@
 #ifndef TERRITORY_TRANSLATE_H
 #define TERRITORY_TRANSLATE_H
 
-#include <iostream>
 #include <fstream>
 #include <nlohmann/json.hpp>
 
