@@ -1,4 +1,4 @@
-﻿//
+//
 // Created by yuhang on 2025/3/6.
 //
 #pragma once
@@ -557,28 +557,16 @@ public:
         }
     }
 // 用于将命令提取的pos转换成需要的值
-    static std::optional<std::tuple<double, double, double>> pos_to_tuple(
-        const std::string& x_str,
-        const std::string& y_str,
-        const std::string& z_str)
-    {
-        double x, y, z;
+    static std::tuple<double, double, double> pos_to_tuple(const std::string& str) {
+        std::tuple<double, double, double> result;
+        std::stringstream ss(str);
+        double value1, value2, value3;
 
-        // 使用字符串流进行转换
-        std::istringstream x_ss(x_str);
-        std::istringstream y_ss(y_str);
-        std::istringstream z_ss(z_str);
-
-        if (!(x_ss >> x) || !(y_ss >> y) || !(z_ss >> z)) {
-            return std::nullopt; // 转换失败
+        // 使用流提取操作符来解析字符串中的浮点数
+        if (ss >> value1 >> value2 >> value3) {
+            result = std::make_tuple(value1, value2, value3);
         }
-
-        // 检查是否全部读取完毕，防止类似 "123abc" 这样的非法输入
-        if (x_ss.rdbuf()->in_avail() != 0 || y_ss.rdbuf()->in_avail() != 0 || z_ss.rdbuf()->in_avail() != 0) {
-            return std::nullopt;
-        }
-
-        return std::make_tuple(x, y, z);
+        return result;
     }
 
     //检查立方体是否为子集函数
@@ -2119,9 +2107,9 @@ ___________                 .__  __
                             int player_z = getServer().getPlayer(player_name)->getLocation().getBlockZ();
                             const std::tuple<double, double, double> tppos = {player_x, player_y, player_z};
                             //领地位置1
-                            Point3D pos1 = pos_to_tuple(args[1],args[2],args[3]).value();
+                            Point3D pos1 = pos_to_tuple(args[1]);
                             //领地位置2
-                            Point3D pos2 = pos_to_tuple(args[4],args[5],args[6]).value();
+                            Point3D pos2 = pos_to_tuple(args[2]);
                             if (get<1>(pos1) > 320 || get<1>(pos1) < -64 || get<1>(pos2) > 320 || get<1>(pos2) < -64) {
                                 sender.sendErrorMessage(LangTty.getLocal("无法在世界之外设置领地"));
                                 return false;
@@ -2141,9 +2129,9 @@ ___________                 .__  __
                             int player_z = getServer().getPlayer(player_name)->getLocation().getBlockZ();
                             const std::tuple<double, double, double> tppos = {player_x, player_y, player_z};
                             //领地位置1
-                            Point3D pos1 = pos_to_tuple(args[1],args[2],args[3]).value();
+                            Point3D pos1 = pos_to_tuple(args[1]);
                             //领地位置2
-                            Point3D pos2 = pos_to_tuple(args[4],args[5],args[6]).value();
+                            Point3D pos2 = pos_to_tuple(args[2]);
                             if (get<1>(pos1) > 320 || get<1>(pos1) < -64 || get<1>(pos2) > 320 || get<1>(pos2) < -64) {
                                 sender.sendErrorMessage(LangTty.getLocal("无法在世界之外设置领地"));
                                 return false;
@@ -2191,13 +2179,9 @@ ___________                 .__  __
                         try {
                             string player_name = sender.getName();
                             if (!args[1].empty()) {
-                                string tty_name = args[1];
-                                if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                                    tty_name = tty_name.substr(1, tty_name.size() - 2);
-                                }
-                                if (read_territory_by_name(tty_name) != nullptr) {
-                                    if (check_tty_owner(tty_name, player_name) == true) {
-                                        if (del_player_tty(tty_name)) {
+                                if (read_territory_by_name(args[1]) != nullptr) {
+                                    if (check_tty_owner(args[1], player_name) == true) {
+                                        if (del_player_tty(args[1])) {
                                             sender.sendMessage(LangTty.getLocal("已成功删除领地"));
                                         } else {
                                             sender.sendErrorMessage(LangTty.getLocal("删除领地失败"));
@@ -2219,21 +2203,14 @@ ___________                 .__  __
                     } else if (args[0] == "rename") {
                         try {
                             string player_name = sender.getName();
-                            string tty_name = args[1];
-                            if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                                tty_name = tty_name.substr(1, tty_name.size() - 2);
-                            }
-                            string new_tty_name = args[2];
-                            if (new_tty_name.size() >= 2 && new_tty_name.front() == '"' && new_tty_name.back() == '"') {
-                                new_tty_name = new_tty_name.substr(1, new_tty_name.size() - 2);
-                            }
+                            const string& tty_name = args[1];
                             TerritoryData *tty_data = read_territory_by_name(tty_name);
                             if (tty_data == nullptr) {
                                 sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                             } else {
                                 if (!args[1].empty() && !args[2].empty()) {
-                                    if (check_tty_owner(tty_name, player_name) == true) {
-                                        pair status_msg = rename_player_tty(tty_name, new_tty_name);
+                                    if (check_tty_owner(args[1], player_name) == true) {
+                                        pair status_msg = rename_player_tty(args[1], args[2]);
                                         if (status_msg.first) {
                                             sender.sendMessage(status_msg.second);
                                         } else {
@@ -2253,10 +2230,7 @@ ___________                 .__  __
                         try {
                             string player_name = sender.getName();
                             if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
-                                string tty_name = args[3];
-                                if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                                    tty_name = tty_name.substr(1, tty_name.size() - 2);
-                                }
+                                const string& tty_name = args[3];
                                 TerritoryData *tty_data = read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
                                     sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
@@ -2288,28 +2262,21 @@ ___________                 .__  __
                         try {
                             string player_name = sender.getName();
                             if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
-                                string tty_name = args[3];
-                                if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                                    tty_name = tty_name.substr(1, tty_name.size() - 2);
-                                }
-                                string action_name = args[2];
-                                if (action_name.size() >= 2 && action_name.front() == '"' && action_name.back() == '"') {
-                                    action_name = action_name.substr(1, action_name.size() - 2);
-                                }
+                                const string& tty_name = args[3];
                                 TerritoryData *tty_data = read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
                                     sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
                                     if (check_tty_op(tty_name, player_name) == true) {
                                         if (args[1] == "add") {
-                                            pair status_msg = change_tty_member(tty_name, "add", action_name);
+                                            pair status_msg = change_tty_member(tty_name, "add", args[2]);
                                             if (status_msg.first) {
                                                 sender.sendMessage(status_msg.second);
                                             } else {
                                                 sender.sendErrorMessage(status_msg.second);
                                             }
                                         } else if (args[1] == "remove") {
-                                            pair status_msg = change_tty_member(tty_name, "remove", action_name);
+                                            pair status_msg = change_tty_member(tty_name, "remove", args[2]);
                                             if (status_msg.first) {
                                                 sender.sendMessage(status_msg.second);
                                             } else {
@@ -2330,28 +2297,21 @@ ___________                 .__  __
                         try {
                             string player_name = sender.getName();
                             if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
-                                string tty_name = args[3];
-                                if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                                    tty_name = tty_name.substr(1, tty_name.size() - 2);
-                                }
-                                string action_name = args[2];
-                                if (action_name.size() >= 2 && action_name.front() == '"' && action_name.back() == '"') {
-                                    action_name = action_name.substr(1, action_name.size() - 2);
-                                }
+                                const string& tty_name = args[3];
                                 TerritoryData *tty_data = read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
                                     sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
                                     if (check_tty_owner(tty_name, player_name) == true) {
                                         if (args[1] == "add") {
-                                            pair status_msg = change_tty_manager(tty_name, "add", action_name);
+                                            pair status_msg = change_tty_manager(tty_name, "add", args[2]);
                                             if (status_msg.first) {
                                                 sender.sendMessage(status_msg.second);
                                             } else {
                                                 sender.sendErrorMessage(status_msg.second);
                                             }
                                         } else if (args[1] == "remove") {
-                                            pair status_msg = change_tty_manager(tty_name, "remove", action_name);
+                                            pair status_msg = change_tty_manager(tty_name, "remove", args[2]);
                                             if (status_msg.first) {
                                                 sender.sendMessage(status_msg.second);
                                             } else {
@@ -2370,16 +2330,13 @@ ___________                 .__  __
                         }
                     } else if (args[0] == "settp") {
                         try {
-                            if (!args[1].empty() && !args[4].empty()) {
+                            if (!args[1].empty() && !args[2].empty()) {
                                 string player_name = sender.getName();
-                                string tty_name = args[4];
-                                if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                                    tty_name = tty_name.substr(1, tty_name.size() - 2);
-                                }
+                                const string& tty_name = args[2];
                                 string dim = getServer().getPlayer(
                                         player_name)->getLocation().getDimension()->getName();
                                 if (check_tty_op(tty_name, player_name) == true) {
-                                    Point3D tp_pos = pos_to_tuple(args[1],args[2],args[3]).value();
+                                    Point3D tp_pos = pos_to_tuple(args[1]);
                                     pair status_msg = change_tty_tppos(tty_name, tp_pos, dim);
                                     if (status_msg.first) {
                                         sender.sendMessage(status_msg.second);
@@ -2399,20 +2356,13 @@ ___________                 .__  __
                         try {
                             string player_name = sender.getName();
                             if (!args[1].empty() && !args[2].empty()) {
-                                string tty_name = args[1];
-                                if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                                    tty_name = tty_name.substr(1, tty_name.size() - 2);
-                                }
+                                const string& tty_name = args[1];
                                 TerritoryData *tty_data = read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
                                     sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
                                     if (check_tty_owner(tty_name, player_name) == true) {
-                                        string new_player_name = args[2];
-                                        if (new_player_name.size() >= 2 && new_player_name.front() == '"' && new_player_name.back() == '"') {
-                                            new_player_name = tty_name.substr(1, new_player_name.size() - 2);
-                                        }
-                                        pair status_msg = change_tty_owner(tty_name, player_name, new_player_name);
+                                        pair status_msg = change_tty_owner(tty_name, player_name, args[2]);
                                         if (status_msg.first) {
                                             sender.sendMessage(status_msg.second);
                                         } else {
@@ -2432,10 +2382,7 @@ ___________                 .__  __
                         try {
                             if (!args[1].empty()) {
                                 string player_name = sender.getName();
-                                string tty_name = args[1];
-                                if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                                    tty_name = tty_name.substr(1, tty_name.size() - 2);
-                                }
+                                const string& tty_name = args[1];
                                 TerritoryData *tty_info = read_territory_by_name(tty_name);
                                 if (tty_info != nullptr) {
                                     if (tty_info->if_tp) {
@@ -2488,12 +2435,8 @@ ___________                 .__  __
                 }
                 if (args[0] == "del") {
                     if (!args[1].empty()) {
-                        string tty_name = args[1];
-                        if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                            tty_name = tty_name.substr(1, tty_name.size() - 2);
-                        }
-                        if (read_territory_by_name(tty_name) != nullptr) {
-                            if (del_player_tty(tty_name)) {
+                        if (read_territory_by_name(args[1]) != nullptr) {
+                            if (del_player_tty(args[1])) {
                                 getLogger().info(LangTty.getLocal("已删除领地"));
                             } else {
                                 getLogger().error(LangTty.getLocal("领地删除失败"));
@@ -2506,11 +2449,7 @@ ___________                 .__  __
                     }
                 } else if (args[0] == "del_all") {
                     if (!args[1].empty()) {
-                        string player_name = args[1];
-                        if (player_name.size() >= 2 && player_name.front() == '"' && player_name.back() == '"') {
-                            player_name = player_name.substr(1, player_name.size() - 2);
-                        }
-                        auto tty_info = list_player_tty(player_name);
+                        auto tty_info = list_player_tty(args[1]);
                         if (tty_info.empty()) {
                             getLogger().error(LangTty.getLocal("该玩家没有领地"));
                         } else {
@@ -2569,10 +2508,7 @@ ___________                 .__  __
                     try {
                         string player_name = sender.getName();
                         if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
-                            string tty_name = args[3];
-                            if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                                tty_name = tty_name.substr(1, tty_name.size() - 2);
-                            }
+                            const string& tty_name = args[3];
                             TerritoryData *tty_data = read_territory_by_name(tty_name);
                             if (tty_data == nullptr) {
                                 getLogger().error(LangTty.getLocal("未知的领地"));
@@ -2605,12 +2541,8 @@ ___________                 .__  __
                 }
                 if (args[0] == "del") {
                     if (!args[1].empty()) {
-                        string tty_name = args[1];
-                        if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                            tty_name = tty_name.substr(1, tty_name.size() - 2);
-                        }
-                        if (read_territory_by_name(tty_name) != nullptr) {
-                            if (del_player_tty(tty_name)) {
+                        if (read_territory_by_name(args[1]) != nullptr) {
+                            if (del_player_tty(args[1])) {
                                 sender.sendMessage(LangTty.getLocal("已删除领地"));
                             } else {
                                 sender.sendErrorMessage(LangTty.getLocal("领地删除失败"));
@@ -2623,11 +2555,7 @@ ___________                 .__  __
                     }
                 } else if (args[0] == "del_all") {
                     if (!args[1].empty()) {
-                        string player_name = args[1];
-                        if (player_name.size() >= 2 && player_name.front() == '"' && player_name.back() == '"') {
-                            player_name = player_name.substr(1, player_name.size() - 2);
-                        }
-                        auto tty_info = list_player_tty(player_name);
+                        auto tty_info = list_player_tty(args[1]);
                         if (tty_info.empty()) {
                             sender.sendErrorMessage(LangTty.getLocal("该玩家没有领地"));
                         } else {
@@ -2686,10 +2614,7 @@ ___________                 .__  __
                     try {
                         string player_name = sender.getName();
                         if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
-                            string tty_name = args[3];
-                            if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
-                                tty_name = tty_name.substr(1, tty_name.size() - 2);
-                            }
+                            const string& tty_name = args[3];
                             TerritoryData *tty_data = read_territory_by_name(tty_name);
                             if (tty_data == nullptr) {
                                 sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
