@@ -2292,20 +2292,24 @@ ___________                 .__  __
                                 if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
                                     tty_name = tty_name.substr(1, tty_name.size() - 2);
                                 }
+                                string action_name = args[2];
+                                if (action_name.size() >= 2 && action_name.front() == '"' && action_name.back() == '"') {
+                                    action_name = action_name.substr(1, action_name.size() - 2);
+                                }
                                 TerritoryData *tty_data = read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
                                     sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
                                     if (check_tty_op(tty_name, player_name) == true) {
                                         if (args[1] == "add") {
-                                            pair status_msg = change_tty_member(tty_name, "add", args[2]);
+                                            pair status_msg = change_tty_member(tty_name, "add", action_name);
                                             if (status_msg.first) {
                                                 sender.sendMessage(status_msg.second);
                                             } else {
                                                 sender.sendErrorMessage(status_msg.second);
                                             }
                                         } else if (args[1] == "remove") {
-                                            pair status_msg = change_tty_member(tty_name, "remove", args[2]);
+                                            pair status_msg = change_tty_member(tty_name, "remove", action_name);
                                             if (status_msg.first) {
                                                 sender.sendMessage(status_msg.second);
                                             } else {
@@ -2330,20 +2334,24 @@ ___________                 .__  __
                                 if (tty_name.size() >= 2 && tty_name.front() == '"' && tty_name.back() == '"') {
                                     tty_name = tty_name.substr(1, tty_name.size() - 2);
                                 }
+                                string action_name = args[2];
+                                if (action_name.size() >= 2 && action_name.front() == '"' && action_name.back() == '"') {
+                                    action_name = action_name.substr(1, action_name.size() - 2);
+                                }
                                 TerritoryData *tty_data = read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
                                     sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
                                     if (check_tty_owner(tty_name, player_name) == true) {
                                         if (args[1] == "add") {
-                                            pair status_msg = change_tty_manager(tty_name, "add", args[2]);
+                                            pair status_msg = change_tty_manager(tty_name, "add", action_name);
                                             if (status_msg.first) {
                                                 sender.sendMessage(status_msg.second);
                                             } else {
                                                 sender.sendErrorMessage(status_msg.second);
                                             }
                                         } else if (args[1] == "remove") {
-                                            pair status_msg = change_tty_manager(tty_name, "remove", args[2]);
+                                            pair status_msg = change_tty_manager(tty_name, "remove", action_name);
                                             if (status_msg.first) {
                                                 sender.sendMessage(status_msg.second);
                                             } else {
