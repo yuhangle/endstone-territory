@@ -13,7 +13,7 @@ include(FetchContent)
 FetchContent_Declare(
         endstone
         GIT_REPOSITORY https://github.com/EndstoneMC/endstone.git
-        GIT_TAG b80c76c
+        GIT_TAG v0.8.2
 )
 FetchContent_MakeAvailable(endstone)
 
