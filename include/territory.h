@@ -1139,7 +1139,12 @@ public:
         // 遍历全局缓存中的每一条领地数据
         for (const auto &territory: all_tty | views::values) {
             if (territory.name == ttyname) {  // 找到对应领地
-                if (player_name == territory.owner || player_name == territory.manager)
+                // 拆分为管理员列表（以逗号分割）
+                std::vector<std::string> currentManagers;
+                if (!territory.manager.empty()) {
+                    currentManagers = split(territory.manager, ',');
+                }
+                if (player_name == territory.owner || ranges::find(currentManagers,player_name) != currentManagers.end())
                     return true;
                 else
                     return false;
