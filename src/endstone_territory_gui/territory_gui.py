@@ -1,3 +1,4 @@
+import endstone.form
 from endstone.command import Command, CommandSender
 from endstone.plugin import Plugin
 from endstone import ColorFormat,Player
@@ -30,7 +31,7 @@ def read_lang() -> bool:
 
 read_lang()
 class Territory_gui(Plugin):
-    api_version = "0.7"
+    api_version = "0.10"
 
     # 连接数据库函数
     def connect(self):
@@ -834,18 +835,18 @@ class Territory_gui(Plugin):
                                 sender.send_form(del_tty_form)
                             return on_click
                         
-                        set_permis_button = ActionForm.Button(text=self.getLocal('§l§1管理自己管理的领地权限'),icon="textures/ui/accessibility_glyph_color",on_click=set_permis())
-                        del_member_button = ActionForm.Button(text=self.getLocal('§l§1删除自己管理的领地成员'),icon="textures/ui/permissions_member_star",on_click=del_tty_member())
-                        add_member_button = ActionForm.Button(text=self.getLocal('§l§1添加自己管理的领地成员'),icon="textures/ui/permissions_member_star_hover",on_click=add_tty_member())
+                        set_permis_button = endstone.form.Button(text=self.getLocal('§l§1管理自己管理的领地权限'),icon="textures/ui/accessibility_glyph_color",on_click=set_permis())
+                        del_member_button = endstone.form.Button(text=self.getLocal('§l§1删除自己管理的领地成员'),icon="textures/ui/permissions_member_star",on_click=del_tty_member())
+                        add_member_button = endstone.form.Button(text=self.getLocal('§l§1添加自己管理的领地成员'),icon="textures/ui/permissions_member_star_hover",on_click=add_tty_member())
                         
-                        del_manager_button = ActionForm.Button(text=self.getLocal('§l§1删除自己领地的领地管理员'),icon="textures/ui/permissions_op_crown",on_click=del_tty_manager())
-                        add_manager_button = ActionForm.Button(text=self.getLocal('§l§1添加自己领地的领地管理员'),icon="textures/ui/permissions_op_crown_hover",on_click=add_tty_manager())
+                        del_manager_button = endstone.form.Button(text=self.getLocal('§l§1删除自己领地的领地管理员'),icon="textures/ui/permissions_op_crown",on_click=del_tty_manager())
+                        add_manager_button = endstone.form.Button(text=self.getLocal('§l§1添加自己领地的领地管理员'),icon="textures/ui/permissions_op_crown_hover",on_click=add_tty_manager())
                         
-                        set_tp_button = ActionForm.Button(text=self.getLocal('§l§1设置自己管理的领地的传送点'),icon="textures/ui/csb_purchase_warning",on_click=set_tp_tty())
+                        set_tp_button = endstone.form.Button(text=self.getLocal('§l§1设置自己管理的领地的传送点'),icon="textures/ui/csb_purchase_warning",on_click=set_tp_tty())
 
-                        transfer_button = ActionForm.Button(text=self.getLocal('§l§1将自己的领地转让给其他玩家'),icon="textures/ui/trade_icon",on_click=transfer_tty())
+                        transfer_button = endstone.form.Button(text=self.getLocal('§l§1将自己的领地转让给其他玩家'),icon="textures/ui/trade_icon",on_click=transfer_tty())
 
-                        del_button = ActionForm.Button(text=self.getLocal('§l§4删除自己的领地'),icon="textures/ui/book_trash_default",on_click=del_tty())
+                        del_button = endstone.form.Button(text=self.getLocal('§l§4删除自己的领地'),icon="textures/ui/book_trash_default",on_click=del_tty())
                         
                         main_menu = ActionForm(
                             title=f"{ColorFormat.DARK_PURPLE}{self.getLocal('§l领地管理界面')}",
@@ -878,14 +879,14 @@ class Territory_gui(Plugin):
                         sender.send_form(list_form)
                     return run_list_click
                 # 创建按钮
-                create_tty_button = ActionForm.Button(text=self.getLocal('§l§5创建领地'),icon="textures/ui/color_plus",on_click=create_tty())
-                create_sub_tty_button = ActionForm.Button(text=self.getLocal('§l§5创建子领地'),icon="textures/ui/copy",on_click=create_sub_tty())
-                rename_tty_button = ActionForm.Button(text=self.getLocal('§l§5重命名领地'),icon="textures/ui/book_edit_default",on_click=rename_tty())
-                tp_tty_button = ActionForm.Button(text=self.getLocal('§l§5传送自己及已加入的领地'),icon="textures/ui/csb_purchase_warning",on_click=tp_tty())
-                tp_all_tty_button = ActionForm.Button(text=self.getLocal('§l§5传送全部领地'),icon="textures/ui/default_world",on_click=tp_all_tty())
-                man_tty_button = ActionForm.Button(text=self.getLocal('§l§5管理领地'),icon="textures/ui/icon_setting",on_click=man_tty())
-                help_tty_button = ActionForm.Button(text=self.getLocal('§l§5查看领地帮助'),icon="textures/ui/Feedback",on_click=run_command(com="tty help"))
-                list_tty_button = ActionForm.Button(text=self.getLocal('§l§5列出自己的全部领地'),icon="textures/ui/infobulb",on_click=run_list())
+                create_tty_button = endstone.form.Button(text=self.getLocal('§l§5创建领地'),icon="textures/ui/color_plus",on_click=create_tty())
+                create_sub_tty_button = endstone.form.Button(text=self.getLocal('§l§5创建子领地'),icon="textures/ui/copy",on_click=create_sub_tty())
+                rename_tty_button = endstone.form.Button(text=self.getLocal('§l§5重命名领地'),icon="textures/ui/book_edit_default",on_click=rename_tty())
+                tp_tty_button = endstone.form.Button(text=self.getLocal('§l§5传送自己及已加入的领地'),icon="textures/ui/csb_purchase_warning",on_click=tp_tty())
+                tp_all_tty_button = endstone.form.Button(text=self.getLocal('§l§5传送全部领地'),icon="textures/ui/default_world",on_click=tp_all_tty())
+                man_tty_button = endstone.form.Button(text=self.getLocal('§l§5管理领地'),icon="textures/ui/icon_setting",on_click=man_tty())
+                help_tty_button = endstone.form.Button(text=self.getLocal('§l§5查看领地帮助'),icon="textures/ui/Feedback",on_click=run_command(com="tty help"))
+                list_tty_button = endstone.form.Button(text=self.getLocal('§l§5列出自己的全部领地'),icon="textures/ui/infobulb",on_click=run_list())
                 # 发送菜单
                 form = ActionForm(
                     title=f"{ColorFormat.DARK_PURPLE}{self.getLocal('§lTerritory领地菜单')}",
