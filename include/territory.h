@@ -2695,6 +2695,9 @@ ___________                 .__  __
     //玩家交互监听
     static void onPlayerjiaohu(endstone::PlayerInteractEvent& event)
     {
+        if (!event.getBlock()) {
+            return;
+        }
         string player_name = event.getPlayer().getName();
         string player_dim = event.getPlayer().getLocation().getDimension()->getName();
         Point3D block_pos = {event.getBlock()->getLocation().getBlockX(),event.getBlock()->getLocation().getBlockY(),event.getBlock()->getLocation().getBlockZ()};
