@@ -1,0 +1,94 @@
+name: Build Endstone Territory
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（例如 1.2.3，会自动加上 v 前缀）'
+        required: true
+      publish_release:
+        description: '是否发布 Release（true/false）'
+        required: true
+        default: 'false'
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ===== Linux =====
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg lsb-release software-properties-common
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 16
+          sudo apt-get install -y libc++-16-dev libc++abi-16-dev cmake libsqlite3-dev
+
+      - name: Configure CMake (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER=clang-16 \
+                -DCMAKE_CXX_COMPILER=clang++-16 \
+                -DCMAKE_CXX_FLAGS="-stdlib=libc++"
+
+      # ===== Windows =====
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
+          git clone https://github.com/microsoft/vcpkg.git
+          .\vcpkg\bootstrap-vcpkg.bat
+          .\vcpkg\vcpkg.exe install sqlite3:x64-windows-static
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release `
+                   -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+                   -DVCPKG_TARGET_TRIPLET=x64-windows-static
+
+      # ===== Build =====
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: endstone-territory-${{ matrix.os }}
+          path: |
+            build/**/*.dll
+            build/**/*.so
+
+  release:
+    name: Publish Release
+    needs: build
+    if: ${{ github.event.inputs.publish_release == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: Endstone Territory v${{ github.event.inputs.version }}
+          draft: false
+          prerelease: false
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}

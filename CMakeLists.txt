@@ -10,37 +10,38 @@ if(WIN32)
 endif()
 
 include(FetchContent)
+
+# Endstone
 FetchContent_Declare(
-        endstone
-        GIT_REPOSITORY https://github.com/EndstoneMC/endstone.git
-        GIT_TAG v0.10.3
+    endstone
+    GIT_REPOSITORY https://github.com/EndstoneMC/endstone.git
+    GIT_TAG v0.10.3
 )
 FetchContent_MakeAvailable(endstone)
 
+# nlohmann_json
 FetchContent_Declare(
-        nlohmann_json
-        GIT_REPOSITORY https://github.com/nlohmann/json.git
-        GIT_TAG master
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG master
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
-if (WIN32)
-    include_directories(D:/Apps/vcpkg/installed/x64-windows-static/include)
-    link_directories(D:/Apps/vcpkg/installed/x64-windows-static/lib)
+# SQLite3 (跨平台检测)
+if(WIN32)
+    find_package(SQLite3 REQUIRED)
+else()
+    find_package(SQLite3 REQUIRED)
 endif()
 
-if (UNIX)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(SQLITE3 REQUIRED sqlite3)
-    include_directories(${SQLITE3_INCLUDE_DIRS})
-    link_directories(${SQLITE3_LIBRARY_DIRS})
-endif ()
-
+# 插件源码
 endstone_add_plugin(${PROJECT_NAME} src/territory.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE include)
-if (WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json "D:/Apps/vcpkg/installed/x64-windows-static/lib/sqlite3.lib")
-endif ()
-if (UNIX)
-    target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json ${SQLITE3_LIBRARIES})
-endif ()
+
+# 链接库
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+        nlohmann_json::nlohmann_json
+        SQLite::SQLite3
+)
+
