@@ -35,7 +35,7 @@ else()
 endif()
 
 # 插件源码
-endstone_add_plugin(${PROJECT_NAME} src/territory.cpp)
+endstone_add_plugin(${PROJECT_NAME} src/territory.cpp include/Territory_Action.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE include)
 
 # 链接库

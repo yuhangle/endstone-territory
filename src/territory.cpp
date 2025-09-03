@@ -1,9 +1,9 @@
 //
 // Created by yuhang on 2025/3/6.
 //
-#include "territory.h"
 
-ENDSTONE_PLUGIN("territory", "0.2.5", Territory)
+#include "TerritoryCore.h"
+ENDSTONE_PLUGIN("territory", "0.2.6dev1", Territory)
 {
     description = "a territory plugin for endstone with C++";
     website = "https://github.com/yuhangle/endstone-territory";
