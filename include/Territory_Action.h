@@ -6,6 +6,7 @@
 #define TERRITORY_TERRITORY_ACTION_H
 
 #include <vector>
+#include <optional>
 #include "DataBase.h"
 using namespace std;
 
