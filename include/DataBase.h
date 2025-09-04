@@ -42,7 +42,7 @@ public:
         // 创建 territories 表
         std::string create_territory_table = "CREATE TABLE IF NOT EXISTS territories ("
                                         "name TEXT PRIMARY KEY, "
-                                        "pos1_x REAL, pos1_               v                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               y REAL, pos1_z REAL, "
+                                        "pos1_x REAL, pos1_y REAL, pos1_z REAL, "
                                         "pos2_x REAL, pos2_y REAL, pos2_z REAL, "
                                         "tppos_x REAL, tppos_y REAL, tppos_z REAL, "
                                         "owner TEXT, manager TEXT, member TEXT, "
@@ -59,7 +59,7 @@ public:
         // 检查并重新构建表结构以插入 if_damage 到 if_bomb 之后
         std::string checkSql = "PRAGMA table_info(territories);";
         sqlite3_stmt* stmt;
-        rc = sqlite3_prepare_v2(db, checkSql.c_str(), -1, &stmt, nullptr);
+        sqlite3_prepare_v2(db, checkSql.c_str(), -1, &stmt, nullptr);
         bool hasIfDamage = false;
         while (sqlite3_step(stmt) == SQLITE_ROW) {
             const unsigned char* columnName = sqlite3_column_text(stmt, 1);
@@ -284,14 +284,8 @@ public:
         }
         std::string sql;
         if (targetColumn == "if_jiaohu" || targetColumn == "if_break" || targetColumn == "if_tp" || targetColumn == "if_build" || targetColumn == "if_bomb" || targetColumn == "if_damage") {
-            int bool_int;
-            if (newValue == "true") {
-                bool_int = 1;
-            } else {
-                bool_int = 0;
-            }
             sql = "UPDATE " + tableName +
-                  " SET " + targetColumn + " = " + fmt::to_string(bool_int) +
+                  " SET " + targetColumn + " = " + fmt::to_string(newValue) +
                   " WHERE " + conditionColumn + " = '" + conditionValue + "';";
         }
         else {

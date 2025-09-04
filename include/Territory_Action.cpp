@@ -6,7 +6,6 @@
 
 #include "TerritoryCore.h"
 Territory_Action::Territory_Action(DataBase database) : Database(std::move(database)) {}
-std::map<std::string, Territory_Action::TerritoryData> Territory_Action::all_tty;
 
 // 从外部获取all_tty数据
 const std::map<std::string, Territory_Action::TerritoryData>&
@@ -15,13 +14,18 @@ Territory_Action::getAllTty() {
 }
 
 //从数据库读取全部领地数据并载入全局变量all_tty
-int Territory_Action::get_all_tty() const{
+std::map<std::string, Territory_Action::TerritoryData>& Territory_Action::get_all_tty() const{
     vector<map<string,string>> result;
     Database.getAllTty(result);
     if (result.empty()) {
-        return 1;
+        Territory_Action::TerritoryData emptyData = {""};
+        std::map<std::string, Territory_Action::TerritoryData> emptyDatas;
+        emptyDatas.insert(make_pair("", emptyData));
+        all_tty = emptyDatas;
+        return all_tty;
     }
     all_tty.clear();
+    std::map<std::string, Territory_Action::TerritoryData> new_all_tty;
     for (const auto& data : result) {
         TerritoryData tty_data;
         tty_data.name = data.at("name");
@@ -39,9 +43,10 @@ int Territory_Action::get_all_tty() const{
         tty_data.if_damage = DataBase::stringToInt(data.at("if_damage"));
         tty_data.dim = data.at("dim");
         tty_data.father_tty = data.at("father_tty");
-        all_tty[tty_data.name] = tty_data;
+        new_all_tty[tty_data.name] = tty_data;
     }
-    return 0;
+    all_tty = new_all_tty;
+    return all_tty;
 };
 
 // 根据名字读取领地信息的函数
@@ -238,27 +243,32 @@ std::vector<std::string> Territory_Action::getSubTty(const std::string &tty_name
         return {};
     }
     vector<std::string> sub_tty_name;
-    for (const auto &data: result) {
+    sub_tty_name.reserve(result.size());
+for (const auto &data: result) {
         sub_tty_name.push_back(data.at("name"));
     }
     return sub_tty_name;
 }
 
 
-//删除领地
+// 删除领地函数
 bool Territory_Action::del_Tty_by_name(const std::string& territory_name) const {
     auto tty_data = read_territory_by_name(territory_name);
     if (!tty_data) {
         return false;
     }
+    // 成功找到领地，执行删除
     (void)Database.deleteTty(tty_data->name);
+
+    // 获取子领地并修改它们的父领地
     auto sub_ttys = getSubTty(territory_name);
-    if (sub_ttys.empty()) {
-        return true;
-    }
     for (const auto &sub_tty: sub_ttys) {
         (void)Database.updateValue("territories","father_tty","","name",sub_tty);
     }
+
+    // 在所有数据库操作完成后，统一刷新全局领地缓存
+    all_tty = get_all_tty();
+
     return true;
 }
 
@@ -280,7 +290,7 @@ bool Territory_Action::rename_Tty(const std::string &territory_name, const std::
 
 // 重命名玩家领地函数
 [[nodiscard]] std::pair<bool, std::string> Territory_Action::rename_player_tty(const std::string &oldname, const std::string &newname) const{
-    if (TA.rename_Tty(oldname, newname)) {
+    if (rename_Tty(oldname, newname)) {
         std::string msg = LangTty.getLocal("已重命名领地: 从 ") + oldname + LangTty.getLocal(" 到 ") + newname;
         (void)get_all_tty();
         return {true, msg};
@@ -390,13 +400,7 @@ bool Territory_Action::change_tty_permissions(const std::string &ttyname, const 
     if (const auto tty = read_territory_by_name(ttyname); tty == nullptr) {
         return false;
     }
-    bool bool_value;
-    if (value == 1) {
-        bool_value = true;
-    } else {
-        bool_value = false;
-    }
-    return Database.updateValue("territories",permission,std::to_string(bool_value),"name",ttyname);
+    return Database.updateValue("territories",permission,std::to_string(value),"name",ttyname);
 }
 
 // 领地权限变更函数
@@ -417,7 +421,7 @@ std::pair<bool, std::string> Territory_Action::change_territory_permissions(cons
         return {false, msg};
                                                                                                                                }
 
-    if (TA.change_tty_permissions(ttyname, permission, value)) {
+    if (change_tty_permissions(ttyname, permission, value)) {
         std::string msg = LangTty.getLocal("已更新领地 ") + ttyname + LangTty.getLocal(" 的权限 ") + permission + LangTty.getLocal(" 为 ") + std::to_string(value);
         // 更新全局领地信息
         (void)get_all_tty();
@@ -449,7 +453,7 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
         }
     }
     auto new_tty_members = DataBase::vectorToString(tty_members);
-    if (Database.updateValue("territories","member",new_tty_members,"ttyname",ttyname)) {
+    if (Database.updateValue("territories","member",new_tty_members,"name",ttyname)) {
         return 0;
     } else {
         return -2;
@@ -471,7 +475,7 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
     if (action != "add" && action != "remove") {
         return {false, "无效的操作类型: " + action};
     }
-    auto status = TA.change_tty_member(ttyname, action, player_name);
+    auto status = change_tty_member(ttyname, action, player_name);
     if (status == -1) {
         std::string msg = LangTty.getLocal("尝试更改领地成员但未找到领地: ") + ttyname;
         return {false, msg};
@@ -539,7 +543,7 @@ int Territory_Action::change_tty_owner(const std::string &ttyname,const std::str
         std::string msg = LangTty.getLocal("玩家 ") + new_owner_name + LangTty.getLocal(" 的领地数量已达到上限, 无法增加新的领地, 转让领地失败");
         return {false, msg};
     }
-    auto status = TA.change_tty_owner(ttyname,old_owner_name,new_owner_name);
+    auto status = change_tty_owner(ttyname,old_owner_name,new_owner_name);
     if (status == -1) {
         std::string msg = LangTty.getLocal("尝试更改领地主人但未找到领地: ") + ttyname;
         return {false, msg};
@@ -582,7 +586,7 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
         }
     }
     auto new_tty_managers = DataBase::vectorToString(tty_manager);
-    if (Database.updateValue("territories","manager",new_tty_managers,"ttyname",ttyname)) {
+    if (Database.updateValue("territories","manager",new_tty_managers,"name",ttyname)) {
         return 0;
     } else {
         return -2;
@@ -604,7 +608,7 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
     if (action != "add" && action != "remove") {
         return {false, "无效的操作类型: " + action};
     }
-    auto status = TA.change_tty_manager(ttyname, action, player_name);
+    auto status = change_tty_manager(ttyname, action, player_name);
     if (status == -1) {
         std::string msg = LangTty.getLocal("尝试更改领地管理员但未找到领地: ") + ttyname;
         return {false, msg};

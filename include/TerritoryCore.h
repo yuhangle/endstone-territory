@@ -142,8 +142,8 @@ public:
     }
 
     // 从数据库读取所有领地数据
-    [[nodiscard]] static int readAllTerritories() {
-        return TA.get_all_tty();
+    static void readAllTerritories() {
+        (void)TA.get_all_tty();
     }
     
     //添加领地函数
@@ -257,7 +257,7 @@ public:
         }
 
         // 父领地检查
-        auto fatherTTYInfo = TA.listTrueFatherTTY(playername, std::make_tuple(pos1, pos2), dim);
+        auto fatherTTYInfo = Territory_Action::listTrueFatherTTY(playername, std::make_tuple(pos1, pos2), dim);
         if (!fatherTTYInfo.first) {
             getServer().getPlayer(playername)->sendErrorMessage(fatherTTYInfo.second);
             return {false, ""};
@@ -348,14 +348,12 @@ public:
 
             // 先更新玩家位置
             get<0>(lastPlayerPositions[player_name]) = player_pos;
-            const auto& all_tty = TA.getAllTty();
+            const auto& all_tty = Territory_Action::getAllTty();
             // 遍历所有领地数据，确定玩家所在的最精细的领地（若存在子领地，则取子领地）
             const Territory_Action::TerritoryData* selectedTerritory = nullptr;
             for (const auto &val: all_tty | views::values) {
                 const Territory_Action::TerritoryData &data = val;
-                cout << data.name << endl;
                 if (data.dim == player_dim && Territory_Action::isPointInCube(player_pos, data.pos1, data.pos2)) {
-                    cout << "2" << endl;
                     // 第一次匹配到的领地先赋值
                     if (selectedTerritory == nullptr) {
                         selectedTerritory = &data;
@@ -418,14 +416,13 @@ public:
     [[nodiscard]] bool del_player_tty(const std::string &tty_name) const {
         if (TA.del_Tty_by_name(tty_name)) {
             if (money_with_umoney) {
-                auto tty_data = TA.read_territory_by_name(tty_name);
+                auto tty_data = Territory_Action::read_territory_by_name(tty_name);
                 int area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
                 (void)umoney_change_player_money(tty_data->owner,area*price);
                 if (auto the_player = getServer().getPlayer(tty_data->owner)) {
                     the_player->sendMessage(LangTty.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(area*price));
                 }
             }
-            (void)readAllTerritories();
             return true;
         } else {
             return false;
@@ -677,7 +674,7 @@ ___________                 .__  __
                     } else if (args[0] == "list") {
                         try {
                             string player_name = sender.getName();
-                            auto territories = TA.list_player_tty(player_name);
+                            auto territories = Territory_Action::list_player_tty(player_name);
                             if (territories.empty()) {
                                 sender.sendErrorMessage(LangTty.getLocal("你没有领地"));
                             } else {
@@ -711,7 +708,7 @@ ___________                 .__  __
                         try {
                             string player_name = sender.getName();
                             if (!args[1].empty()) {
-                                if (TA.read_territory_by_name(args[1]) != nullptr) {
+                                if (Territory_Action::read_territory_by_name(args[1]) != nullptr) {
                                     if (Territory_Action::check_tty_owner(args[1], player_name) == true) {
                                         if (del_player_tty(args[1])) {
                                             sender.sendMessage(LangTty.getLocal("已成功删除领地"));
@@ -736,7 +733,7 @@ ___________                 .__  __
                         try {
                             string player_name = sender.getName();
                             const string& tty_name = args[1];
-                            Territory_Action::TerritoryData *tty_data = TA.read_territory_by_name(tty_name);
+                            Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name);
                             if (tty_data == nullptr) {
                                 sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                             } else {
@@ -763,7 +760,7 @@ ___________                 .__  __
                             string player_name = sender.getName();
                             if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
                                 const string& tty_name = args[3];
-                                Territory_Action::TerritoryData *tty_data = TA.read_territory_by_name(tty_name);
+                                Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
                                     sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
@@ -795,7 +792,7 @@ ___________                 .__  __
                             string player_name = sender.getName();
                             if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
                                 const string& tty_name = args[3];
-                                Territory_Action::TerritoryData *tty_data = TA.read_territory_by_name(tty_name);
+                                Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
                                     sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
@@ -830,7 +827,7 @@ ___________                 .__  __
                             string player_name = sender.getName();
                             if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
                                 const string& tty_name = args[3];
-                                Territory_Action::TerritoryData *tty_data = TA.read_territory_by_name(tty_name);
+                                Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
                                     sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
@@ -889,7 +886,7 @@ ___________                 .__  __
                             string player_name = sender.getName();
                             if (!args[1].empty() && !args[2].empty()) {
                                 const string& tty_name = args[1];
-                                Territory_Action::TerritoryData *tty_data = TA.read_territory_by_name(tty_name);
+                                Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name);
                                 if (tty_data == nullptr) {
                                     sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                                 } else {
@@ -915,7 +912,7 @@ ___________                 .__  __
                             if (!args[1].empty()) {
                                 string player_name = sender.getName();
                                 const string& tty_name = args[1];
-                                Territory_Action::TerritoryData *tty_info = TA.read_territory_by_name(tty_name);
+                                Territory_Action::TerritoryData *tty_info = Territory_Action::read_territory_by_name(tty_name);
                                 if (tty_info != nullptr) {
                                     if (tty_info->if_tp) {
                                         auto player = getServer().getPlayer(player_name);
@@ -967,7 +964,7 @@ ___________                 .__  __
                 }
                 if (args[0] == "del") {
                     if (!args[1].empty()) {
-                        if (TA.read_territory_by_name(args[1]) != nullptr) {
+                        if (Territory_Action::read_territory_by_name(args[1]) != nullptr) {
                             if (del_player_tty(args[1])) {
                                 getLogger().info(LangTty.getLocal("已删除领地"));
                             } else {
@@ -981,7 +978,7 @@ ___________                 .__  __
                     }
                 } else if (args[0] == "del_all") {
                     if (!args[1].empty()) {
-                        auto tty_info = TA.list_player_tty(args[1]);
+                        auto tty_info = Territory_Action::list_player_tty(args[1]);
                         if (tty_info.empty()) {
                             getLogger().error(LangTty.getLocal("该玩家没有领地"));
                         } else {
@@ -1041,7 +1038,7 @@ ___________                 .__  __
                         string player_name = sender.getName();
                         if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
                             const string& tty_name = args[3];
-                            Territory_Action::TerritoryData *tty_data = TA.read_territory_by_name(tty_name);
+                            Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name);
                             if (tty_data == nullptr) {
                                 getLogger().error(LangTty.getLocal("未知的领地"));
                             } else {
@@ -1073,7 +1070,7 @@ ___________                 .__  __
                 }
                 if (args[0] == "del") {
                     if (!args[1].empty()) {
-                        if (TA.read_territory_by_name(args[1]) != nullptr) {
+                        if (Territory_Action::read_territory_by_name(args[1]) != nullptr) {
                             if (del_player_tty(args[1])) {
                                 sender.sendMessage(LangTty.getLocal("已删除领地"));
                             } else {
@@ -1087,7 +1084,7 @@ ___________                 .__  __
                     }
                 } else if (args[0] == "del_all") {
                     if (!args[1].empty()) {
-                        auto tty_info = TA.list_player_tty(args[1]);
+                        auto tty_info = Territory_Action::list_player_tty(args[1]);
                         if (tty_info.empty()) {
                             sender.sendErrorMessage(LangTty.getLocal("该玩家没有领地"));
                         } else {
@@ -1147,7 +1144,7 @@ ___________                 .__  __
                         string player_name = sender.getName();
                         if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
                             const string& tty_name = args[3];
-                            Territory_Action::TerritoryData *tty_data = TA.read_territory_by_name(tty_name);
+                            Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name);
                             if (tty_data == nullptr) {
                                 sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                             } else {
