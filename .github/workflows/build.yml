@@ -18,6 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04, windows-latest]
+        lang: [english]
 
     steps:
       - name: Checkout repository
@@ -64,55 +65,40 @@ jobs:
         run: cmake --build build --config Release
 
       # ===== Package per language =====
-      - name: Package per language
+      - name: Package plugin
         run: |
           VERSION=${{ github.event.inputs.version }}
           OS=${{ matrix.os }}
+          LANG=${{ matrix.lang }}
           ARTIFACT_DIR=artifacts
-
+          
           mkdir -p $ARTIFACT_DIR
-
-          # 找到插件产物
+          
+          PKG_DIR=pkg_${LANG}
+          mkdir -p ${PKG_DIR}/territory
+          
           if [ "${OS}" = "windows-latest" ]; then
-            PLUGIN=$(find build -name "*.dll" | head -n 1)
-            EXT=dll
-            IS_WINDOWS=1
+              # 使用 PowerShell 找第一个 dll
+              PLUGIN=$(powershell -Command "Get-ChildItem -Recurse -Filter '*.dll' build | Select-Object -First 1 | ForEach-Object { \$_.FullName }" | tr -d '\r')
+              EXT=dll
           else
-            PLUGIN=$(find build -name "*.so" | head -n 1)
-            EXT=so
-            IS_WINDOWS=0
+              PLUGIN=$(find build -name "*.so" | head -n 1)
+              EXT=so
           fi
+          
+          cp "$PLUGIN" ${PKG_DIR}/territory/territory.${EXT}
+          cp "language/${LANG}/lang.json" ${PKG_DIR}/territory/lang.json
+          
+          ZIP_NAME=territory_v${VERSION}_${OS}_${LANG}.zip
+          (cd ${PKG_DIR} && zip -r ../${ARTIFACT_DIR}/${ZIP_NAME} territory)
+          rm -rf ${PKG_DIR}
 
-          for LANG_DIR in language/*; do
-            LANG_NAME=$(basename "$LANG_DIR")
-
-            PKG_DIR=pkg_${LANG_NAME}
-            mkdir -p ${PKG_DIR}/territory
-
-            cp "$PLUGIN" ${PKG_DIR}/territory/territory.${EXT}
-            cp "${LANG_DIR}/lang.json" ${PKG_DIR}/territory/lang.json
-
-            ZIP_NAME=territory_v${VERSION}_${OS}_${LANG_NAME}.zip
-
-            if [ $IS_WINDOWS -eq 0 ]; then
-              # Linux 使用 zip
-              (cd ${PKG_DIR} && zip -r ../${ARTIFACT_DIR}/${ZIP_NAME} territory)
-            else
-              # Windows 使用 PowerShell Compress-Archive
-              powershell -Command "Compress-Archive -Path '${PKG_DIR}\\territory\\*' -DestinationPath '${ARTIFACT_DIR}\\${ZIP_NAME}' -Force"
-            fi
-
-            rm -rf ${PKG_DIR}
-          done
-
-      # ===== Upload artifacts =====
-      - name: Upload artifacts per language
-        run: |
-          for f in artifacts/*.zip; do
-            LANG_NAME=$(basename "$f" | cut -d'_' -f4 | cut -d'.' -f1)
-            echo "Uploading $f as $LANG_NAME"
-            gh actions upload-artifact --name "endstone-territory-${{ matrix.os }}-$LANG_NAME" --path "$f"
-          done
+      # ===== Upload artifact per language =====
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: territory-${{ matrix.os }}-${{ matrix.lang }}
+          path: artifacts/territory_v${{ github.event.inputs.version }}_${{ matrix.os }}_${{ matrix.lang }}.zip
 
   release:
     name: Publish Release
