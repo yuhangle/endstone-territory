@@ -69,9 +69,9 @@ jobs:
           VERSION=${{ github.event.inputs.version }}
           OS=${{ matrix.os }}
           ARTIFACT_DIR=artifacts
-
+          
           mkdir -p $ARTIFACT_DIR
-
+          
           # 找到插件产物
           if [ "${OS}" = "windows-latest" ]; then
             PLUGIN=$(find build -name "*.dll" | head -n 1)
@@ -80,19 +80,21 @@ jobs:
             PLUGIN=$(find build -name "*.so" | head -n 1)
             EXT=so
           fi
-
+          
           for LANG_DIR in language/*; do
             LANG_NAME=$(basename "$LANG_DIR")
-
+          
             PKG_DIR=pkg_${LANG_NAME}
             mkdir -p ${PKG_DIR}/territory
-
-            cp "$PLUGIN" ${PKG_DIR}/territory/territory.${EXT}
+          
+            # 第一层插件文件
+            cp "$PLUGIN" ${PKG_DIR}/territory.${EXT}
+            # 第二层语言文件
             cp "${LANG_DIR}/lang.json" ${PKG_DIR}/territory/lang.json
-
+          
             ZIP_NAME=territory_v${VERSION}_${OS}_${LANG_NAME}.zip
-            (cd ${PKG_DIR} && zip -r ../${ARTIFACT_DIR}/${ZIP_NAME} territory)
-
+            (cd ${PKG_DIR} && zip -r ../${ARTIFACT_DIR}/${ZIP_NAME} .)
+          
             rm -rf ${PKG_DIR}
           done
 

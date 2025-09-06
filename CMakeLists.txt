@@ -29,17 +29,26 @@ FetchContent_MakeAvailable(nlohmann_json)
 
 # SQLite3
 find_package(SQLite3 REQUIRED)
-# 内置fmt
-find_package(fmt CONFIG REQUIRED)
+if (UNIX)
+    # 内置fmt
+    find_package(fmt CONFIG REQUIRED)
+endif ()
 # 插件源码
 endstone_add_plugin(${PROJECT_NAME} src/territory.cpp include/Territory_Action.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE include)
 
 # 链接库
+if (UNIX)
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         nlohmann_json::nlohmann_json
         SQLite::SQLite3
         fmt::fmt-header-only
 )
-
+else()
+    target_link_libraries(${PROJECT_NAME}
+            PRIVATE
+            nlohmann_json::nlohmann_json
+            SQLite::SQLite3
+    )
+endif ()
