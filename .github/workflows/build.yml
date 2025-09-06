@@ -118,7 +118,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: territory-${{ matrix.os }}-${{ matrix.lang }}
-          # 上传上一步骤直接生成的压缩包，而不是让 upload-artifact 再次打包
           path: territory_v${{ github.event.inputs.version }}_${{ matrix.os }}_${{ matrix.lang }}.zip
 
   release:
@@ -130,7 +129,9 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          pattern: territory-*        # 匹配所有平台+语言的 artifact
+          merge-multiple: false       # 关键：不要合并到一个目录
+          path: artifacts             # 每个 artifact 会在 artifacts/territory-OS-LANG/ 下
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -139,6 +140,7 @@ jobs:
           name: Endstone Territory v${{ github.event.inputs.version }}
           draft: false
           prerelease: false
-          files: artifacts/*.zip   # <-- 每个语言的包独立上传
+          files: artifacts/**/*.zip   # 递归匹配所有 zip
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
