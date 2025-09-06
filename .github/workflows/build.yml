@@ -7,9 +7,13 @@ on:
         description: '版本号（例如 1.2.3，会自动加上 v 前缀）'
         required: true
       publish_release:
-        description: '是否发布 Release（true/false）'
+        description: '是否发布 Release'
         required: true
         default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
   build:
@@ -70,7 +74,9 @@ jobs:
             echo "No .so file found!"
             exit 1
           fi
-          cp "$SO_FILE" build/territory.so
+          if [ "$SO_FILE" != "build/endstone_territory.so" ]; then
+            cp "$SO_FILE" build/endstone_territory.so
+          fi
 
       # ===== Upload plugin artifact =====
       - name: Upload plugin artifact (Linux)
@@ -78,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: territory-linux-plugin
-          path: build/territory.so
+          path: build/endstone_territory.so
 
       - name: Upload plugin artifact (Windows)
         if: runner.os == 'Windows'
@@ -86,7 +92,7 @@ jobs:
         with:
           name: territory-windows-plugin
           path: |
-            ${{ github.workspace }}\build\Release\*.dll
+            ${{ github.workspace }}\build\Release\endstone_territory.dll
 
   release:
     name: Publish Release
@@ -111,20 +117,20 @@ jobs:
           OS_LIST=(linux windows)
           for OS in "${OS_LIST[@]}"; do
             if [[ "$OS" == "linux" ]]; then
-              PLUGIN_PATH=$(find artifacts/territory-linux-plugin -name "*.so" | head -n 1)
+              PLUGIN_PATH=$(find artifacts/territory-linux-plugin -name "endstone_territory.so" | head -n 1)
               EXT=so
             else
-              PLUGIN_PATH=$(find artifacts/territory-windows-plugin -name "*.dll" | head -n 1)
+              PLUGIN_PATH=$(find artifacts/territory-windows-plugin -name "endstone_territory.dll" | head -n 1)
               EXT=dll
             fi
             for LANG in "${LANGS[@]}"; do
               BUILD_DIR=package
               mkdir -p ${BUILD_DIR}/territory
-              cp "$PLUGIN_PATH" ${BUILD_DIR}/territory.${EXT}
+              cp "$PLUGIN_PATH" ${BUILD_DIR}/endstone_territory.${EXT}
               cp "language/${LANG}/lang.json" ${BUILD_DIR}/territory/lang.json
               ZIP_NAME=territory_v${VERSION}_${OS}_${LANG}.zip
               cd ${BUILD_DIR}
-              zip -r ../${ZIP_NAME} territory.${EXT} territory
+              zip -r ../${ZIP_NAME} endstone_territory.${EXT} territory
               cd ..
               mv ${ZIP_NAME} artifacts/
               rm -rf ${BUILD_DIR}
