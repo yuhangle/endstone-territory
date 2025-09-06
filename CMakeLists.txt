@@ -23,17 +23,14 @@ FetchContent_MakeAvailable(endstone)
 FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG master
+    GIT_TAG v3.12.0
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
-# SQLite3 (跨平台检测)
-if(WIN32)
-    find_package(SQLite3 REQUIRED)
-else()
-    find_package(SQLite3 REQUIRED)
-endif()
-
+# SQLite3
+find_package(SQLite3 REQUIRED)
+# 内置fmt
+find_package(fmt CONFIG REQUIRED)
 # 插件源码
 endstone_add_plugin(${PROJECT_NAME} src/territory.cpp include/Territory_Action.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE include)
@@ -43,5 +40,6 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         nlohmann_json::nlohmann_json
         SQLite::SQLite3
+        fmt::fmt-header-only
 )
 

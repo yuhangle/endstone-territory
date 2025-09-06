@@ -28,7 +28,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget gnupg lsb-release software-properties-common
+          sudo apt-get install -y wget gnupg lsb-release software-properties-common unzip zip
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 16
@@ -50,26 +50,58 @@ jobs:
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
           git clone https://github.com/microsoft/vcpkg.git
           .\vcpkg\bootstrap-vcpkg.bat
-          .\vcpkg\vcpkg.exe install sqlite3:x64-windows-static
+          .\vcpkg\vcpkg.exe install sqlite3:x64-windows-static zip
 
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release `
-                   -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake" `
-                   -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static
 
       # ===== Build =====
       - name: Build
         run: cmake --build build --config Release
 
+      # ===== Package per language =====
+      - name: Package per language
+        run: |
+          VERSION=${{ github.event.inputs.version }}
+          OS=${{ matrix.os }}
+          ARTIFACT_DIR=artifacts
+
+          mkdir -p $ARTIFACT_DIR
+
+          # 找到插件产物
+          if [ "${OS}" = "windows-latest" ]; then
+            PLUGIN=$(find build -name "*.dll" | head -n 1)
+            EXT=dll
+          else
+            PLUGIN=$(find build -name "*.so" | head -n 1)
+            EXT=so
+          fi
+
+          for LANG_DIR in language/*; do
+            LANG_NAME=$(basename "$LANG_DIR")
+
+            PKG_DIR=pkg_${LANG_NAME}
+            mkdir -p ${PKG_DIR}/territory
+
+            cp "$PLUGIN" ${PKG_DIR}/territory/territory.${EXT}
+            cp "${LANG_DIR}/lang.json" ${PKG_DIR}/territory/lang.json
+
+            ZIP_NAME=territory_v${VERSION}_${OS}_${LANG_NAME}.zip
+            (cd ${PKG_DIR} && zip -r ../${ARTIFACT_DIR}/${ZIP_NAME} territory)
+
+            rm -rf ${PKG_DIR}
+          done
+
+      # ===== Upload artifacts =====
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: endstone-territory-${{ matrix.os }}
-          path: |
-            build/**/*.dll
-            build/**/*.so
+          path: artifacts/*.zip
 
   release:
     name: Publish Release

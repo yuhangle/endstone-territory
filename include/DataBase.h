@@ -353,24 +353,6 @@ public:
         return querySQL_many(sql, result);
     }
 
-    [[nodiscard]] int updateUser(const std::string &uuid, const std::string &playername,
-                   const std::string &username, const std::string &avatar,const std::string& item, const int money) const {
-        std::string sql = "UPDATE USER SET playername = '" +
-                          uuid + "', '" + playername + "', '" + username + "', '" + avatar +
-                          "',' " + item + "',"+ std::to_string(money) +";";
-        return executeSQL(sql);
-    }
-
-    int getUser(const std::string &uuid, std::vector<std::map<std::string, std::string>> &result) const {
-        std::string sql = "SELECT * FROM USER WHERE uuid = '" + uuid + "';";
-        return querySQL(sql, result);
-    }
-
-    int getUser_by_playername(const std::string &playername, std::vector<std::map<std::string, std::string>> &result) const {
-        std::string sql = "SELECT * FROM USER WHERE playername = '" + playername + "';";
-        return querySQL(sql, result);
-    }
-
 
     //数据库工具
 
