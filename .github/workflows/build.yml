@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04, windows-latest]
-        lang: [english]
+        # 只保留 os 维度
 
     steps:
       - name: Checkout repository
@@ -29,12 +29,11 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget gnupg lsb-release software-properties-common unzip zip libfmt-dev
+          sudo apt-get install -y wget gnupg lsb-release software-properties-common unzip zip
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 16
           sudo apt-get install -y libc++-16-dev libc++abi-16-dev cmake libsqlite3-dev
-
       - name: Configure CMake (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -42,7 +41,6 @@ jobs:
                 -DCMAKE_C_COMPILER=clang-16 \
                 -DCMAKE_CXX_COMPILER=clang++-16 \
                 -DCMAKE_CXX_FLAGS="-stdlib=libc++"
-
       # ===== Windows =====
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
@@ -52,7 +50,6 @@ jobs:
           git clone https://github.com/microsoft/vcpkg.git
           .\vcpkg\bootstrap-vcpkg.bat
           .\vcpkg\vcpkg.exe install sqlite3:x64-windows-static
-
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -64,61 +61,32 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-      # ===== Package per language =====
-      - name: Package plugin
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $VERSION = "${{ github.event.inputs.version }}"
-          $OS = "${{ matrix.os }}"
-          $LANG = "${{ matrix.lang }}"
-          
-          # 直接在当前目录创建最终的打包目录
-          $BUILD_DIR = "territory" 
-          New-Item -Path $BUILD_DIR -ItemType Directory -Force
-          
-          $PLUGIN = Get-ChildItem -Recurse -Path build -Filter '*.dll' | Select-Object -First 1 | ForEach-Object { $_.FullName }
-          $EXT = "dll"
-          
-          # 将文件直接复制到最终的打包目录
-          Copy-Item -Path "$PLUGIN" -Destination "${BUILD_DIR}/territory.${EXT}"
-          Copy-Item -Path "language/${LANG}/lang.json" -Destination "${BUILD_DIR}/lang.json"
-          
-          $ZIP_NAME = "territory_v${VERSION}_${OS}_${LANG}.zip"
-          # 【直接压缩最终的打包目录，并将压缩包放在当前工作目录
-          Compress-Archive -Path $BUILD_DIR -DestinationPath $ZIP_NAME
-          Remove-Item -Path $BUILD_DIR -Recurse -Force
-
-      - name: Package plugin (Linux)
+      # ===== Prepare plugin artifact (Linux) =====
+      - name: Prepare plugin artifact (Linux)
         if: runner.os == 'Linux'
         run: |
-          VERSION=${{ github.event.inputs.version }}
-          OS=${{ matrix.os }}
-          LANG=${{ matrix.lang }}
-          
-          # 直接在当前目录创建最终的打包目录
-          BUILD_DIR=territory
-          mkdir -p $BUILD_DIR
-          
-          PLUGIN=$(find build -name "*.so" | head -n 1)
-          EXT=so
-          
-          # 将文件直接复制到最终的打包目录
-          cp "$PLUGIN" ${BUILD_DIR}/territory.${EXT}
-          cp "language/${LANG}/lang.json" ${BUILD_DIR}/lang.json
-          
-          ZIP_NAME=territory_v${VERSION}_${OS}_${LANG}.zip
-          # 直接压缩最终的打包目录，并将压缩包放在当前工作目录
-          zip -r ${ZIP_NAME} ${BUILD_DIR}
-          rm -rf ${BUILD_DIR}
+          SO_FILE=$(find build -name "*.so" | head -n 1)
+          if [ -z "$SO_FILE" ]; then
+            echo "No .so file found!"
+            exit 1
+          fi
+          cp "$SO_FILE" build/territory.so
 
-
-      # ===== Upload artifact per language =====
-      - name: Upload artifact
+      # ===== Upload plugin artifact =====
+      - name: Upload plugin artifact (Linux)
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
-          name: territory-${{ matrix.os }}-${{ matrix.lang }}
-          path: territory_v${{ github.event.inputs.version }}_${{ matrix.os }}_${{ matrix.lang }}.zip
+          name: territory-linux-plugin
+          path: build/territory.so
+
+      - name: Upload plugin artifact (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: territory-windows-plugin
+          path: |
+            ${{ github.workspace }}\build\Release\*.dll
 
   release:
     name: Publish Release
@@ -126,12 +94,42 @@ jobs:
     if: ${{ github.event.inputs.publish_release == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Download all artifacts
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all plugin artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: territory-*        # 匹配所有平台+语言的 artifact
-          merge-multiple: false       # 关键：不要合并到一个目录
-          path: artifacts             # 每个 artifact 会在 artifacts/territory-OS-LANG/ 下
+          pattern: territory-*-plugin
+          merge-multiple: false
+          path: artifacts
+
+      - name: Prepare and Package All
+        run: |
+          VERSION=${{ github.event.inputs.version }}
+          LANGS=(chinese english)
+          OS_LIST=(linux windows)
+          for OS in "${OS_LIST[@]}"; do
+            if [[ "$OS" == "linux" ]]; then
+              PLUGIN_PATH=$(find artifacts/territory-linux-plugin -name "*.so" | head -n 1)
+              EXT=so
+            else
+              PLUGIN_PATH=$(find artifacts/territory-windows-plugin -name "*.dll" | head -n 1)
+              EXT=dll
+            fi
+            for LANG in "${LANGS[@]}"; do
+              BUILD_DIR=package
+              mkdir -p ${BUILD_DIR}/territory
+              cp "$PLUGIN_PATH" ${BUILD_DIR}/territory.${EXT}
+              cp "language/${LANG}/lang.json" ${BUILD_DIR}/territory/lang.json
+              ZIP_NAME=territory_v${VERSION}_${OS}_${LANG}.zip
+              cd ${BUILD_DIR}
+              zip -r ../${ZIP_NAME} territory.${EXT} territory
+              cd ..
+              mv ${ZIP_NAME} artifacts/
+              rm -rf ${BUILD_DIR}
+            done
+          done
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -140,7 +138,8 @@ jobs:
           name: Endstone Territory v${{ github.event.inputs.version }}
           draft: false
           prerelease: false
-          files: artifacts/**/*.zip   # 递归匹配所有 zip
+          files: artifacts/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-
+          name: territory-windows-${{ matrix.lang }}
+          path: territory_v${{ github.event.inputs.version }}_${{ matrix.os }}_${{ matrix.lang }}.zip
