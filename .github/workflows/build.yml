@@ -66,39 +66,60 @@ jobs:
 
       # ===== Package per language =====
       - name: Package plugin
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $VERSION = "${{ github.event.inputs.version }}"
+          $OS = "${{ matrix.os }}"
+          $LANG = "${{ matrix.lang }}"
+          
+          # 直接在当前目录创建最终的打包目录
+          $BUILD_DIR = "territory" 
+          New-Item -Path $BUILD_DIR -ItemType Directory -Force
+          
+          $PLUGIN = Get-ChildItem -Recurse -Path build -Filter '*.dll' | Select-Object -First 1 | ForEach-Object { $_.FullName }
+          $EXT = "dll"
+          
+          # 将文件直接复制到最终的打包目录
+          Copy-Item -Path "$PLUGIN" -Destination "${BUILD_DIR}/territory.${EXT}"
+          Copy-Item -Path "language/${LANG}/lang.json" -Destination "${BUILD_DIR}/lang.json"
+          
+          $ZIP_NAME = "territory_v${VERSION}_${OS}_${LANG}.zip"
+          # 【直接压缩最终的打包目录，并将压缩包放在当前工作目录
+          Compress-Archive -Path $BUILD_DIR -DestinationPath $ZIP_NAME
+          Remove-Item -Path $BUILD_DIR -Recurse -Force
+
+      - name: Package plugin (Linux)
+        if: runner.os == 'Linux'
         run: |
           VERSION=${{ github.event.inputs.version }}
           OS=${{ matrix.os }}
           LANG=${{ matrix.lang }}
-          ARTIFACT_DIR=artifacts
           
-          mkdir -p $ARTIFACT_DIR
+          # 直接在当前目录创建最终的打包目录
+          BUILD_DIR=territory
+          mkdir -p $BUILD_DIR
           
-          PKG_DIR=pkg_${LANG}
-          mkdir -p ${PKG_DIR}/territory
+          PLUGIN=$(find build -name "*.so" | head -n 1)
+          EXT=so
           
-          if [ "${OS}" = "windows-latest" ]; then
-              # 使用 PowerShell 找第一个 dll
-              PLUGIN=$(powershell -Command "Get-ChildItem -Recurse -Filter '*.dll' build | Select-Object -First 1 | ForEach-Object { \$_.FullName }" | tr -d '\r')
-              EXT=dll
-          else
-              PLUGIN=$(find build -name "*.so" | head -n 1)
-              EXT=so
-          fi
-          
-          cp "$PLUGIN" ${PKG_DIR}/territory/territory.${EXT}
-          cp "language/${LANG}/lang.json" ${PKG_DIR}/territory/lang.json
+          # 将文件直接复制到最终的打包目录
+          cp "$PLUGIN" ${BUILD_DIR}/territory.${EXT}
+          cp "language/${LANG}/lang.json" ${BUILD_DIR}/lang.json
           
           ZIP_NAME=territory_v${VERSION}_${OS}_${LANG}.zip
-          (cd ${PKG_DIR} && zip -r ../${ARTIFACT_DIR}/${ZIP_NAME} territory)
-          rm -rf ${PKG_DIR}
+          # 直接压缩最终的打包目录，并将压缩包放在当前工作目录
+          zip -r ${ZIP_NAME} ${BUILD_DIR}
+          rm -rf ${BUILD_DIR}
+
 
       # ===== Upload artifact per language =====
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: territory-${{ matrix.os }}-${{ matrix.lang }}
-          path: artifacts/territory_v${{ github.event.inputs.version }}_${{ matrix.os }}_${{ matrix.lang }}.zip
+          # 上传上一步骤直接生成的压缩包，而不是让 upload-artifact 再次打包
+          path: territory_v${{ github.event.inputs.version }}_${{ matrix.os }}_${{ matrix.lang }}.zip
 
   release:
     name: Publish Release
