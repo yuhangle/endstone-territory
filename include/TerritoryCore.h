@@ -14,7 +14,6 @@
 #include <fstream>
 #include <string>
 #include <filesystem>
-#include <map>
 #include <tuple>
 #include <utility>
 #include <algorithm>
@@ -35,11 +34,11 @@
 #include <random>
 #include <iomanip>
 #include "Territory_Action.h"
+#include "menu.h"
 
 using json = nlohmann::json;
 using namespace std;
 namespace fs = std::filesystem;
-inline translate_tty LangTty;
 
 //数据文件路径
 inline std::string data_path = "plugins/territory";
@@ -605,6 +604,7 @@ ___________                 .__  __
         (void)readAllTerritories();
         //周期执行
         getServer().getScheduler().runTaskTimer(*this,[&]() { tips_online_players(); }, 0, 40);
+        menu_ = std::make_unique<Menu>(*this);
 
     }
 
@@ -621,10 +621,10 @@ ___________                 .__  __
                 if (args.empty()) {
                     //菜单
                     if (getServer().getPluginManager().getPlugin("territory_gui")) {
-                        (void)sender.asPlayer()->performCommand("ttygui");
+                        sender.sendMessage(LangTty.getLocal("Territory_gui插件已不再需要，菜单已被集成到插件本体内"));
+                        menu_->openMainMenu(sender.asPlayer());
                     } else {
-                        sender.sendMessage(
-                                LangTty.getLocal("安装Territory_gui插件后即可使用/ttygui命令打开图形界面菜单"));
+                        menu_->openMainMenu(sender.asPlayer());
                     }
                 } else {
                     if (args[0] == "add") {
@@ -1309,7 +1309,8 @@ ___________                 .__  __
             }
         }
     }
-
+private:
+    std::unique_ptr<Menu> menu_;
 };
 
 

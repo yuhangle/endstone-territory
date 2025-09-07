@@ -38,5 +38,5 @@ public:
         return key; // 如果找不到，返回原始 key
     }
 };
-
+inline translate_tty LangTty;
 #endif //TERRITORY_TRANSLATE_H

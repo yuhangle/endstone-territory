@@ -445,12 +445,15 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
         } else {
             tty_members.push_back(player_name);
         }
-    } else {
-        if (ranges::find(tty_members, player_name) == tty_members.end()) {
+    } else if (action == "remove") {
+        auto it = ranges::find(tty_members, player_name);
+        if (it == tty_members.end()) {
             return 1;
         } else {
-            tty_members.erase(tty_members.end());
+            tty_members.erase(it);
         }
+    } else {
+        return -2; // 非法操作类型
     }
     auto new_tty_members = DataBase::vectorToString(tty_members);
     if (Database.updateValue("territories","member",new_tty_members,"name",ttyname)) {
@@ -578,12 +581,15 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
         } else {
             tty_manager.push_back(player_name);
         }
-    } else {
-        if (ranges::find(tty_manager, player_name) == tty_manager.end()) {
+    } else if (action == "remove") {
+        auto it = ranges::find(tty_manager, player_name);
+        if (it == tty_manager.end()) {
             return 1;
         } else {
-            tty_manager.erase(tty_manager.end());
+            tty_manager.erase(it);
         }
+    } else {
+        return -2; // 非法操作类型
     }
     auto new_tty_managers = DataBase::vectorToString(tty_manager);
     if (Database.updateValue("territories","manager",new_tty_managers,"name",ttyname)) {
@@ -765,4 +771,74 @@ std::string Territory_Action::pointToString(const Point3D &p) {
         std::string msg = LangTty.getLocal("尝试更新领地传送点但未找到领地: ") + ttyname;
         return {false, msg};
     }
+}
+
+//获取玩家全部领地名函数
+std::vector<std::string> Territory_Action::getPlayerTtyNames(const std::string &player_name) {
+    vector<std::string> ttynames;
+    for (const auto &val: all_tty | views::values) {
+        if (const TerritoryData& territory = val; territory.owner == player_name) {
+            ttynames.push_back(territory.name);
+        }
+    }
+    return ttynames;
+}
+
+//获取玩家成员及以上权限的领地名列表函数
+std::vector<std::string> Territory_Action::getMemberTtyNames(const std::string &player_name) {
+    vector<std::string> ttynames;
+    for (const auto &val: all_tty | views::values) {
+        const TerritoryData& territory = val;
+        std::vector<std::string> members;
+        if (!territory.member.empty()) {
+            members = DataBase::splitString(territory.member);
+        }
+        std::vector<std::string> managers;
+        if (!territory.manager.empty()) {
+            managers = DataBase::splitString(territory.manager);
+        }
+        if (territory.owner == player_name ||
+            ranges::find(managers, player_name) != managers.end() ||
+            ranges::find(members, player_name) != members.end()) {
+            ttynames.push_back(territory.name);
+        }
+    }
+    return ttynames;
+}
+
+//获取全部领地名函数
+std::vector<std::string> Territory_Action::getAllTtyNames() {
+    vector<std::string> ttynames;
+    for (const auto &val: all_tty | views::values) {
+        ttynames.push_back(val.name);
+    }
+    return ttynames;
+}
+
+// 获取玩家拥有管理权限的全部领地名字函数
+std::vector<Territory_Action::TerritoryData> Territory_Action::getOpTtyList(const std::string &player_name) {
+    vector<TerritoryData> ttys;
+    for (const auto &val: all_tty | views::values) {
+        const TerritoryData& territory = val;
+        std::vector<std::string> managers;
+        if (!territory.manager.empty()) {
+            managers = DataBase::splitString(territory.manager);
+        }
+        if (territory.owner == player_name ||
+            ranges::find(managers, player_name) != managers.end()) {
+            ttys.push_back(territory);
+        }
+    }
+    return ttys;
+}
+
+//获取玩家所拥有的全部领地函数
+std::vector<Territory_Action::TerritoryData> Territory_Action::getPlayerTtyList(const std::string &player_name) {
+    vector<TerritoryData> ttys;
+    for (const auto &val: all_tty | views::values) {
+        if (const TerritoryData& territory = val; territory.owner == player_name) {
+            ttys.push_back(territory);
+        }
+    }
+    return ttys;
 }

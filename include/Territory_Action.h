@@ -85,6 +85,11 @@ public:
     [[nodiscard]] std::pair<bool, std::string> change_territory_manager(const std::string &ttyname,const std::string &action,const std::string &player_name) const;
     static std::string pointToString(const Point3D &p);
     [[nodiscard]] std::pair<bool, std::string> change_tty_tppos(const std::string &ttyname,const Territory_Action::Point3D &tppos,const std::string &dim) const;
+    static std::vector<std::string> getPlayerTtyNames(const std::string& player_name);
+    static std::vector<std::string> getMemberTtyNames(const std::string& player_name);
+    static std::vector<std::string> getAllTtyNames();
+    static std::vector<TerritoryData> getOpTtyList(const std::string& player_name);
+    static std::vector<TerritoryData>getPlayerTtyList(const std::string& player_name);
 
 
 private:

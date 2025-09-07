@@ -56,7 +56,7 @@
     "配置文件错误,使用默认配置": "Configuration file error, using default configuration",
     "请确保您的endstone版本为0.6.2及以上,否则将发生崩溃": "Please ensure your endstone version is 0.6.2 or above, otherwise a crash will occur",
     "无法在服务端使用tty命令!": "Cannot use tty command on the server!",
-    "安装Territory_gui插件后即可使用/ttygui命令打开图形界面菜单": "After installing the Territory_gui plugin, you can use the /ttygui command to open the graphical menu",
+    "Territory_gui插件已不再需要，菜单已被集成到插件本体内": "The Territory_gui plugin is no longer needed, the menu has been integrated into the plugin itself",
     "你没有领地": "You do not have a territory",
     ". 领地名称: ": ". Territory name: ",
     "\n位置范围: ": "\nPosition range: ",
