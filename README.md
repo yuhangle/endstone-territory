@@ -14,13 +14,11 @@ The Territory plugin supports the integration of the umoney plugin as an economi
 
 ## Features
 
-The core of territory plugin is developed using C++ and utilizes SQLite for storing territory data, theoretically offering better performance.
+Territory plugin is developed using C++ and utilizes SQLite for storing territory data, theoretically offering better performance.
 
 ## How to use
 
 > Install&Config
-
-The plugin is divided into two parts: a graphical menu plugin and the core plugin. The graphical menu plugin is written in Python and does not possess the core functionality. The core plugin can run independently without the graphical menu plugin.
 
 **Install Endstone**
 
@@ -28,17 +26,23 @@ Please refer to the endstone documentation for this step.
 
 **Download & Install Territory Plugin**
 
-> Windows
+Go to the Releases page to download the latest version of the plugin archive, then extract it into the plugins folder in your server directory. The directory structure is as follows:
 
-Go to Releases to download the latest version of the core plugin DLL file and the territory menu plugin WHL file, and then place them in the plugins folder of the server directory.
+Windows:
+- plugins/
+    - endstone_territory.dll # Plugin file for Windows
+    - territory/ # Data directory
+        - lang.json # Language file
 
-> Linux
-
-Go to Releases to download the latest version of the core plugin SO file and the territory menu plugin WHL file, and then place them in the plugins folder of the server directory.
+Linux:
+- plugins/
+    - endstone_territory.so # Plugin file for Linux
+    - territory/ # Data directory
+        - lang.json # Language file
 
 **Language**
 
-The default language of this plugin is Chinese. If you need to switch to another language, please download the corresponding lang.json file for your desired language from the language directory in this plugin's GitHub repository, place it in the /plugins/territory folder on your server, and then restart the server to apply the language settings.
+The plugin defaults to Chinese. You can change the language by replacing the `lang.json` file inside the plugin’s data directory (`territory/`). The GitHub Releases page provides pre-packaged archives with different language versions — currently, Chinese and English are supported. You may also manually edit `lang.json` to adapt it to your preferred language.
 
 **Config**
 
@@ -73,7 +77,7 @@ The default configuration of the configuration file is as follows:
 Open territory menu
 
 ```shell
-/ttygui
+/tty
 ```
 
 Create New Territory

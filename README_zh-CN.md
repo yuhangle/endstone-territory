@@ -14,13 +14,11 @@ Territory领地插件支持umoney插件作为经济系统接入,默认关闭经�
 
 ## 特点
 
-Territory插件本体使用C++开发，使用SQlite储存领地数据，理论性能更好。
+Territory插件使用C++开发，使用SQlite储存领地数据，理论性能更好。
 
 ## 如何使用
 
 > 安装&配置
-
-插件分为图形菜单与插件本体两个插件，图形菜单插件使用Python编写，不具备本体功能；插件本体无需图形菜单插件即可运行。
 
 **安装Endstone**
 
@@ -28,13 +26,19 @@ Territory插件本体使用C++开发，使用SQlite储存领地数据，理论�
 
 **下载&安装Territory插件**
 
-> Windows平台
+前往Releases处下载最新版本的插件压缩包,然后解压到服务端目录的plugins文件夹里，目录结构如下:
 
-前往Releases处下载最新版本的插件本体dll文件和领地菜单插件whl文件,然后放在服务端目录的plugins文件夹里
+Windows:
+- plugins/
+    - endstone_territory.dll # Windows插件文件
+    - territory/ # 数据目录
+        - lang.json # 语言文件
 
-> Linux平台
-
-前往Releases处下载最新版本的插件本体so文件和领地菜单插件whl文件,然后放在服务端目录的plugins文件夹里
+Linux:
+- plugins/
+    - endstone_territory.so # Linux插件文件
+    - territory/ # 数据目录
+        - lang.json # 语言文件
 
 **配置**
 
@@ -68,7 +72,7 @@ Territory插件本体使用C++开发，使用SQlite储存领地数据，理论�
 打开领地菜单
 
 ```shell
-/ttygui
+/tty
 ```
 
 新建领地
