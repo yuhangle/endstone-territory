@@ -60,6 +60,9 @@ inline Territory_Action TA(Database);
 //全局玩家位置信息
 inline std::unordered_map<std::string, std::tuple<Territory_Action::Point3D, string, string>> lastPlayerPositions;
 
+//快速创建领地玩家数据缓存
+inline std::unordered_map<std::string,Territory_Action::QuickTtyData> quick_create_player_data;
+
 class Territory : public endstone::Plugin {
 
 
@@ -597,6 +600,8 @@ ___________                 .__  __
         registerEvent<endstone::PlayerInteractEvent>(Territory::onPlayerjiaohu);
         registerEvent<endstone::PlayerInteractActorEvent>(Territory::onPlayerjiaohust);
         registerEvent<endstone::ActorDamageEvent>(Territory::onActorhit);
+        //快速创建领地选择监听
+        registerEvent<endstone::PlayerInteractEvent>(quickCreateTtyRightClick);
 
         getLogger().info(enable_msg);
         getLogger().info(endstone::ColorFormat::Yellow + "Project address: https://github.com/yuhangle/endstone-territory");
@@ -945,10 +950,34 @@ ___________                 .__  __
                         } catch (const std::exception &e) {
                             sender.sendErrorMessage(e.what());
                         }
-                    } else if (args[0] == "help") {
+                    } else if (args[0] == "quick") {
+                        try {
+                            if (args[1] == "add") {
+                                if (quick_create_player_data.contains(sender.getName())) {
+                                    quick_create_player_data.erase(sender.getName());
+                                }
+                                auto tmp = quick_create_player_data[sender.getName()];
+                                tmp.tty_type = "tty";
+                                tmp.player_name = sender.getName();
+                                quick_create_player_data[sender.getName()] = tmp;
+                                sender.sendMessage(LangTty.getLocal("进入快速创建领地模式，请使用木棍点地确定领地第一个点"));
+                            } else {
+                                if (quick_create_player_data.contains(sender.getName())) {
+                                    quick_create_player_data.erase(sender.getName());
+                                }
+                                auto tmp = quick_create_player_data[sender.getName()];
+                                tmp.tty_type = "sub_tty";
+                                tmp.player_name = sender.getName();
+                                quick_create_player_data[sender.getName()] = tmp;
+                                sender.sendMessage(LangTty.getLocal("进入快速创建子领地模式，请使用木棍点地确定子领地第一个点"));
+                            }
+                        } catch (const std::exception &e) {
+                            sender.sendErrorMessage(e.what());
+                        }
+                    }else if (args[0] == "help") {
                         try {
                             string player_name = sender.getName();
-                            string help_info = LangTty.getLocal("新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n");
+                            string help_info = LangTty.getLocal("新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n快速创建领地--/tty quick add\n快速创建子领地--/tty quick add_sub\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n");
                             sender.sendMessage(help_info);
                         } catch (const std::exception &e) {
                             sender.sendErrorMessage(e.what());
@@ -1306,6 +1335,50 @@ ___________                 .__  __
                     }
                     return;
                 }
+            }
+        }
+    }
+
+    //快速创建领地-右键事件
+    static void quickCreateTtyRightClick(const endstone::PlayerInteractEvent& event) {
+        if (!quick_create_player_data.contains(event.getPlayer().getName())) {
+            return;
+        }
+        if (!event.getItem()) {
+            return;
+        }
+        if (event.getItem()->getType().getId() == "minecraft:stick") {
+            if (!event.getBlock()) {
+                return;
+            }
+            //在玩家处于快速创建模式且手持木棍点击非空气时开始提示
+            auto& player = event.getPlayer();
+            auto tmp = quick_create_player_data[player.getName()];
+            if (tmp.dim1.empty()) {
+                tmp.dim1 = player.getDimension().getName();
+                tmp.pos1 = Territory_Action::Point3D{event.getBlock()->getLocation().getBlockX(),event.getBlock()->getLocation().getBlockY(),event.getBlock()->getLocation().getBlockZ()};
+                player.sendMessage(LangTty.getLocal("已记录此坐标为第一个坐标，请选择第二个坐标"));
+            } else if (!tmp.dim2.empty()){
+                //点二已存在数据，去重
+                return;
+            } else {
+                tmp.dim2 = player.getDimension().getName();
+                //进行维度检查
+                if (tmp.dim1 != tmp.dim2) {
+                    player.sendErrorMessage(LangTty.getLocal("坐标在不同维度，无法创建领地"));
+                    return;
+                }
+                tmp.pos2 = Territory_Action::Point3D{event.getBlock()->getLocation().getBlockX(),event.getBlock()->getLocation().getBlockY(),event.getBlock()->getLocation().getBlockZ()};
+                //由于交互事件可能多次触发，检查点重复
+                if (tmp.pos1 == tmp.pos2) {
+                    return;
+                }
+                player.sendMessage(LangTty.getLocal("已记录此坐标为第二个坐标，请通过提示完成领地创建"));
+            }
+            //存储坐标数据
+            quick_create_player_data[player.getName()] = tmp;
+            if (!tmp.dim2.empty()) {
+                Menu::openQuickCreateTtyMenu(&player,tmp);
             }
         }
     }

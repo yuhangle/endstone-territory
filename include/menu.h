@@ -94,6 +94,9 @@ public:
     menu.addButton(LangTty.getLocal("§l§5创建子领地"), "textures/ui/copy", [this] (endstone::Player* p) {
       openCreateSubTtyMenu(p);
     });
+    menu.addButton(LangTty.getLocal("§l§5快速创建"), "textures/ui/welcome", [this] (endstone::Player* p) {
+      openQuickCreateMainMenu(p);
+    });
     menu.addButton(LangTty.getLocal("§l§5重命名领地"), "textures/ui/book_edit_default", [this] (endstone::Player* p) {
       auto names = Territory_Action::getPlayerTtyNames(p->getName());
       if (names.empty()) {
@@ -209,6 +212,33 @@ public:
     });
 
     player->sendForm(form);
+  }
+
+  //快速创建领地主菜单
+  void openQuickCreateMainMenu(endstone::Player*  player) const {
+    endstone::ModalForm menu;
+    menu.setTitle(LangTty.getLocal("§l快速创建领地"));
+
+    endstone::Dropdown ttyDropdown;
+    ttyDropdown.setLabel(LangTty.getLocal("§l选择领地类型"));
+    ttyDropdown.setOptions({LangTty.getLocal("普通领地"),LangTty.getLocal("子领地")});
+    ttyDropdown.setDefaultIndex(0);
+    menu.addControl(ttyDropdown);
+    menu.setOnSubmit([=](const endstone::Player* p, const std::string& response) {
+     auto parse = nlohmann::json::parse(response);
+      std::ostringstream cmd;
+      if (parse[0] == 0) {
+        cmd << "tty quick add";
+        (void)p->performCommand(cmd.str());
+      } else {
+        cmd << "tty quick add_sub";
+        (void)p->performCommand(cmd.str());
+      }
+    });
+    menu.setOnClose([this](endstone::Player* p) {
+      openMainMenu(p);
+    });
+    player->sendForm(menu);
   }
 
   // 重命名领地菜单
@@ -939,6 +969,44 @@ public:
     });
 
     player->sendForm(form);
+  }
+
+  //快速创建领地菜单
+  static void openQuickCreateTtyMenu(endstone::Player* player,Territory_Action::QuickTtyData& quick_tty_data) {
+    if (quick_tty_data.dim1.empty() ||
+        quick_tty_data.dim2.empty() ||
+        quick_tty_data.player_name.empty() ||
+        quick_tty_data.tty_type.empty()) {
+      player->sendErrorMessage(LangTty.getLocal("领地数据不完整，无法创建领地"));
+      return;
+    }
+    endstone::ModalForm menu;
+    menu.setTitle(LangTty.getLocal("§l快速创建领地"));
+    endstone::Slider MaxY,MinY;
+    MaxY.setLabel(LangTty.getLocal("§l设置领地最高点"));
+    MaxY.setMax(320);MaxY.setMin(-64);MaxY.setDefaultValue(320);MaxY.setStep(1);
+
+    MinY.setLabel(LangTty.getLocal("§l设置领地最低点"));
+    MinY.setMin(-64);MinY.setMin(-64);MinY.setDefaultValue(-64);MinY.setStep(1);
+    menu.setControls({MaxY,MinY});
+    bool create_status = false;
+    menu.setOnSubmit([create_status,quick_tty_data](const endstone::Player* p, const std::string& response)mutable {
+      auto parse = nlohmann::json::parse(response);
+      const int maxY = parse[0];
+      const int minY = parse[1];
+      std::ostringstream cmd;
+      if (quick_tty_data.tty_type == "tty") {
+        cmd << "tty add " << get<0>(quick_tty_data.pos1) << " " << maxY << " " << get<2>(quick_tty_data.pos1) << " " << get<0>(quick_tty_data.pos2) << " " << minY << " " << get<2>(quick_tty_data.pos2);
+      } else {
+        cmd << "tty add_sub " << get<0>(quick_tty_data.pos1) << " " << maxY << " " << get<2>(quick_tty_data.pos1) << " " << get<0>(quick_tty_data.pos2) << " " << minY << " " << get<2>(quick_tty_data.pos2);
+      }
+      (void)p->performCommand(cmd.str());
+      create_status = true;
+    });
+    menu.setOnClose([create_status](const endstone::Player* p) {
+      if (!create_status) p->sendMessage(LangTty.getLocal("创建已取消"));
+    });
+    player->sendForm(menu);
   }
 
 private:

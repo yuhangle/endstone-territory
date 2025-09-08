@@ -3,7 +3,7 @@
 //
 
 #include "TerritoryCore.h"
-ENDSTONE_PLUGIN("territory", "0.2.6dev4", Territory)
+ENDSTONE_PLUGIN("territory", "0.2.6dev5", Territory)
 {
     description = "a territory plugin for endstone with C++";
     website = "https://github.com/yuhangle/endstone-territory";
@@ -13,6 +13,7 @@ ENDSTONE_PLUGIN("territory", "0.2.6dev4", Territory)
             .description("Territory command")
             .usages("/tty (add)[opt: opt_add] [pos: pos] [pos: pos]",
                     "/tty (add_sub)[opt: opt_addsub] [pos: pos] [pos: pos]",
+                    "/tty (quick)<opt: opt_quick> (add|add_sub)<opt: opt_qa>",
                     "/tty (list)[opt: opt_list]",
                     "/tty (del)[opt: opt_del] [territory: message]",
                     "/tty (rename)[opt: opt_rename] [old_name: message] [new_name: message]",

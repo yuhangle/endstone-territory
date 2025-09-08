@@ -80,7 +80,7 @@
     "你没有权限重命名此领地": "You do not have permission to rename this territory",
     "你没有权限变更此领地": "You do not have permission to modify this territory",
     "你没有传送到此领地的权限": "You do not have permission to teleport to this territory",
-    "新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n": "Create territory -- /tty add territory corner coordinate1 territory corner coordinate2\nCreate sub territory -- /tty add_sub sub territory corner coordinate1 sub territory corner coordinate2\nList territory -- /tty list\nDelete territory -- /tty del territory name\nRename territory -- /tty rename old territory name new territory name\nSet territory permissions -- /tty set permission name (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) permission value territory name\nSet territory administrator -- /tty manager add|remove (add|remove) player name territory name\nSet territory member -- /tty member add|remove (add|remove) player name territory name\nSet territory teleport point -- /tty settp territory teleport coordinate territory name\nTeleport to territory -- /tty tp territory name\n",
+    "新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n快速创建领地--/tty quick add\n快速创建子领地--/tty quick add_sub\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n": "Create territory -- /tty add territory corner coordinate1 territory corner coordinate2\nCreate sub territory -- /tty add_sub sub territory corner coordinate1 sub territory corner coordinate2\nQuick Create Territory--/tty quick add\nQuick Create Sub-Territory--/tty quick add_sub\nList territory -- /tty list\nDelete territory -- /tty del territory name\nRename territory -- /tty rename old territory name new territory name\nSet territory permissions -- /tty set permission name (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) permission value territory name\nSet territory administrator -- /tty manager add|remove (add|remove) player name territory name\nSet territory member -- /tty member add|remove (add|remove) player name territory name\nSet territory teleport point -- /tty settp territory teleport coordinate territory name\nTeleport to territory -- /tty tp territory name\n",
     "已删除领地": "Territory deleted",
     "领地删除失败": "Territory deletion failed",
     "该玩家没有领地": "This player does not have a territory",
@@ -185,5 +185,18 @@
     "无法设置领地为一个点": "It is not possible to set a territory to a point",
     "你的领地大小超过所能创建的最大面积,无法创建": "Your territory is larger than the maximum area you can create and can't be created",
     "无法在世界之外设置领地": "It is not possible to set a territory outside of the world",
-    "您的领地已被删除,以当前价格返还资金:": "Your territory has been deleted and the money are returned at the current price:"
+    "您的领地已被删除,以当前价格返还资金:": "Your territory has been deleted and the money are returned at the current price:",
+    "进入快速创建领地模式，请使用木棍点地确定领地第一个点": "Entered quick territory creation mode, please use a stick to tap the ground to set the first point of the territory",
+    "进入快速创建子领地模式，请使用木棍点地确定子领地第一个点": "Entered quick sub-territory creation mode, please use a stick to tap the ground to set the first point of the sub-territory",
+    "输入不能为空": "Input cannot be empty",
+    "坐标在不同维度，无法创建领地": "Coordinates are in different dimensions, cannot create territory",
+    "已记录此坐标为第一个坐标，请选择第二个坐标": "This coordinate has been recorded as the first point, please select the second coordinate",
+    "已记录此坐标为第二个坐标，请通过提示完成领地创建": "This coordinate has been recorded as the second point, please follow the prompts to complete territory creation",
+    "领地数据不完整，无法创建领地": "Territory data is incomplete, cannot create territory",
+    "§l快速创建领地": "§lQuick Create Territory",
+    "§l设置领地最高点": "§lSet Territory Highest Point",
+    "§l设置领地最低点": "§lSet Territory Lowest Point",
+    "§l§5快速创建领地": "§l§5Quick Create",
+    "创建已取消": "Creation Cancelled",
+    "子领地": "Sub-Territory"
 }

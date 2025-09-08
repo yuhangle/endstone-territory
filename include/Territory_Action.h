@@ -56,6 +56,16 @@ public:
         std::string owner;
     };
 
+    //定义快速创建领地数据
+    struct QuickTtyData {
+        std::string player_name;
+        std::string tty_type;
+        Point3D pos1;
+        std::string dim1;
+        Point3D pos2;
+        std::string dim2;
+    };
+
     [[nodiscard]] std::map<std::string, Territory_Action::TerritoryData>& get_all_tty() const;
     static const std::map<std::string, TerritoryData>& getAllTty();
     static TerritoryData* read_territory_by_name(const std::string& territory_name);
