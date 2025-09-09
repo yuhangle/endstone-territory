@@ -853,6 +853,9 @@ public:
 
     endstone::TextInput tpInput;
     tpInput.setLabel(LangTty.getLocal("§l坐标"));
+    std::ostringstream playerPos;
+    playerPos << player->getLocation().getX() << " " << player->getLocation().getY() << " " << player->getLocation().getZ();
+    tpInput.setDefaultValue(playerPos.str());
 
     form.setControls({ttyDropdown, tpInput});
 

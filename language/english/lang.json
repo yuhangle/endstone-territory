@@ -198,5 +198,6 @@
     "§l设置领地最低点": "§lSet Territory Lowest Point",
     "§l§5快速创建领地": "§l§5Quick Create",
     "创建已取消": "Creation Cancelled",
-    "子领地": "Sub-Territory"
+    "子领地": "Sub-Territory",
+    "§2[领地] §r您当前位于 ": "§2[Territory] §rYou are currently located in "
 }
