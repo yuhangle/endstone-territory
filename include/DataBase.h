@@ -10,7 +10,6 @@
 #include <fstream>
 #include <string>
 #include <sstream>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 #include <map>
@@ -240,14 +239,12 @@ public:
             std::cerr << "无法打开数据库: " << sqlite3_errmsg(db) << std::endl;
             return false;
         }
+        
         std::string sql;
-        if (columnName == "gid") {
-            // 构造 SQL 查询语句
-            sql = "SELECT COUNT(*) FROM " + tableName + " WHERE " + columnName + " = " + value + ";";
-        } else {
-            // 构造 SQL 查询语句
-            sql = "SELECT COUNT(*) FROM " + tableName + " WHERE " + columnName + " = '" + value + "';";
-        }
+
+        // 构造 SQL 查询语句
+        sql = "SELECT COUNT(*) FROM " + tableName + " WHERE " + columnName + " = ?;";
+        
         sqlite3_stmt* stmt;
         rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
         if (rc != SQLITE_OK) {
@@ -255,6 +252,9 @@ public:
             sqlite3_close(db);
             return false;
         }
+        
+        // 绑定参数
+        sqlite3_bind_text(stmt, 1, value.c_str(), -1, SQLITE_STATIC);
 
         // 执行查询并获取结果
         bool exists = false;
@@ -282,27 +282,41 @@ public:
             std::cerr << "无法打开数据库: " << sqlite3_errmsg(db) << std::endl;
             return false;
         }
+        
         std::string sql;
-        if (targetColumn == "if_jiaohu" || targetColumn == "if_break" || targetColumn == "if_tp" || targetColumn == "if_build" || targetColumn == "if_bomb" || targetColumn == "if_damage") {
-            sql = "UPDATE " + tableName +
-                  " SET " + targetColumn + " = " + fmt::to_string(newValue) +
-                  " WHERE " + conditionColumn + " = '" + conditionValue + "';";
-        }
-        else {
             // 构造 SQL 更新语句
             sql = "UPDATE " + tableName +
-                  " SET " + targetColumn + " = '" + newValue + "'" +
-                  " WHERE " + conditionColumn + " = '" + conditionValue + "';";
-        }
-        // 执行 SQL 语句
-        rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, nullptr);
+                  " SET " + targetColumn + " = ?" +
+                  " WHERE " + conditionColumn + " = ?;";
+        
+        sqlite3_stmt* stmt;
+        rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
         if (rc != SQLITE_OK) {
+            std::cerr << "SQL 预处理失败: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return false;
+        }
+        
+        // 绑定参数
+        if (targetColumn == "if_jiaohu" || targetColumn == "if_break" || targetColumn == "if_tp" || targetColumn == "if_build" || targetColumn == "if_bomb" || targetColumn == "if_damage") {
+            int value = std::stoi(newValue);
+            sqlite3_bind_int(stmt, 1, value);
+        } else {
+            sqlite3_bind_text(stmt, 1, newValue.c_str(), -1, SQLITE_STATIC);
+        }
+        sqlite3_bind_text(stmt, 2, conditionValue.c_str(), -1, SQLITE_STATIC);
+        
+        // 执行 SQL 语句
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
             std::cerr << "SQL 更新失败: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_finalize(stmt);
             sqlite3_close(db);
             return false;
         }
 
-        // 关闭数据库连接
+        // 清理资源
+        sqlite3_finalize(stmt);
         sqlite3_close(db);
 
         return true;
@@ -321,22 +335,73 @@ public:
                    int if_jiaohu, int if_break, int if_tp,
                    int if_build, int if_bomb, int if_damage, const std::string& dim,
                    const std::string& father_tty) const  {
+        sqlite3* db;
+        int rc = sqlite3_open(db_filename.c_str(), &db);
+        if (rc) {
+            std::cerr << "无法打开数据库: " << sqlite3_errmsg(db) << std::endl;
+            return rc;
+        }
+        
         std::string sql = "INSERT INTO territories (name, pos1_x, pos1_y, pos1_z, "
                           "pos2_x, pos2_y, pos2_z, tppos_x, tppos_y, tppos_z, "
                           "owner, manager, member, if_jiaohu, if_break, if_tp, "
-                          "if_build, if_bomb, if_damage, dim, father_tty) VALUES ('" + name + "', "
-                          + std::to_string(pos1_x) + ", " + std::to_string(pos1_y) + ", " + std::to_string(pos1_z) + ", "
-                          + std::to_string(pos2_x) + ", " + std::to_string(pos2_y) + ", " + std::to_string(pos2_z) + ", "
-                          + std::to_string(tppos_x) + ", " + std::to_string(tppos_y) + ", " + std::to_string(tppos_z) + ", '"
-                          + owner + "', '" + manager + "', '" + member + "', "
-                          + std::to_string(if_jiaohu) + ", " + std::to_string(if_break) + ", " + std::to_string(if_tp) + ", "
-                          + std::to_string(if_build) + ", " + std::to_string(if_bomb) + ", " + std::to_string(if_damage) + ", '" + dim + "', '"
-                          + father_tty + "');";
-        return executeSQL(sql);
+                          "if_build, if_bomb, if_damage, dim, father_tty) VALUES (?, "
+                          "?, ?, ?, "
+                          "?, ?, ?, "
+                          "?, ?, ?, "
+                          "?, ?, ?, "
+                          "?, ?, ?, "
+                          "?, ?, ?, "
+                          "?, ?);";
+                          
+        sqlite3_stmt* stmt;
+        rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+        if (rc != SQLITE_OK) {
+            std::cerr << "SQL 预处理失败: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return rc;
+        }
+        
+        // 绑定参数
+        sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_double(stmt, 2, pos1_x);
+        sqlite3_bind_double(stmt, 3, pos1_y);
+        sqlite3_bind_double(stmt, 4, pos1_z);
+        sqlite3_bind_double(stmt, 5, pos2_x);
+        sqlite3_bind_double(stmt, 6, pos2_y);
+        sqlite3_bind_double(stmt, 7, pos2_z);
+        sqlite3_bind_double(stmt, 8, tppos_x);
+        sqlite3_bind_double(stmt, 9, tppos_y);
+        sqlite3_bind_double(stmt, 10, tppos_z);
+        sqlite3_bind_text(stmt, 11, owner.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 12, manager.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 13, member.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 14, if_jiaohu);
+        sqlite3_bind_int(stmt, 15, if_break);
+        sqlite3_bind_int(stmt, 16, if_tp);
+        sqlite3_bind_int(stmt, 17, if_build);
+        sqlite3_bind_int(stmt, 18, if_bomb);
+        sqlite3_bind_int(stmt, 19, if_damage);
+        sqlite3_bind_text(stmt, 20, dim.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 21, father_tty.c_str(), -1, SQLITE_STATIC);
+        
+        // 执行 SQL 语句
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            std::cerr << "SQL 插入失败: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_finalize(stmt);
+            sqlite3_close(db);
+            return rc;
+        }
+        
+        // 清理资源
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return SQLITE_OK;
     }
 
     int getAllTty(std::vector<std::map<std::string, std::string>> &result) const {
-        // 构造 SQL 查询语句，从 GOODS 表中获取所有数据
+        // 获取所有tty数据
         std::string sql = "SELECT * FROM territories;";
 
         // 调用 querySQL_many 函数执行查询，并将结果存储到 result 中
@@ -344,13 +409,75 @@ public:
     }
 
     [[nodiscard]] int deleteTty(const std::string &tty_name) const {
-        std::string sql = "DELETE FROM territories WHERE name = '" + tty_name + "';";
-        return executeSQL(sql);
+        sqlite3* db;
+        int rc = sqlite3_open(db_filename.c_str(), &db);
+        if (rc) {
+            std::cerr << "无法打开数据库: " << sqlite3_errmsg(db) << std::endl;
+            return rc;
+        }
+        
+        std::string sql = "DELETE FROM territories WHERE name = ?;";
+        sqlite3_stmt* stmt;
+        rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+        if (rc != SQLITE_OK) {
+            std::cerr << "SQL 预处理失败: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return rc;
+        }
+        
+        // 绑定参数
+        sqlite3_bind_text(stmt, 1, tty_name.c_str(), -1, SQLITE_STATIC);
+        
+        // 执行 SQL 语句
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            std::cerr << "SQL 删除失败: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_finalize(stmt);
+            sqlite3_close(db);
+            return rc;
+        }
+        
+        // 清理资源
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return SQLITE_OK;
     }
 
     int getTtyByFather(const std::string& tty_name, std::vector<std::map<std::string, std::string>> &result) const {
-        std::string sql = "SELECT * FROM territories WHERE father_tty = '" + tty_name + "';";
-        return querySQL_many(sql, result);
+        sqlite3* db;
+        int rc = sqlite3_open(db_filename.c_str(), &db);
+        if (rc) {
+            std::cerr << "无法打开数据库: " << sqlite3_errmsg(db) << std::endl;
+            return rc;
+        }
+        
+        std::string sql = "SELECT * FROM territories WHERE father_tty = ?;";
+        sqlite3_stmt* stmt;
+        rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+        if (rc != SQLITE_OK) {
+            std::cerr << "SQL 预处理失败: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return rc;
+        }
+        
+        // 绑定参数
+        sqlite3_bind_text(stmt, 1, tty_name.c_str(), -1, SQLITE_STATIC);
+        
+        // 执行查询并获取结果
+        char* errmsg = nullptr;
+        rc = sqlite3_exec(db, sql.c_str(), queryCallback_many_dict, &result, &errmsg);
+        if (rc != SQLITE_OK) {
+            std::cerr << "SQL 查询失败: " << errmsg << std::endl;
+            sqlite3_free(errmsg);
+            sqlite3_finalize(stmt);
+            sqlite3_close(db);
+            return rc;
+        }
+        
+        // 清理资源
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return SQLITE_OK;
     }
 
 
@@ -465,49 +592,6 @@ public:
         }
     }
 
-
-    // 将附魔 map 转换为字符串
-    static std::string enchantsToString(const std::unordered_map<std::string, int>& enchants) {
-        if (enchants.empty()) {
-            return ""; // 如果没有附魔，返回空字符串
-        }
-
-        std::ostringstream oss;
-
-        for (auto it = enchants.begin(); it != enchants.end(); ++it) {
-            oss << it->first << ":" << it->second; // 格式：enchant_name:level
-
-            // 如果不是最后一个元素，添加逗号
-            if (std::next(it) != enchants.end()) {
-                oss << ",";
-            }
-        }
-
-        return oss.str();
-    }
-    //还原附魔字符串为附魔map
-    static std::unordered_map<std::string, int> stringToEnchants(const std::string& str) {
-        std::unordered_map<std::string, int> result;
-        std::istringstream ss(str);
-        std::string pairStr;
-
-        while (std::getline(ss, pairStr, ',')) {
-            size_t colonPos = pairStr.find(':');
-            if (colonPos != std::string::npos) {
-                std::string key = pairStr.substr(0, colonPos);
-                std::string valueStr = pairStr.substr(colonPos + 1);
-                try {
-                    int value = std::stoi(valueStr);
-                    result[key] = value;
-                } catch (...) {
-                    // 忽略无效项
-                }
-            }
-        }
-
-        return result;
-    }
-
     // 生成一个符合 RFC 4122 标准的 UUID v4
     static std::string generate_uuid_v4() {
         static thread_local std::mt19937 gen{std::random_device{}()};
@@ -540,4 +624,3 @@ private:
 };
 
 #endif // TERRITORY_DATABASE_H
-
