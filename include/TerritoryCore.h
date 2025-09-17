@@ -52,7 +52,7 @@ inline bool actor_fire_attack_protect;
 inline bool money_with_umoney;
 inline int price;
 inline int max_tty_area;
-inline bool wellcome_all;
+inline bool welcome_all;
 
 //初始化其它实例
 inline DataBase Database(db_file);
@@ -93,7 +93,7 @@ public:
                 {"money_with_umoney", false},
                 {"price", 1},
                 {"max_tty_area",4000000},
-                {"wellcome_all",false}
+                {"welcome_all",false}
         };
 
         if (!(std::filesystem::exists(data_path))) {
@@ -337,7 +337,7 @@ public:
                                   player->getLocation().getBlockZ()};
 
             // 检查玩家位置是否有变化
-            if (!wellcome_all && get<0>(lastPlayerPositions[player_name]) == player_pos) {
+            if (!welcome_all && get<0>(lastPlayerPositions[player_name]) == player_pos) {
                 // 玩家位置未改变
                 continue;
             } else if (get<0>(lastPlayerPositions[player_name]) == tuple{0.000000, 0.000000, 0.000000}) {
@@ -379,18 +379,18 @@ public:
                 std::string current_father_territory = selectedTerritory->father_tty; // 若为空则为父领地，否则为子领地
 
                 // 如果领地名称改变，说明玩家进入新领地（包括从父领地到子领地的切换）
-                if (previous_territory != current_territory || wellcome_all) {
+                if (previous_territory != current_territory || welcome_all) {
                     std::string msg;
                     if (!current_father_territory.empty()) {
                         // 进入子领地
-                        if (wellcome_all) {
+                        if (welcome_all) {
                             msg = LangTty.getLocal("§2[领地] §r您当前位于 ") + selectedTerritory->owner + LangTty.getLocal(" 的子领地 ") + current_territory;
                         } else {
                             msg = LangTty.getLocal("§2[领地] §r欢迎来到 ") + selectedTerritory->owner + LangTty.getLocal(" 的子领地 ") + current_territory;
                         }
                     } else {
                         // 进入普通领地
-                        if (wellcome_all) {
+                        if (welcome_all) {
                             msg = LangTty.getLocal("§2[领地] §r您当前位于 ") + selectedTerritory->owner + LangTty.getLocal(" 的领地 ") + current_territory;
                         } else {
                             msg = LangTty.getLocal("§2[领地] §r欢迎来到 ") + selectedTerritory->owner + LangTty.getLocal(" 的领地 ") + current_territory;
@@ -574,7 +574,7 @@ ___________                 .__  __
                 max_tty_num = json_msg["player_max_tty_num"];
                 actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
                 max_tty_area = json_msg["max_tty_area"];
-                wellcome_all = json_msg["wellcome_all"];
+                welcome_all = json_msg["welcome_all"];
                 if (json_msg["money_with_umoney"]) {
                     if (json_msg["money_with_umoney"] && umoney_check_exists() && json_msg["price"] >0) {
                         money_with_umoney = true;
@@ -595,7 +595,7 @@ ___________                 .__  __
                 money_with_umoney = false;
                 price = 1;
                 max_tty_area = 4000000;
-                wellcome_all = false;
+                welcome_all = false;
             }
         } catch (const std::exception& e) {
             max_tty_num = 20;
@@ -603,7 +603,7 @@ ___________                 .__  __
             money_with_umoney = false;
             price = 1;
             max_tty_area = 4000000;
-            wellcome_all = false;
+            welcome_all = false;
             getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置")+","+e.what());
         }
         //注册事件监听

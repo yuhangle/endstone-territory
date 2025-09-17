@@ -200,7 +200,7 @@ public:
         const Territory_Action::Point3D pos1 = Territory_Action::pos_to_tuple(parsed[0]);
         const Territory_Action::Point3D pos2 = Territory_Action::pos_to_tuple(parsed[1]);
         std::ostringstream cmd;
-        cmd << "tty add " << get<0>(pos1) << " " << get<1>(pos1) << " " << get<2>(pos1) << " " << get<0>(pos2) << " " << get<1>(pos2) << " " << get<2>(pos2);
+        cmd << "tty add_sub " << get<0>(pos1) << " " << get<1>(pos1) << " " << get<2>(pos1) << " " << get<0>(pos2) << " " << get<1>(pos2) << " " << get<2>(pos2);
         (void)p->performCommand(cmd.str());
       } catch (...) {
         p->sendErrorMessage(LangTty.getLocal("错误的坐标!"));
