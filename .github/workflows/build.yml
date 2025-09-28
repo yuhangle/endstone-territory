@@ -101,7 +101,7 @@ jobs:
         with:
           name: territory-windows-plugin
           path: |
-            ${{ github.workspace }}\build\Release\endstone_territory.dll
+            ${{ github.workspace }}\build\endstone_territory.dll
 
   release:
     name: Publish Release
