@@ -93,7 +93,7 @@ public:
                 {"money_with_umoney", false},
                 {"price", 1},
                 {"max_tty_area",4000000},
-                {"welcome_all",false}
+                {"welcome_all",true}
         };
 
         if (!(std::filesystem::exists(data_path))) {
@@ -595,7 +595,7 @@ ___________                 .__  __
                 money_with_umoney = false;
                 price = 1;
                 max_tty_area = 4000000;
-                welcome_all = false;
+                welcome_all = true;
             }
         } catch (const std::exception& e) {
             max_tty_num = 20;
@@ -603,7 +603,7 @@ ___________                 .__  __
             money_with_umoney = false;
             price = 1;
             max_tty_area = 4000000;
-            welcome_all = false;
+            welcome_all = true;
             getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置")+","+e.what());
         }
         //注册事件监听

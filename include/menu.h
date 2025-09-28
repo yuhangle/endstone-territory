@@ -985,13 +985,17 @@ public:
     }
     endstone::ModalForm menu;
     menu.setTitle(LangTty.getLocal("§l快速创建领地"));
+    endstone::Label pos_info;
+    pos_info.setText(to_string(get<0>(quick_tty_data.pos1)) + " y1 " + to_string(get<2>(quick_tty_data.pos1)) + "\n" +
+      to_string(get<0>(quick_tty_data.pos2)) + " y2 " + to_string(get<2>(quick_tty_data.pos2))
+      );
     endstone::Slider MaxY,MinY;
     MaxY.setLabel(LangTty.getLocal("§l设置领地最高点"));
     MaxY.setMax(320);MaxY.setMin(-64);MaxY.setDefaultValue(320);MaxY.setStep(1);
 
     MinY.setLabel(LangTty.getLocal("§l设置领地最低点"));
     MinY.setMin(-64);MinY.setMin(-64);MinY.setDefaultValue(-64);MinY.setStep(1);
-    menu.setControls({MaxY,MinY});
+    menu.setControls({MaxY,MinY,pos_info});
     bool create_status = false;
     menu.setOnSubmit([create_status,quick_tty_data](const endstone::Player* p, const std::string& response)mutable {
       auto parse = nlohmann::json::parse(response);
