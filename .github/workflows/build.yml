@@ -36,14 +36,14 @@ jobs:
           sudo apt-get install -y wget gnupg lsb-release software-properties-common unzip zip
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
-          sudo ./llvm.sh 16
-          sudo apt-get install -y libc++-16-dev libc++abi-16-dev cmake libsqlite3-dev ninja-build
+          sudo ./llvm.sh 19
+          sudo apt-get install -y libc++-19-dev libc++abi-19-dev cmake libsqlite3-dev ninja-build
       - name: Configure CMake (Linux)
         if: runner.os == 'Linux'
         run: |
           cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_C_COMPILER=clang-16 \
-                -DCMAKE_CXX_COMPILER=clang++-16 \
+                -DCMAKE_C_COMPILER=clang-19 \
+                -DCMAKE_CXX_COMPILER=clang++-19 \
                 -DCMAKE_CXX_FLAGS="-stdlib=libc++"
       # ===== Windows =====
       - name: Set up MSVC
