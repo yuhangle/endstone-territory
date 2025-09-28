@@ -67,12 +67,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          mkdir build
-          cd build
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release `
+          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows-static
-          cd ..
       # ===== Build =====
       - name: Build
         run: cmake --build build --config Release
