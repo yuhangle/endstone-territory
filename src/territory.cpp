@@ -3,7 +3,7 @@
 //
 
 #include "TerritoryCore.h"
-ENDSTONE_PLUGIN("territory", "0.2.6dev8", Territory)
+ENDSTONE_PLUGIN("territory", "0.2.6", Territory)
 {
     description = "a territory plugin for endstone with C++";
     website = "https://github.com/yuhangle/endstone-territory";
