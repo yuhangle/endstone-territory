@@ -7,7 +7,7 @@
 
 #include <vector>
 #include <optional>
-#include "database.h"
+#include "database.hpp"
 using namespace std;
 
 class Territory_Action {

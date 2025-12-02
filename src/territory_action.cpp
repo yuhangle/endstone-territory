@@ -3,7 +3,7 @@
 //
 
 #include "../include/territory_action.h"
-
+#include "translate.hpp"
 #include "../include/territory.h"
 Territory_Action::Territory_Action(DataBase database) : Database(std::move(database)) {}
 
@@ -18,14 +18,14 @@ std::map<std::string, Territory_Action::TerritoryData>& Territory_Action::get_al
     vector<map<string,string>> result;
     Database.getAllTty(result);
     if (result.empty()) {
-        Territory_Action::TerritoryData emptyData = {""};
-        std::map<std::string, Territory_Action::TerritoryData> emptyDatas;
+        TerritoryData emptyData = {""};
+        std::map<std::string, TerritoryData> emptyDatas;
         emptyDatas.insert(make_pair("", emptyData));
         all_tty = emptyDatas;
         return all_tty;
     }
     all_tty.clear();
-    std::map<std::string, Territory_Action::TerritoryData> new_all_tty;
+    std::map<std::string, TerritoryData> new_all_tty;
     for (const auto& data : result) {
         TerritoryData tty_data;
         tty_data.name = data.at("name");
@@ -51,7 +51,7 @@ std::map<std::string, Territory_Action::TerritoryData>& Territory_Action::get_al
 
 // 根据名字读取领地信息的函数
 Territory_Action::TerritoryData* Territory_Action::read_territory_by_name(const std::string& territory_name) {
-    auto it = all_tty.find(territory_name);
+    const auto it = all_tty.find(territory_name);
     if (it != all_tty.end()) {
         return &it->second;
     }
@@ -62,12 +62,12 @@ Territory_Action::TerritoryData* Territory_Action::read_territory_by_name(const 
 bool Territory_Action::isPointInCube(const tuple<double, double, double>& point,
                           const tuple<double, double, double>& corner1,
                           const tuple<double, double, double>& corner2) {
-    double x_min = min(get<0>(corner1), get<0>(corner2));
-    double x_max = max(get<0>(corner1), get<0>(corner2));
-    double y_min = min(get<1>(corner1), get<1>(corner2));
-    double y_max = max(get<1>(corner1), get<1>(corner2));
-    double z_min = min(get<2>(corner1), get<2>(corner2));
-    double z_max = max(get<2>(corner1), get<2>(corner2));
+    const double x_min = min(get<0>(corner1), get<0>(corner2));
+    const double x_max = max(get<0>(corner1), get<0>(corner2));
+    const double y_min = min(get<1>(corner1), get<1>(corner2));
+    const double y_max = max(get<1>(corner1), get<1>(corner2));
+    const double z_min = min(get<2>(corner1), get<2>(corner2));
+    const double z_max = max(get<2>(corner1), get<2>(corner2));
 
     return (x_min <= get<0>(point) && get<0>(point) <= x_max &&
             y_min <= get<1>(point) && get<1>(point) <= y_max &&
@@ -90,21 +90,21 @@ bool Territory_Action::is_overlapping(const std::pair<std::tuple<double, double,
     };
 
     // 计算cube1的范围
-    auto range1 = computeMinMax(cube1.first, cube1.second);
-    double x1_min = std::get<0>(range1), x1_max = std::get<1>(range1);
-    double y1_min = std::get<2>(range1), y1_max = std::get<3>(range1);
-    double z1_min = std::get<4>(range1), z1_max = std::get<5>(range1);
+    const auto range1 = computeMinMax(cube1.first, cube1.second);
+    const double x1_min = std::get<0>(range1), x1_max = std::get<1>(range1);
+    const double y1_min = std::get<2>(range1), y1_max = std::get<3>(range1);
+    const double z1_min = std::get<4>(range1), z1_max = std::get<5>(range1);
 
     // 计算cube2的范围
-    auto range2 = computeMinMax(cube2.first, cube2.second);
-    double x2_min = std::get<0>(range2), x2_max = std::get<1>(range2);
-    double y2_min = std::get<2>(range2), y2_max = std::get<3>(range2);
-    double z2_min = std::get<4>(range2), z2_max = std::get<5>(range2);
+    const auto range2 = computeMinMax(cube2.first, cube2.second);
+    const double x2_min = std::get<0>(range2), x2_max = std::get<1>(range2);
+    const double y2_min = std::get<2>(range2), y2_max = std::get<3>(range2);
+    const double z2_min = std::get<4>(range2), z2_max = std::get<5>(range2);
 
     // 检查是否有维度不重叠
-    bool overlap_x = x1_max >= x2_min && x2_max >= x1_min;
-    bool overlap_y = y1_max >= y2_min && y2_max >= y1_min;
-    bool overlap_z = z1_max >= z2_min && z2_max >= z1_min;
+    const bool overlap_x = x1_max >= x2_min && x2_max >= x1_min;
+    const bool overlap_y = y1_max >= y2_min && y2_max >= y1_min;
+    const bool overlap_z = z1_max >= z2_min && z2_max >= z1_min;
 
     return overlap_x && overlap_y && overlap_z;
 }
@@ -114,7 +114,7 @@ bool Territory_Action::isTerritoryOverlapping(const std::tuple<double, double, d
                             const std::tuple<double, double, double>& new_pos2,
                             const std::string& new_dim) {
     // 构造表示新领地范围的 pair
-    auto new_tty = std::make_pair(new_pos1, new_pos2);
+    const auto new_tty = std::make_pair(new_pos1, new_pos2);
 
     return ranges::any_of(std::as_const(all_tty),
                           [&](const auto& entry) {
@@ -133,8 +133,7 @@ int Territory_Action::check_tty_num(const std::string& player_name) {
     // 初始化计数器
     int tty_num = 0;
     for (const auto &val: all_tty | views::values) {
-        const Territory_Action::TerritoryData& territory = val;
-        if (player_name == territory.owner) {
+        if (const TerritoryData& territory = val; player_name == territory.owner) {
             // 找到一个就加1
             tty_num++;
         }
@@ -145,11 +144,11 @@ int Territory_Action::check_tty_num(const std::string& player_name) {
 //计算面积
 int Territory_Action::get_tty_area(const int x1,const int z1,const int x2,const int z2) {
     // 计算矩形的宽度和高度
-    int width = abs(x2 - x1);
-    int height = abs(z2 - z1);
+    const int width = abs(x2 - x1);
+    const int height = abs(z2 - z1);
 
     // 计算面积
-    int area = width * height;
+    const int area = width * height;
 
     // 返回面积
     return area;
@@ -159,17 +158,16 @@ int Territory_Action::get_tty_area(const int x1,const int z1,const int x2,const 
 std::tuple<double, double, double> Territory_Action::pos_to_tuple(const std::string& str) {
     std::tuple<double, double, double> result;
     std::stringstream ss(str);
-    double value1, value2, value3;
 
     // 使用流提取操作符来解析字符串中的浮点数
-    if (ss >> value1 >> value2 >> value3) {
+    if (double value1, value2, value3; ss >> value1 >> value2 >> value3) {
         result = std::make_tuple(value1, value2, value3);
     }
     return result;
 }
 
 //检查立方体是否为子集函数
-bool Territory_Action::isSubsetCube(const Territory_Action::Cube &cube1, const Territory_Action::Cube &cube2) {
+bool Territory_Action::isSubsetCube(const Cube &cube1, const Cube &cube2) {
     // 获取立方体 1 的最小和最大坐标
     auto [cube1_min_x, cube1_max_x] = std::minmax({get<0>(std::get<0>(cube1)), get<0>(std::get<1>(cube1))});
     auto [cube1_min_y, cube1_max_y] = std::minmax({get<1>(std::get<0>(cube1)), get<1>(std::get<1>(cube1))});
@@ -188,16 +186,16 @@ bool Territory_Action::isSubsetCube(const Territory_Action::Cube &cube1, const T
 
 //列出符合条件父领地的函数
 std::pair<bool, std::string> Territory_Action::listTrueFatherTTY(const std::string& playerName,
-                                               const Territory_Action::Cube& childCube,
+                                               const Cube& childCube,
                                                const std::string& childDim) {
     std::vector<std::string> trueTTYInfo;
 
     for (const auto &val: all_tty | views::values) {
-        const Territory_Action::TerritoryData& ttyInfo = val;
+        const TerritoryData& ttyInfo = val;
         std::string ttyOwner = ttyInfo.owner;
         std::string ttyManager = ttyInfo.manager;
-        Territory_Action::Point3D pos1 = ttyInfo.pos1;
-        Territory_Action::Point3D pos2 = ttyInfo.pos2;
+        Point3D pos1 = ttyInfo.pos1;
+        Point3D pos2 = ttyInfo.pos2;
         std::string dim = ttyInfo.dim;
         std::string ttyName = ttyInfo.name;
 
@@ -206,7 +204,7 @@ std::pair<bool, std::string> Territory_Action::listTrueFatherTTY(const std::stri
             // 领地维度相同
             if (childDim == dim) {
                 // 检查全包围领地
-                if (Territory_Action::isSubsetCube(childCube, std::make_tuple(pos1, pos2))) {
+                if (isSubsetCube(childCube, std::make_tuple(pos1, pos2))) {
                     trueTTYInfo.push_back(ttyName);
                 }
             }
@@ -215,13 +213,14 @@ std::pair<bool, std::string> Territory_Action::listTrueFatherTTY(const std::stri
 
     if (trueTTYInfo.size() > 1) {
         return {false, LangTty.getLocal("无法在子领地内创建子领地")};
-    } else if (trueTTYInfo.empty()) {
-        return {false, LangTty.getLocal("未查找到符合条件的父领地, 子领地创建失败")};
-    } else if (trueTTYInfo.size() == 1) {
-        return {true, trueTTYInfo.front()};
-    } else {
-        return {false, LangTty.getLocal("未知错误")};
     }
+    if (trueTTYInfo.empty()) {
+        return {false, LangTty.getLocal("未查找到符合条件的父领地, 子领地创建失败")};
+    }
+    if (trueTTYInfo.size() == 1) {
+        return {true, trueTTYInfo.front()};
+    }
+    return {false, LangTty.getLocal("未知错误")};
 }
 
 // 列出玩家领地的函数
@@ -253,7 +252,7 @@ for (const auto &data: result) {
 
 // 删除领地函数
 bool Territory_Action::del_Tty_by_name(const std::string& territory_name) const {
-    auto tty_data = read_territory_by_name(territory_name);
+    const auto tty_data = read_territory_by_name(territory_name);
     if (!tty_data) {
         return false;
     }
@@ -261,8 +260,7 @@ bool Territory_Action::del_Tty_by_name(const std::string& territory_name) const 
     (void)Database.deleteTty(tty_data->name);
 
     // 获取子领地并修改它们的父领地
-    auto sub_ttys = getSubTty(territory_name);
-    for (const auto &sub_tty: sub_ttys) {
+    for (const auto sub_ttys = getSubTty(territory_name); const auto &sub_tty: sub_ttys) {
         (void)Database.updateValue("territories","father_tty","","name",sub_tty);
     }
 
@@ -278,7 +276,7 @@ bool Territory_Action::rename_Tty(const std::string &territory_name, const std::
         return false;
     }
     (void)Database.updateValue("territories","name",new_tty_name,"name",territory_name);
-    auto sub_ttys = getSubTty(territory_name);
+    const auto sub_ttys = getSubTty(territory_name);
     if (sub_ttys.empty()) {
         return true;
     }
@@ -294,10 +292,9 @@ bool Territory_Action::rename_Tty(const std::string &territory_name, const std::
         std::string msg = LangTty.getLocal("已重命名领地: 从 ") + oldname + LangTty.getLocal(" 到 ") + newname;
         (void)get_all_tty();
         return {true, msg};
-    } else {
-        std::string msg = LangTty.getLocal("尝试重命名领地但未找到: ") + oldname;
-        return {false, msg};
     }
+    std::string msg = LangTty.getLocal("尝试重命名领地但未找到: ") + oldname;
+    return {false, msg};
 }
 
 // 检查领地主人函数
@@ -307,9 +304,9 @@ std::optional<bool> Territory_Action::check_tty_owner(const std::string &ttyname
         if (territory.name == ttyname) {         // 找到对应领地
             if (territory.owner == player_name) {  // 领地主人匹配
                 return true;
-            } else {                             // 领地主人不匹配
-                return false;
             }
+            // 领地主人不匹配
+            return false;
         }
     }
     // 未找到该领地，返回空值
@@ -328,8 +325,7 @@ std::optional<bool> Territory_Action::check_tty_op(const std::string &ttyname, c
             }
             if (player_name == territory.owner || ranges::find(currentManagers,player_name) != currentManagers.end())
                 return true;
-            else
-                return false;
+            return false;
         }
     }
     // 未找到领地，返回空值
@@ -337,7 +333,7 @@ std::optional<bool> Territory_Action::check_tty_op(const std::string &ttyname, c
 }
 
 // 函数功能：列出与给定坐标点及维度匹配的全部领地信息
-std::optional<std::vector<Territory_Action::InTtyInfo>> Territory_Action::list_in_tty(const Territory_Action::Point3D &pos, const std::string &dim) {
+std::optional<std::vector<Territory_Action::InTtyInfo>> Territory_Action::list_in_tty(const Point3D &pos, const std::string &dim) {
     /* 参数：
     //   pos: 点坐标
     //   dim: 点所在的维度
@@ -345,15 +341,14 @@ std::optional<std::vector<Territory_Action::InTtyInfo>> Territory_Action::list_i
     //   若找到至少一个匹配的领地，则返回包含各领地信息的 vector；
     //  若无匹配，则返回 std::nullopt。
     */
-    std::vector<Territory_Action::InTtyInfo> in_tty;
+    std::vector<InTtyInfo> in_tty;
 
     // 遍历所有领地数据
     for (const auto &val: all_tty | views::values) {
-        const Territory_Action::TerritoryData &territory = val;
         // 维度匹配
-        if (territory.dim == dim) {
+        if (const TerritoryData &territory = val; territory.dim == dim) {
             // 坐标匹配（调用 is_point_in_cube）
-            if (Territory_Action::isPointInCube(pos, territory.pos1, territory.pos2)) {
+            if (isPointInCube(pos, territory.pos1, territory.pos2)) {
                 // 合并领地的所有成员：分别按逗号分割后拼接
                 std::vector<std::string> combinedMembers;
                 auto owners   = DataBase::splitString(territory.owner);
@@ -363,7 +358,7 @@ std::optional<std::vector<Territory_Action::InTtyInfo>> Territory_Action::list_i
                 combinedMembers.insert(combinedMembers.end(), managers.begin(), managers.end());
                 combinedMembers.insert(combinedMembers.end(), members.begin(), members.end());
 
-                Territory_Action::InTtyInfo info{
+                InTtyInfo info{
                         territory.name,
                         territory.if_jiaohu,
                         territory.if_break,
@@ -379,10 +374,9 @@ std::optional<std::vector<Territory_Action::InTtyInfo>> Territory_Action::list_i
                     in_tty.clear();
                     in_tty.push_back(info);
                     return in_tty;
-                } else {
-                    // 非子领地直接加入列表
-                    in_tty.push_back(info);
                 }
+                // 非子领地直接加入列表
+                in_tty.push_back(info);
             }
         }
     }
@@ -390,13 +384,12 @@ std::optional<std::vector<Territory_Action::InTtyInfo>> Territory_Action::list_i
     // 如果没有匹配的领地，则返回空（None风格的返回）
     if (in_tty.empty()) {
         return std::nullopt;
-    } else {
-        return in_tty;
     }
+    return in_tty;
 }
 
 //领地权限更改
-bool Territory_Action::change_tty_permissions(const std::string &ttyname, const std::string &permission, int value) const {
+bool Territory_Action::change_tty_permissions(const std::string &ttyname, const std::string &permission, const int value) const {
     if (const auto tty = read_territory_by_name(ttyname); tty == nullptr) {
         return false;
     }
@@ -404,7 +397,7 @@ bool Territory_Action::change_tty_permissions(const std::string &ttyname, const 
 }
 
 // 领地权限变更函数
-std::pair<bool, std::string> Territory_Action::change_territory_permissions(const std::string &ttyname,const std::string &permission,int value) const{
+std::pair<bool, std::string> Territory_Action::change_territory_permissions(const std::string &ttyname,const std::string &permission, const int value) const{
     // 参数：
     //   ttyname: 领地名
     //   permission: 权限名（允许的选项为 "if_jiaohu", "if_break", "if_tp", "if_build", "if_bomb","if_damage"）
@@ -426,15 +419,14 @@ std::pair<bool, std::string> Territory_Action::change_territory_permissions(cons
         // 更新全局领地信息
         (void)get_all_tty();
         return {true, msg};
-    } else {
-        std::string msg = LangTty.getLocal("尝试更新领地权限但未找到领地: ") + ttyname;
-        return {false, msg};
     }
+    std::string msg = LangTty.getLocal("尝试更新领地权限但未找到领地: ") + ttyname;
+    return {false, msg};
 }
 
 //添加或删除领地成员的函数
 int Territory_Action::change_tty_member(const std::string &ttyname, const std::string &action, const std::string &player_name) const {
-    auto tty_data = read_territory_by_name(ttyname);
+    const auto tty_data = read_territory_by_name(ttyname);
     if (tty_data == nullptr) {
         return -1;
     }
@@ -442,25 +434,21 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
     if (action == "add") {
         if (ranges::find(tty_members, player_name) != tty_members.end()) {
             return 1;
-        } else {
-            tty_members.push_back(player_name);
         }
+        tty_members.push_back(player_name);
     } else if (action == "remove") {
-        auto it = ranges::find(tty_members, player_name);
+        const auto it = ranges::find(tty_members, player_name);
         if (it == tty_members.end()) {
             return 1;
-        } else {
-            tty_members.erase(it);
         }
+        tty_members.erase(it);
     } else {
         return -2; // 非法操作类型
     }
-    auto new_tty_members = DataBase::vectorToString(tty_members);
-    if (Database.updateValue("territories","member",new_tty_members,"name",ttyname)) {
+    if (const auto new_tty_members = DataBase::vectorToString(tty_members); Database.updateValue("territories","member",new_tty_members,"name",ttyname)) {
         return 0;
-    } else {
-        return -2;
     }
+    return -2;
 }
 
 // 添加或删除领地成员的函数
@@ -478,7 +466,7 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
     if (action != "add" && action != "remove") {
         return {false, "无效的操作类型: " + action};
     }
-    auto status = change_tty_member(ttyname, action, player_name);
+    const auto status = change_tty_member(ttyname, action, player_name);
     if (status == -1) {
         std::string msg = LangTty.getLocal("尝试更改领地成员但未找到领地: ") + ttyname;
         return {false, msg};
@@ -508,26 +496,24 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
         // 更新全局领地信息
         (void)get_all_tty();
         return {true, msg};
-    } else {
-        return {false, LangTty.getLocal("更新领地成员时发生未知错误: ") + ttyname};
     }
+    return {false, LangTty.getLocal("更新领地成员时发生未知错误: ") + ttyname};
 }
 
 //更改领地主人函数
 int Territory_Action::change_tty_owner(const std::string &ttyname,const std::string &old_owner_name,const std::string &new_owner_name) const {
-    auto tty_data = read_territory_by_name(ttyname);
+    const auto tty_data = read_territory_by_name(ttyname);
     if (tty_data == nullptr) {
         return -1;
     }
-    auto tty_owner = tty_data->owner;
+    const auto tty_owner = tty_data->owner;
     if (tty_owner != old_owner_name || tty_owner == new_owner_name) {
         return -2;
     }
     if (Database.updateValue("territories","owner",new_owner_name,"name",ttyname)) {
         return 0;
-    } else {
-        return 1;
     }
+    return 1;
 }
 
 // 领地转让函数
@@ -542,11 +528,11 @@ int Territory_Action::change_tty_owner(const std::string &ttyname,const std::str
     //   std::pair<bool, std::string>，first 为是否成功，second 为提示信息
 
     // 1. 检查新领地主人的领地数量是否达到上限
-    if (Territory_Action::check_tty_num(new_owner_name) >= max_tty_num) {
+    if (check_tty_num(new_owner_name) >= max_tty_num) {
         std::string msg = LangTty.getLocal("玩家 ") + new_owner_name + LangTty.getLocal(" 的领地数量已达到上限, 无法增加新的领地, 转让领地失败");
         return {false, msg};
     }
-    auto status = change_tty_owner(ttyname,old_owner_name,new_owner_name);
+    const auto status = change_tty_owner(ttyname,old_owner_name,new_owner_name);
     if (status == -1) {
         std::string msg = LangTty.getLocal("尝试更改领地主人但未找到领地: ") + ttyname;
         return {false, msg};
@@ -559,18 +545,17 @@ int Territory_Action::change_tty_owner(const std::string &ttyname,const std::str
         // 更新全局领地信息
         (void)get_all_tty();
         return {true, msg};
-    } else if (status == 1) {
+    }
+    if (status == 1) {
         return {false,"Update data failed"};
     }
-    else {
-        std::string msg = LangTty.getLocal("领地转让失败, 请检查是否为领地主人以及转让对象是否合规");
-        return {false, msg};
-    }
+    std::string msg = LangTty.getLocal("领地转让失败, 请检查是否为领地主人以及转让对象是否合规");
+    return {false, msg};
 }
 
 //添加或删除领地管理员的函数
 int Territory_Action::change_tty_manager(const std::string &ttyname, const std::string &action, const std::string &player_name) const {
-    auto tty_data = read_territory_by_name(ttyname);
+    const auto tty_data = read_territory_by_name(ttyname);
     if (tty_data == nullptr) {
         return -1;
     }
@@ -578,25 +563,21 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
     if (action == "add") {
         if (ranges::find(tty_manager, player_name) != tty_manager.end()) {
             return 1;
-        } else {
-            tty_manager.push_back(player_name);
         }
+        tty_manager.push_back(player_name);
     } else if (action == "remove") {
-        auto it = ranges::find(tty_manager, player_name);
+        const auto it = ranges::find(tty_manager, player_name);
         if (it == tty_manager.end()) {
             return 1;
-        } else {
-            tty_manager.erase(it);
         }
+        tty_manager.erase(it);
     } else {
         return -2; // 非法操作类型
     }
-    auto new_tty_managers = DataBase::vectorToString(tty_manager);
-    if (Database.updateValue("territories","manager",new_tty_managers,"name",ttyname)) {
+    if (const auto new_tty_managers = DataBase::vectorToString(tty_manager); Database.updateValue("territories","manager",new_tty_managers,"name",ttyname)) {
         return 0;
-    } else {
-        return -2;
     }
+    return -2;
 }
 
 // 添加或删除领地管理员的函数
@@ -614,7 +595,7 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
     if (action != "add" && action != "remove") {
         return {false, "无效的操作类型: " + action};
     }
-    auto status = change_tty_manager(ttyname, action, player_name);
+    const auto status = change_tty_manager(ttyname, action, player_name);
     if (status == -1) {
         std::string msg = LangTty.getLocal("尝试更改领地管理员但未找到领地: ") + ttyname;
         return {false, msg};
@@ -644,9 +625,8 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
         // 更新全局领地信息
         (void)get_all_tty();
         return {true, msg};
-    } else {
-        return {false, LangTty.getLocal("更新领地管理员时发生未知错误: ") + ttyname};
     }
+    return {false, LangTty.getLocal("更新领地管理员时发生未知错误: ") + ttyname};
 }
 
 // 帮助将Point转换为字符串（用于提示信息）
@@ -658,7 +638,7 @@ std::string Territory_Action::pointToString(const Point3D &p) {
 
 // 领地传送点变更函数
 [[nodiscard]] std::pair<bool, std::string> Territory_Action::change_tty_tppos(const std::string &ttyname,
-                                              const Territory_Action::Point3D &tppos,
+                                              const Point3D &tppos,
                                               const std::string &dim) const{
     // 参数：
     //   ttyname: 领地名
@@ -671,16 +651,15 @@ std::string Territory_Action::pointToString(const Point3D &p) {
     // 在更新数据库前，先检查传送点是否合法
     // 遍历全局缓存中的所有领地记录
     for (const auto &val: all_tty | views::values) {
-        const Territory_Action::TerritoryData &territory = val;
-        if (territory.name == ttyname) {
+        if (const TerritoryData &territory = val; territory.name == ttyname) {
             // 维度检查
             if (territory.dim != dim) {
                 std::string msg = LangTty.getLocal("你当前所在的维度(") + dim + LangTty.getLocal(")与领地维度(") + territory.dim + LangTty.getLocal(")不匹配, 无法设置领地传送点");
                 return {false, msg};
             }
             // 坐标检查
-            if (!Territory_Action::isPointInCube(tppos, territory.pos1, territory.pos2)) {
-                std::string pos_str = Territory_Action::pointToString(tppos);
+            if (!isPointInCube(tppos, territory.pos1, territory.pos2)) {
+                std::string pos_str = pointToString(tppos);
                 std::string msg = LangTty.getLocal("无法接受的坐标") + pos_str + LangTty.getLocal(", 领地传送点不能位于领地之外!");
                 return {false, msg};
             }
@@ -762,7 +741,7 @@ std::string Territory_Action::pointToString(const Point3D &p) {
     sqlite3_close(db);
 
     if (affectedRows > 0) {
-        std::string pos_str = Territory_Action::pointToString(tppos);
+        std::string pos_str = pointToString(tppos);
         std::string msg = LangTty.getLocal("已更新领地 ") + ttyname + LangTty.getLocal(" 的传送点为 ") + pos_str;
         // 更新全局领地信息缓存
         (void)get_all_tty();
