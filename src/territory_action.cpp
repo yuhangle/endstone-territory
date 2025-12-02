@@ -2,9 +2,9 @@
 // Created by yuhang on 2025/9/3.
 //
 
-#include "Territory_Action.h"
+#include "../include/territory_action.h"
 
-#include "TerritoryCore.h"
+#include "../include/territory.h"
 Territory_Action::Territory_Action(DataBase database) : Database(std::move(database)) {}
 
 // 从外部获取all_tty数据

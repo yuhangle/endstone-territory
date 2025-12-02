@@ -7,7 +7,7 @@
 #pragma once
 #include <endstone/endstone.hpp>
 #include "translate.h"
-#include "Territory_Action.h"
+#include "territory_action.h"
 class Menu {
 public:
   explicit Menu(endstone::Plugin &plugin) : plugin_(plugin) {} ;

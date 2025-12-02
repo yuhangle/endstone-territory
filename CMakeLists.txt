@@ -39,7 +39,11 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(fmt)
 
 # 插件源码
-endstone_add_plugin(${PROJECT_NAME} src/territory.cpp include/Territory_Action.cpp)
+file(GLOB PLUGIN_SOURCES
+        CONFIGURE_DEPENDS
+        "src/*.cpp"
+)
+endstone_add_plugin(${PROJECT_NAME} ${PLUGIN_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE include)
 
 # 链接库

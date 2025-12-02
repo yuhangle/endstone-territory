@@ -5,7 +5,7 @@
 #ifndef TERRITORY_TERRITORYCORE_H
 #define TERRITORY_TERRITORYCORE_H
 
-#include "DataBase.h"
+#include "database.h"
 #include <endstone/endstone.hpp>
 #include <endstone/plugin/plugin.h>
 #include <endstone/color_format.h>
@@ -33,7 +33,7 @@
 #include "translate.h"
 #include <random>
 #include <iomanip>
-#include "Territory_Action.h"
+#include "territory_action.h"
 #include "menu.h"
 
 using json = nlohmann::json;

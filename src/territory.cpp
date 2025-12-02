@@ -2,7 +2,7 @@
 // Created by yuhang on 2025/3/6.
 //
 
-#include "TerritoryCore.h"
+#include "territory.h"
 ENDSTONE_PLUGIN("territory", "0.2.6", Territory)
 {
     description = "a territory plugin for endstone with C++";
