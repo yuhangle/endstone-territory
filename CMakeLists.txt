@@ -53,3 +53,65 @@ target_link_libraries(${PROJECT_NAME}
         SQLite::SQLite3
         fmt::fmt-header-only
 )
+
+find_package(Git QUIET)
+if(GIT_FOUND)
+    # 获取最近的 tag
+    execute_process(
+            COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0 HEAD
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            OUTPUT_VARIABLE LAST_TAG
+            ERROR_QUIET
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    if(LAST_TAG)
+        # 计算自该 tag 以来的提交数
+        execute_process(
+                COMMAND ${GIT_EXECUTABLE} rev-list --count "${LAST_TAG}..HEAD"
+                WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                OUTPUT_VARIABLE GIT_COMMIT_COUNT
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+    else()
+        # 没有 tag，回退到总提交数
+        execute_process(
+                COMMAND ${GIT_EXECUTABLE} rev-list --count HEAD
+                WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                OUTPUT_VARIABLE GIT_COMMIT_COUNT
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+    endif()
+
+    # 获取短哈希
+    execute_process(
+            COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            OUTPUT_VARIABLE GIT_SHORT_HASH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+else()
+    set(GIT_COMMIT_COUNT "0")
+    set(GIT_SHORT_HASH "unknown")
+endif()
+
+# 基础版本（主版本号）
+set(BASE_VERSION "0.2.7")
+
+# 检查是否为正式发布版本
+if(RELEASE_VERSION)
+    # 正式发布版本
+    set(PROJECT_VERSION "${BASE_VERSION}")
+else()
+    # 开发版本
+    set(PROJECT_VERSION "${BASE_VERSION}-alpha.${GIT_COMMIT_COUNT}+${GIT_SHORT_HASH}")
+endif()
+
+# 生成 version.h
+configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/generated/version.h"
+)
+
+# 将生成目录加入包含路径
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")

@@ -2,7 +2,7 @@
 // Created by yuhang on 2025/12/2.
 //
 #include "menu.h"
-#include "translate.hpp"
+#include "territory.h"
 
 vector<std::string> Menu::getOnlinePlayerList() const {
   const auto players = plugin_.getServer().getOnlinePlayers();
@@ -121,7 +121,7 @@ void Menu::openMainMenu(endstone::Player* player) const{
 
 void Menu::openCreateTtyMenu(endstone::Player* player) const {
   endstone::ModalForm form;
-  form.setTitle(LangTty.getLocal("§5§l新建领地"));
+  form.setTitle(LangTty.getLocal("§l§5新建领地"));
 
   // 输入框1
   endstone::TextInput inputTtyPos1;
@@ -168,7 +168,7 @@ void Menu::openCreateTtyMenu(endstone::Player* player) const {
 
 void Menu::openCreateSubTtyMenu(endstone::Player* player) const {
   endstone::ModalForm form;
-  form.setTitle(LangTty.getLocal("§5§l新建子领地"));
+  form.setTitle(LangTty.getLocal("§l§5新建子领地"));
 
   endstone::TextInput inputSubTtyPos1;
   inputSubTtyPos1.setLabel(LangTty.getLocal("§l输入子领地边角坐标1 格式示例: 114 5 14"));

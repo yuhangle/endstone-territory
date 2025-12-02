@@ -3,9 +3,6 @@ name: Build Endstone Territory
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: '版本号（例如 1.2.3，会自动加上 v 前缀）'
-        required: true
       publish_release:
         description: '是否发布 Release'
         required: true
@@ -14,6 +11,14 @@ on:
         options:
           - 'false'
           - 'true'
+      release_type:
+        description: '发布类型'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - 'development'
+          - 'release'
 
 jobs:
   build:
@@ -27,6 +32,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # ===== Linux =====
       - name: Install dependencies (Linux)
@@ -41,16 +48,23 @@ jobs:
       - name: Configure CMake (Linux)
         if: runner.os == 'Linux'
         run: |
-          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_C_COMPILER=clang-19 \
-                -DCMAKE_CXX_COMPILER=clang++-19 \
-                -DCMAKE_CXX_FLAGS="-stdlib=libc++"
+          if [ "${{ github.event.inputs.release_type }}" = "release" ]; then
+            cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=1 \
+                  -DCMAKE_C_COMPILER=clang-19 \
+                  -DCMAKE_CXX_COMPILER=clang++-19 \
+                  -DCMAKE_CXX_FLAGS="-stdlib=libc++"
+          else
+            cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release \
+                  -DCMAKE_C_COMPILER=clang-19 \
+                  -DCMAKE_CXX_COMPILER=clang++-19 \
+                  -DCMAKE_CXX_FLAGS="-stdlib=libc++"
+          fi
       # ===== Windows =====
       - name: Set up MSVC
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: x86_64
+          arch: x64
 
       - name: Set up CMake and Ninja
         if: runner.os == 'Windows'
@@ -67,9 +81,15 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          if ("${{ github.event.inputs.release_type }}" -eq "release") {
+            cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=1 `
+              -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+              -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          } else {
+            cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release `
+              -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+              -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          }
       # ===== Build =====
       - name: Build
         run: cmake --build build --config Release
@@ -111,6 +131,40 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version information
+        id: get_version
+        run: |
+          # 从 CMakeLists.txt 中提取基础版本号
+          BASE_VERSION=$(grep -o 'set(BASE_VERSION "[^"]*")' CMakeLists.txt | cut -d'"' -f2)
+          
+          if [ "${{ github.event.inputs.release_type }}" = "release" ]; then
+            # 正式发布版本
+            PROJECT_VERSION="${BASE_VERSION}"
+            TAG_VERSION="v${BASE_VERSION}"
+          else
+            # 开发版本
+            # 尝试获取最近的正式版 tag
+            LAST_TAG=$(git describe --tags --match="v[0-9]*.[0-9]*.[0-9]*" --match="v[0-9]*.[0-9]*.[0-9]*.[0-9]*" --abbrev=0 2>/dev/null || echo "")
+          
+            if [ -n "$LAST_TAG" ]; then
+              GIT_COMMIT_COUNT=$(git rev-list --count "${LAST_TAG}"..HEAD)
+            else
+              GIT_COMMIT_COUNT=$(git rev-list --count HEAD)  # 无 tag 时回退
+            fi
+          
+            GIT_SHORT_HASH=$(git rev-parse --short HEAD)
+          
+            # 组合成完整版本
+            PROJECT_VERSION="${BASE_VERSION}-alpha.${GIT_COMMIT_COUNT}+${GIT_SHORT_HASH}"
+            TAG_VERSION="v${BASE_VERSION}-alpha.${GIT_COMMIT_COUNT}"
+          fi
+          
+          echo "VERSION=${PROJECT_VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG_VERSION=${TAG_VERSION}" >> $GITHUB_OUTPUT
+          echo "RELEASE_TITLE=${RELEASE_TITLE}" >> $GITHUB_OUTPUT
 
       - name: Download all plugin artifacts
         uses: actions/download-artifact@v4
@@ -121,8 +175,7 @@ jobs:
 
       - name: Prepare and Package All
         run: |
-          VERSION=${{ github.event.inputs.version }}
-          LANGS=(chinese english)
+          VERSION=${{ steps.get_version.outputs.VERSION }}
           OS_LIST=(linux windows)
           for OS in "${OS_LIST[@]}"; do
             if [[ "$OS" == "linux" ]]; then
@@ -132,29 +185,25 @@ jobs:
               PLUGIN_PATH=$(find artifacts/territory-windows-plugin -name "endstone_territory.dll" | head -n 1)
               EXT=dll
             fi
-            for LANG in "${LANGS[@]}"; do
-              BUILD_DIR=package
-              mkdir -p ${BUILD_DIR}/territory
-              cp "$PLUGIN_PATH" ${BUILD_DIR}/endstone_territory.${EXT}
-              cp "language/${LANG}/lang.json" ${BUILD_DIR}/territory/lang.json
-              ZIP_NAME=territory_v${VERSION}_${OS}_${LANG}.zip
-              cd ${BUILD_DIR}
-              zip -r ../${ZIP_NAME} endstone_territory.${EXT} territory
-              cd ..
-              mv ${ZIP_NAME} artifacts/
-              rm -rf ${BUILD_DIR}
-            done
+            BUILD_DIR=package
+            mkdir -p ${BUILD_DIR}/territory/language
+            cp "$PLUGIN_PATH" ${BUILD_DIR}/endstone_territory.${EXT}
+            cp -r language/* ${BUILD_DIR}/territory/language/
+            ZIP_NAME=territory_plugin_v${VERSION}_${OS}.zip
+            cd ${BUILD_DIR}
+            zip -r ../${ZIP_NAME} endstone_territory.${EXT} territory_data
+            cd ..
+            mv ${ZIP_NAME} artifacts/
+            rm -rf ${BUILD_DIR}
           done
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.event.inputs.version }}
-          name: Endstone Territory v${{ github.event.inputs.version }}
+          tag_name: ${{ steps.get_version.outputs.TAG_VERSION }}
+          name: ${{ steps.get_version.outputs.RELEASE_TITLE }}
           draft: false
-          prerelease: false
+          prerelease: ${{ github.event.inputs.release_type == 'development' }}
           files: artifacts/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-          name: territory-windows-${{ matrix.lang }}
-          path: territory_v${{ github.event.inputs.version }}_${{ matrix.os }}_${{ matrix.lang }}.zip

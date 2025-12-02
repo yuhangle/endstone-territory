@@ -17,6 +17,7 @@
 #include <random>
 #include "territory_action.h"
 #include "menu.h"
+#include "translate.hpp"
 
 using json = nlohmann::json;
 using namespace std;
@@ -27,6 +28,7 @@ extern std::string data_path;
 extern std::string config_path;
 extern const std::string db_file;
 extern const std::string umoney_file;
+extern const std::string language_path;
 
 //一些全局变量
 extern int max_tty_num;
@@ -35,11 +37,13 @@ extern bool money_with_umoney;
 extern int price;
 extern int max_tty_area;
 extern bool welcome_all;
+extern string language;
 
 //初始化其它实例
 extern DataBase Database;
 extern Territory_Action TA;
-
+//翻译类
+extern translate LangTty;
 //全局玩家位置信息
 extern std::unordered_map<std::string, std::tuple<Territory_Action::Point3D, string, string>> lastPlayerPositions;
 

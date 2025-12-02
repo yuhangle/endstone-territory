@@ -4,12 +4,14 @@
 
 #include "territory.h"
 #include "translate.hpp"
+#include "version.h"
 
 //数据文件路径
 std::string data_path = "plugins/territory";
 std::string config_path = "plugins/territory/config.json";
 const std::string db_file = "plugins/territory/territory_data.db";
 const std::string umoney_file = "plugins/umoney/money.json";
+const std::string language_path = "plugins/territory/language/";
 
 //一些全局变量
 int max_tty_num;
@@ -18,10 +20,12 @@ bool money_with_umoney;
 int price;
 int max_tty_area;
 bool welcome_all;
+string language = "en_US";
 
 //初始化其它实例
 DataBase Database(db_file);
 Territory_Action TA(Database);
+translate LangTty;
 
 //全局玩家位置信息
 std::unordered_map<std::string, std::tuple<Territory_Action::Point3D, string, string>> lastPlayerPositions;
@@ -53,7 +57,8 @@ void Territory::datafile_check() const {
             {"money_with_umoney", false},
             {"price", 1},
             {"max_tty_area",4000000},
-            {"welcome_all",true}
+            {"welcome_all",true},
+            {"language","zh_CN"}
     };
 
     if (!(std::filesystem::exists(data_path))) {
@@ -85,7 +90,7 @@ void Territory::datafile_check() const {
             for (auto& [key, value] : df_config.items()) {
                 if (!loaded_config.contains(key)) {
                     loaded_config[key] = value;
-                    getLogger().info(LangTty.getLocal("配置项 '{}' 已根据默认配置进行更新")+","+ key);
+                    getLogger().info(LangTty.tr(LangTty.getLocal("配置项 '{}' 已根据默认配置进行更新"),key));
                     need_update = true;
                 }
             }
@@ -99,6 +104,10 @@ void Territory::datafile_check() const {
                 }
             }
         }
+    }
+    if (!filesystem::exists(language_path))
+    {
+        std::filesystem::create_directory(language_path);
     }
 }
 
@@ -520,6 +529,7 @@ ___________                 .__  __
             actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
             max_tty_area = json_msg["max_tty_area"];
             welcome_all = json_msg["welcome_all"];
+            language = json_msg["language"];
             if (json_msg["money_with_umoney"]) {
                 if (json_msg["money_with_umoney"] && umoney_check_exists() && json_msg["price"] >0) {
                     money_with_umoney = true;
@@ -551,6 +561,8 @@ ___________                 .__  __
         welcome_all = true;
         getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置")+","+e.what());
     }
+    LangTty = translate(language_path+language+".json");LangTty.loadLanguage();
+    LangTty.checkLanguageCommon(language_path,language_path+language+".json");
     //注册事件监听
     registerEvent<endstone::BlockBreakEvent>(onBlockBreak);
     registerEvent<endstone::BlockPlaceEvent>(onBlockPlace);
@@ -1316,7 +1328,7 @@ void Territory::quickCreateTtyRightClick(const endstone::PlayerInteractEvent& ev
 }
 
 //插件信息
-ENDSTONE_PLUGIN("territory", "0.2.6", Territory)
+ENDSTONE_PLUGIN("territory", TERRITORY_PLUGIN_VERSION, Territory)
 {
     description = "a territory plugin for endstone with C++";
     website = "https://github.com/yuhangle/endstone-territory";
