@@ -503,6 +503,8 @@ void Territory::onLoad()
     //执行数据目录检查
     datafile_check();
     (void)Database.init_database();
+    LangTty = translate(language_path+getServer().getLanguage().getLocale()+".json");
+    LangTty.loadLanguage();
 }
 
 void Territory::onEnable()
@@ -562,7 +564,7 @@ ___________                 .__  __
         getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置")+","+e.what());
     }
     LangTty = translate(language_path+language+".json");LangTty.loadLanguage();
-    LangTty.checkLanguageCommon(language_path,language_path+language+".json");
+    translate::checkLanguageCommon(language_path,language_path+language+".json");
     //注册事件监听
     registerEvent<endstone::BlockBreakEvent>(onBlockBreak);
     registerEvent<endstone::BlockPlaceEvent>(onBlockPlace);
