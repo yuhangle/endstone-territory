@@ -66,8 +66,10 @@ public:
         std::string dim2;
     };
 
-    [[nodiscard]] std::map<std::string, Territory_Action::TerritoryData>& get_all_tty() const;
+    [[nodiscard]] std::map<std::string, TerritoryData>& get_all_tty() const;
     static const std::map<std::string, TerritoryData>& getAllTty();
+    std::pair<bool, std::string> create_territory(const std::string& player_name, const Point3D &pos1, const Point3D &pos2, const Point3D &tppos, const std::string& dim);
+    std::pair<bool, std::string> create_sub_territory(const std::string& player_name, const Point3D &pos1, const Point3D &pos2, const Point3D &tppos, const std::string& dim);
     static TerritoryData* read_territory_by_name(const std::string& territory_name);
     static bool isPointInCube(const tuple<double, double, double>& point,const tuple<double, double, double>& corner1,const tuple<double, double, double>& corner2);
     static bool is_overlapping(const std::pair<std::tuple<double, double, double>, std::tuple<double, double, double>>& cube1,const std::pair<std::tuple<double, double, double>, std::tuple<double, double, double>>& cube2);

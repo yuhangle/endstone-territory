@@ -24,20 +24,20 @@ using namespace std;
 namespace fs = std::filesystem;
 
 //数据文件路径
-extern std::string data_path;
-extern std::string config_path;
-extern const std::string db_file;
-extern const std::string umoney_file;
-extern const std::string language_path;
+inline std::string data_path = "plugins/territory";
+inline std::string config_path = "plugins/territory/config.json";
+inline const std::string db_file = "plugins/territory/territory_data.db";
+inline const std::string umoney_file = "plugins/umoney/money.json";
+inline const std::string language_path = "plugins/territory/language/";
 
 //一些全局变量
-extern int max_tty_num;
-extern bool actor_fire_attack_protect;
-extern bool money_with_umoney;
-extern int price;
-extern int max_tty_area;
-extern bool welcome_all;
-extern string language;
+inline int max_tty_num;
+inline bool actor_fire_attack_protect;
+inline bool money_with_umoney;
+inline int price;
+inline int max_tty_area;
+inline bool welcome_all;
+inline string language = "en_US";
 
 //初始化其它实例
 extern DataBase Database;
@@ -61,15 +61,9 @@ public:
     // 从数据库读取所有领地数据
     static void readAllTerritories();
     
-    //添加领地函数
-    void player_add_tty(const std::string& player_name, const Territory_Action::Point3D &pos1, const Territory_Action::Point3D &pos2, const Territory_Action::Point3D &tppos, const std::string& dim) const;
+    //添加领地函数（已移除，功能整合到Territory_Action::create_territory）
 
-    //用于添加玩家子领地的函数
-    [[nodiscard]] std::pair<bool, std::string> player_add_sub_tty(const std::string& playername,
-                                                   const Territory_Action::Point3D& pos1,
-                                                   const Territory_Action::Point3D& pos2,
-                                                   const Territory_Action::Point3D& tppos,
-                                                   const std::string& dim) const;
+    //用于添加玩家子领地的函数（已移除，功能整合到Territory_Action::create_sub_territory）
 
     // 提示领地信息函数
     void tips_online_players() const;

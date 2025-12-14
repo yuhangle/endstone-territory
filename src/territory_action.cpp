@@ -184,6 +184,117 @@ bool Territory_Action::isSubsetCube(const Cube &cube1, const Cube &cube2) {
            cube1_min_z >= cube2_min_z && cube1_max_z <= cube2_max_z;
 }
 
+std::pair<bool, std::string> Territory_Action::create_territory(const std::string& player_name, const Point3D& pos1, const Point3D& pos2, const Point3D& tppos, const std::string& dim)
+{
+    //检查领地是否为一个点
+    if (pos1 == pos2) {
+        return {false, "无法设置领地为一个点"};
+    }
+    
+    // 检查新领地是否与其他领地重叠
+    if (isTerritoryOverlapping(pos1, pos2, dim)) {
+        return {false, "此区域与其他玩家领地重叠"};
+    }
+    
+    // 检查传送点是否在领地内
+    if (!isPointInCube(tppos, pos1, pos2)) {
+        return {false, "传送点不在领地范围内"};
+    }
+    
+    // 使用当前时间作为领地名
+    const auto now = std::chrono::system_clock::now();
+    std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+#ifdef _WIN32
+    // Windows
+    struct tm timeinfo{};
+    if (localtime_s(&timeinfo, &now_time_t) == 0) {
+        ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
+    } else {
+        ss << "uuid_" << rand(); // 简单替代方案
+    }
+#else
+    // Linux
+    tm timeinfo{};
+    if (localtime_r(&now_time_t, &timeinfo) != nullptr) {
+        ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
+    } else {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution dis(0, 999999);
+        ss << "uuid_" << dis(gen);
+    }
+#endif
+
+    // 插入新领地数据到数据库
+    if (const std::string name = ss.str(); !Database.addTerritory(name,
+                                                                  std::get<0>(pos1), std::get<1>(pos1), std::get<2>(pos1),
+                                                                  std::get<0>(pos2), std::get<1>(pos2), std::get<2>(pos2),
+                                                                  std::get<0>(tppos), std::get<1>(tppos), std::get<2>(tppos),
+                                                                  player_name, "", "", false, false, false, false, false,false, dim, "")) {
+        return {false, "数据库操作失败"};
+    }
+
+    return {true, "成功创建领地"};
+}
+
+std::pair<bool, std::string> Territory_Action::create_sub_territory(const std::string& player_name, const Point3D& pos1, const Point3D& pos2, const Point3D& tppos, const std::string& dim)
+{
+    //检查领地是否为一个点
+    if (pos1 == pos2) {
+        return {false, "无法设置领地为一个点"};
+    }
+    
+    // 检查传送点是否在领地内
+    if (!Territory_Action::isPointInCube(tppos, pos1, pos2)) {
+        return {false, "传送点不在领地范围内"};
+    }
+
+    // 父领地检查
+    auto [found, parent_name] = Territory_Action::listTrueFatherTTY(player_name, std::make_tuple(pos1, pos2), dim);
+    if (!found) {
+        return {false, parent_name}; // parent_name here contains error message
+    }
+    
+    // 使用当前时间和父领地名作为新领地名
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+#ifdef _WIN32
+    // Windows
+    struct tm timeinfo{};
+    if (localtime_s(&timeinfo, &now_time_t) == 0) {
+        ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
+    } else {
+        ss << "uuid_" << rand(); // 简单替代方案
+    }
+#else
+    // Linux
+    tm timeinfo{};
+    if (localtime_r(&now_time_t, &timeinfo) != nullptr) {
+        ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
+    } else {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution dis(0, 999999);
+        ss << "uuid_" << dis(gen);
+    }
+#endif
+
+    std::string child_territory_name = parent_name + "_" + ss.str();
+
+    // 写入数据库
+    if (!Database.addTerritory(child_territory_name,
+                                get<0>(pos1),get<1>(pos1),get<2>(pos1),
+                                get<0>(pos2),get<1>(pos2),get<2>(pos2),
+                                get<0>(tppos),get<1>(tppos),get<2>(tppos),player_name,"","",
+                                false,false,false,false,false,false,dim,parent_name)) {
+        return {false, "数据库操作失败"};
+    }
+
+    return {true, child_territory_name};
+}
+
 //列出符合条件父领地的函数
 std::pair<bool, std::string> Territory_Action::listTrueFatherTTY(const std::string& playerName,
                                                const Cube& childCube,
