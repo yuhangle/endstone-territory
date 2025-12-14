@@ -12,7 +12,6 @@
 #include <string>
 #include <filesystem>
 #include <tuple>
-#include <utility>
 #include <vector>
 #include <random>
 #include "territory_action.h"
@@ -60,19 +59,12 @@ public:
 
     // 从数据库读取所有领地数据
     static void readAllTerritories();
-    
-    //添加领地函数（已移除，功能整合到Territory_Action::create_territory）
-
-    //用于添加玩家子领地的函数（已移除，功能整合到Territory_Action::create_sub_territory）
 
     // 提示领地信息函数
     void tips_online_players() const;
 
     // 删除玩家领地函数，删除名称为 tty_name 的领地，并更新相关数据
     [[nodiscard]] bool del_player_tty(const std::string &tty_name) const;
-
-    //UUID生成
-    static std::string generateUUID();
 
     //接入umoney
     //检查插件存在

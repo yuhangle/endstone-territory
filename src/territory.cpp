@@ -211,28 +211,6 @@ bool Territory::del_player_tty(const std::string &tty_name) const {
     return false;
 }
 
-//UUID生成
-std::string Territory::generateUUID() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, 15);
-    constexpr char hex_chars[] = "0123456789abcdef";
-
-    std::stringstream ss;
-    for (int i = 0; i < 8; ++i) ss << hex_chars[dis(gen)];
-    ss << "-";
-    for (int i = 0; i < 4; ++i) ss << hex_chars[dis(gen)];
-    ss << "-4"; // UUID version 4
-    for (int i = 0; i < 3; ++i) ss << hex_chars[dis(gen)];
-    ss << "-";
-    ss << hex_chars[8 + dis(gen) % 4]; // Variant 10xx
-    for (int i = 0; i < 3; ++i) ss << hex_chars[dis(gen)];
-    ss << "-";
-    for (int i = 0; i < 12; ++i) ss << hex_chars[dis(gen)];
-
-    return ss.str();
-}
-
 //检查插件存在
 bool Territory::umoney_check_exists() const {
     if (getServer().getPluginManager().getPlugin("umoney")) {
@@ -448,8 +426,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         }
                         
                         // 调用领地创建函数
-                        auto [success, message] = TA.create_territory(player_name, pos1, pos2, tppos, dim);
-                        if (success) {
+                        if (auto [success, message] = TA.create_territory(player_name, pos1, pos2, tppos, dim); success) {
                             //检查是否启用经济以及资产是否足够
                             if (money_with_umoney) {
                                 const int money = umoney_get_player_money(player_name);
@@ -506,8 +483,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         }
                         
                         // 调用子领地创建函数
-                        auto [success, child_territory_name] = TA.create_sub_territory(player_name, pos1, pos2, tppos, dim);
-                        if (success) {
+                        if (auto [success, child_territory_name] = TA.create_sub_territory(player_name, pos1, pos2, tppos, dim); success) {
                             //检查是否启用经济以及资产是否足够
                             if (money_with_umoney) {
                                 const int money = umoney_get_player_money(player_name);
@@ -829,6 +805,28 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             {
                                 sender.sendErrorMessage(LangTty.getLocal("你没有权限变更此领地"));
                                 return false;
+                            }
+                            //领地位置1
+                            Territory_Action::Point3D pos1 = Territory_Action::pos_to_tuple(args[2]);
+                            //领地位置2
+                            Territory_Action::Point3D pos2 = Territory_Action::pos_to_tuple(args[3]);
+                            if (get<1>(pos1) > 320 || get<1>(pos1) < -64 || get<1>(pos2) > 320 || get<1>(pos2) < -64) {
+                                sender.sendErrorMessage(LangTty.getLocal("无法在世界之外设置领地"));
+                                return false;
+                            }
+
+                            // 检查领地大小
+                            if (const int area = Territory_Action::get_tty_area(static_cast<int>(std::get<0>(pos1)),static_cast<int>(std::get<2>(pos1)),static_cast<int>(std::get<0>(pos2)),static_cast<int>(std::get<2>(pos2))); area >= max_tty_area && max_tty_area != -1) {
+                                sender.sendErrorMessage(LangTty.getLocal("你的领地大小超过所能创建的最大面积,无法创建"));
+                                return false;
+                            }
+                            if (auto [fst, snd] = TA.resize_territory(pos1,pos2,*tty_data); fst)
+                            {
+                                sender.sendMessage(LangTty.getLocal(snd));
+                                readAllTerritories();
+                            }  else
+                            {
+                                sender.sendErrorMessage(LangTty.getLocal(snd));
                             }
 
                         } else
@@ -1258,6 +1256,7 @@ ENDSTONE_PLUGIN("territory", TERRITORY_PLUGIN_VERSION, Territory)
                     "/tty (settp)<opt: opt_settp> [pos: pos] <territory: str>",
                     "/tty (transfer)<opt: opt_transfer> <territory: str> <player: target>",
                     "/tty (tp)<opt: opt_tp> <territory: str>",
+                    "/tty (resize)<opt: resize> <territory: str> [pos: pos] [pos: pos]",
                     "/tty (help)<opt: opt_help>"
                     )
             .permissions("territory.command.member");

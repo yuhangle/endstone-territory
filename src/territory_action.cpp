@@ -112,13 +112,17 @@ bool Territory_Action::is_overlapping(const std::pair<std::tuple<double, double,
 // 检查领地重合
 bool Territory_Action::isTerritoryOverlapping(const std::tuple<double, double, double>& new_pos1,
                             const std::tuple<double, double, double>& new_pos2,
-                            const std::string& new_dim) {
+                            const std::string& new_dim, const bool resize, const std::string& tty_name) {
     // 构造表示新领地范围的 pair
     const auto new_tty = std::make_pair(new_pos1, new_pos2);
 
     return ranges::any_of(std::as_const(all_tty),
                           [&](const auto& entry) {
                               const TerritoryData& data = entry.second;
+                              // 如果是 resize 模式，跳过比较自身
+                              if (resize && data.name == tty_name) {
+                                    return false;
+                              }
                               const auto& existing_pos1 = data.pos1;
                               const auto& existing_pos2 = data.pos2;
                               const std::string& existing_dim = data.dim;
@@ -211,7 +215,7 @@ std::pair<bool, std::string> Territory_Action::create_territory(const std::strin
     if (localtime_s(&timeinfo, &now_time_t) == 0) {
         ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
     } else {
-        ss << "uuid_" << rand(); // 简单替代方案
+        ss << DataBase::generate_uuid_v4();
     }
 #else
     // Linux
@@ -219,15 +223,12 @@ std::pair<bool, std::string> Territory_Action::create_territory(const std::strin
     if (localtime_r(&now_time_t, &timeinfo) != nullptr) {
         ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
     } else {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution dis(0, 999999);
-        ss << "uuid_" << dis(gen);
+        ss << DataBase::generate_uuid_v4();
     }
 #endif
 
     // 插入新领地数据到数据库
-    if (const std::string name = ss.str(); !Database.addTerritory(name,
+    if (const std::string name = ss.str(); Database.addTerritory(name,
                                                                   std::get<0>(pos1), std::get<1>(pos1), std::get<2>(pos1),
                                                                   std::get<0>(pos2), std::get<1>(pos2), std::get<2>(pos2),
                                                                   std::get<0>(tppos), std::get<1>(tppos), std::get<2>(tppos),
@@ -246,12 +247,12 @@ std::pair<bool, std::string> Territory_Action::create_sub_territory(const std::s
     }
     
     // 检查传送点是否在领地内
-    if (!Territory_Action::isPointInCube(tppos, pos1, pos2)) {
+    if (!isPointInCube(tppos, pos1, pos2)) {
         return {false, "传送点不在领地范围内"};
     }
 
     // 父领地检查
-    auto [found, parent_name] = Territory_Action::listTrueFatherTTY(player_name, std::make_tuple(pos1, pos2), dim);
+    auto [found, parent_name] = listTrueFatherTTY(player_name, std::make_tuple(pos1, pos2), dim);
     if (!found) {
         return {false, parent_name}; // parent_name here contains error message
     }
@@ -266,7 +267,7 @@ std::pair<bool, std::string> Territory_Action::create_sub_territory(const std::s
     if (localtime_s(&timeinfo, &now_time_t) == 0) {
         ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
     } else {
-        ss << "uuid_" << rand(); // 简单替代方案
+        ss << DataBase::generate_uuid_v4();
     }
 #else
     // Linux
@@ -274,17 +275,14 @@ std::pair<bool, std::string> Territory_Action::create_sub_territory(const std::s
     if (localtime_r(&now_time_t, &timeinfo) != nullptr) {
         ss << std::put_time(&timeinfo, "%Y%m%d%H%M%S");
     } else {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution dis(0, 999999);
-        ss << "uuid_" << dis(gen);
+        ss << DataBase::generate_uuid_v4();
     }
 #endif
 
     std::string child_territory_name = parent_name + "_" + ss.str();
 
     // 写入数据库
-    if (!Database.addTerritory(child_territory_name,
+    if (Database.addTerritory(child_territory_name,
                                 get<0>(pos1),get<1>(pos1),get<2>(pos1),
                                 get<0>(pos2),get<1>(pos2),get<2>(pos2),
                                 get<0>(tppos),get<1>(tppos),get<2>(tppos),player_name,"","",
@@ -617,8 +615,7 @@ int Territory_Action::change_tty_owner(const std::string &ttyname,const std::str
     if (tty_data == nullptr) {
         return -1;
     }
-    const auto tty_owner = tty_data->owner;
-    if (tty_owner != old_owner_name || tty_owner == new_owner_name) {
+    if (const auto tty_owner = tty_data->owner; tty_owner != old_owner_name || tty_owner == new_owner_name) {
         return -2;
     }
     if (Database.updateValue("territories","owner",new_owner_name,"name",ttyname)) {
@@ -857,10 +854,9 @@ std::string Territory_Action::pointToString(const Point3D &p) {
         // 更新全局领地信息缓存
         (void)get_all_tty();
         return {true, msg};
-    } else {
-        std::string msg = LangTty.getLocal("尝试更新领地传送点但未找到领地: ") + ttyname;
-        return {false, msg};
     }
+    std::string msg = LangTty.getLocal("尝试更新领地传送点但未找到领地: ") + ttyname;
+    return {false, msg};
 }
 
 //获取玩家全部领地名函数
@@ -931,4 +927,32 @@ std::vector<Territory_Action::TerritoryData> Territory_Action::getPlayerTtyList(
         }
     }
     return ttys;
+}
+
+//更改领地大小
+std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data) const
+{
+    //检查领地是否为一个点
+    if (pos1 == pos2) {
+        return {false, "无法设置领地为一个点"};
+    }
+
+    // 检查新领地是否与其他领地重叠
+    if (isTerritoryOverlapping(pos1, pos2, old_tty_data.dim, true, old_tty_data.name)) {
+        return {false, "此区域与其他玩家领地重叠"};
+    }
+    const auto updateCoord = [&](const char* column, const double value) -> bool {
+        return Database.updateValue("territories", column, std::to_string(value), "name", old_tty_data.name);
+    };
+
+    std::pair failed_info = {false, "更改领地大小失败"};
+
+    if (!updateCoord("pos1_x", std::get<0>(pos1))) return failed_info;
+    if (!updateCoord("pos1_y", std::get<1>(pos1))) return failed_info;
+    if (!updateCoord("pos1_z", std::get<2>(pos1))) return failed_info;
+    if (!updateCoord("pos2_x", std::get<0>(pos2))) return failed_info;
+    if (!updateCoord("pos2_y", std::get<1>(pos2))) return failed_info;
+    if (!updateCoord("pos2_z", std::get<2>(pos2))) return failed_info;
+
+    return {true,"领地大小更改成功"};
 }

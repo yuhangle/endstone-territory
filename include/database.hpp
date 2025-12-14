@@ -259,7 +259,7 @@ public:
         // 执行查询并获取结果
         bool exists = false;
         if (sqlite3_step(stmt) == SQLITE_ROW) {
-            int count = sqlite3_column_int(stmt, 0); // 获取 COUNT(*) 的结果
+            const int count = sqlite3_column_int(stmt, 0); // 获取 COUNT(*) 的结果
             exists = (count > 0);
         }
 
@@ -299,9 +299,18 @@ public:
         
         // 绑定参数
         if (targetColumn == "if_jiaohu" || targetColumn == "if_break" || targetColumn == "if_tp" || targetColumn == "if_build" || targetColumn == "if_bomb" || targetColumn == "if_damage") {
-            int value = std::stoi(newValue);
+            const int value = std::stoi(newValue);
             sqlite3_bind_int(stmt, 1, value);
-        } else {
+        }
+        else if (targetColumn == "pos1_x" || targetColumn == "pos1_y" || targetColumn == "pos1_z" ||
+         targetColumn == "pos2_x" || targetColumn == "pos2_y" || targetColumn == "pos2_z" ||
+         targetColumn == "radius") { // 根据你的表结构调整
+            // 浮点型 (REAL)
+            const double value = std::stod(newValue);
+            sqlite3_bind_double(stmt, 1, value);
+         }
+
+        else {
             sqlite3_bind_text(stmt, 1, newValue.c_str(), -1, SQLITE_STATIC);
         }
         sqlite3_bind_text(stmt, 2, conditionValue.c_str(), -1, SQLITE_STATIC);
@@ -326,14 +335,14 @@ public:
     ///////////////////// territories 表操作 /////////////////////
 
     [[nodiscard]] int addTerritory(const std::string& name,
-                   double pos1_x, double pos1_y, double pos1_z,
-                   double pos2_x, double pos2_y, double pos2_z,
-                   double tppos_x, double tppos_y, double tppos_z,
+                   const double pos1_x, const double pos1_y, const double pos1_z,
+                   const double pos2_x, const double pos2_y, const double pos2_z,
+                   const double tppos_x, const double tppos_y, const double tppos_z,
                    const std::string& owner,
                    const std::string& manager,
                    const std::string& member,
-                   int if_jiaohu, int if_break, int if_tp,
-                   int if_build, int if_bomb, int if_damage, const std::string& dim,
+                   const int if_jiaohu, const int if_break, const int if_tp,
+                   const int if_build, const int if_bomb, const int if_damage, const std::string& dim,
                    const std::string& father_tty) const  {
         sqlite3* db;
         int rc = sqlite3_open(db_filename.c_str(), &db);
@@ -341,8 +350,8 @@ public:
             std::cerr << "无法打开数据库: " << sqlite3_errmsg(db) << std::endl;
             return rc;
         }
-        
-        std::string sql = "INSERT INTO territories (name, pos1_x, pos1_y, pos1_z, "
+
+        const std::string sql = "INSERT INTO territories (name, pos1_x, pos1_y, pos1_z, "
                           "pos2_x, pos2_y, pos2_z, tppos_x, tppos_y, tppos_z, "
                           "owner, manager, member, if_jiaohu, if_break, if_tp, "
                           "if_build, if_bomb, if_damage, dim, father_tty) VALUES (?, "
@@ -402,7 +411,7 @@ public:
 
     int getAllTty(std::vector<std::map<std::string, std::string>> &result) const {
         // 获取所有tty数据
-        std::string sql = "SELECT * FROM territories;";
+        const std::string sql = "SELECT * FROM territories;";
 
         // 调用 querySQL_many 函数执行查询，并将结果存储到 result 中
         return querySQL_many(sql, result);
@@ -416,7 +425,7 @@ public:
             return rc;
         }
         
-        std::string sql = "DELETE FROM territories WHERE name = ?;";
+        const std::string sql = "DELETE FROM territories WHERE name = ?;";
         sqlite3_stmt* stmt;
         rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
         if (rc != SQLITE_OK) {
@@ -451,7 +460,7 @@ public:
             return rc;
         }
         
-        std::string sql = "SELECT * FROM territories WHERE father_tty = ?;";
+        const std::string sql = "SELECT * FROM territories WHERE father_tty = ?;";
         sqlite3_stmt* stmt;
         rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
         if (rc != SQLITE_OK) {

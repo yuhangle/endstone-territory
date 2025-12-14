@@ -73,7 +73,7 @@ public:
     static TerritoryData* read_territory_by_name(const std::string& territory_name);
     static bool isPointInCube(const tuple<double, double, double>& point,const tuple<double, double, double>& corner1,const tuple<double, double, double>& corner2);
     static bool is_overlapping(const std::pair<std::tuple<double, double, double>, std::tuple<double, double, double>>& cube1,const std::pair<std::tuple<double, double, double>, std::tuple<double, double, double>>& cube2);
-    static bool isTerritoryOverlapping(const std::tuple<double, double, double>& new_pos1,const std::tuple<double, double, double>& new_pos2,const std::string& new_dim);
+    static bool isTerritoryOverlapping(const std::tuple<double, double, double>& new_pos1,const std::tuple<double, double, double>& new_pos2,const std::string& new_dim, bool resize = false, const std::string& tty_name = "");
     static int check_tty_num(const std::string& player_name);
     static int get_tty_area(int x1, int z1, int x2, int z2);
     static std::tuple<double, double, double> pos_to_tuple(const std::string& str);
@@ -96,12 +96,13 @@ public:
     [[nodiscard]] int change_tty_manager(const std::string &ttyname,const std::string &action, const std::string &player_name) const;
     [[nodiscard]] std::pair<bool, std::string> change_territory_manager(const std::string &ttyname,const std::string &action,const std::string &player_name) const;
     static std::string pointToString(const Point3D &p);
-    [[nodiscard]] std::pair<bool, std::string> change_tty_tppos(const std::string &ttyname,const Territory_Action::Point3D &tppos,const std::string &dim) const;
+    [[nodiscard]] std::pair<bool, std::string> change_tty_tppos(const std::string &ttyname,const Point3D &tppos,const std::string &dim) const;
     static std::vector<std::string> getPlayerTtyNames(const std::string& player_name);
     static std::vector<std::string> getMemberTtyNames(const std::string& player_name);
     static std::vector<std::string> getAllTtyNames();
     static std::vector<TerritoryData> getOpTtyList(const std::string& player_name);
     static std::vector<TerritoryData>getPlayerTtyList(const std::string& player_name);
+    [[nodiscard]] std::pair<bool,std::string> resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data) const;
 
 
 private:
