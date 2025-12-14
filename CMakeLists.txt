@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(territory CXX)
+set(BASE_VERSION "0.2.7")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -15,7 +16,7 @@ include(FetchContent)
 FetchContent_Declare(
     endstone
     GIT_REPOSITORY https://github.com/EndstoneMC/endstone.git
-    GIT_TAG v0.10.6
+    GIT_TAG v0.10.17
 )
 FetchContent_MakeAvailable(endstone)
 
@@ -56,25 +57,25 @@ target_link_libraries(${PROJECT_NAME}
 
 find_package(Git QUIET)
 if(GIT_FOUND)
-    # 获取最近的 tag
+    # 1. 查找最近的【纯净】正式版本 Tag (排除带 - 的 Tag)
     execute_process(
-            COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0 HEAD
+            COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0 --match "v[0-9]*" --exclude "*-*" HEAD
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            OUTPUT_VARIABLE LAST_TAG
+            OUTPUT_VARIABLE LAST_STABLE_TAG
             ERROR_QUIET
             OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 
-    if(LAST_TAG)
-        # 计算自该 tag 以来的提交数
+    if(LAST_STABLE_TAG)
+        # 有稳定版基准：计算距离该 Tag 的提交数
         execute_process(
-                COMMAND ${GIT_EXECUTABLE} rev-list --count "${LAST_TAG}..HEAD"
+                COMMAND ${GIT_EXECUTABLE} rev-list --count "${LAST_STABLE_TAG}..HEAD"
                 WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                 OUTPUT_VARIABLE GIT_COMMIT_COUNT
                 OUTPUT_STRIP_TRAILING_WHITESPACE
         )
     else()
-        # 没有 tag，回退到总提交数
+        # 无稳定版基准：计算总提交数
         execute_process(
                 COMMAND ${GIT_EXECUTABLE} rev-list --count HEAD
                 WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -95,15 +96,10 @@ else()
     set(GIT_SHORT_HASH "unknown")
 endif()
 
-# 基础版本（主版本号）
-set(BASE_VERSION "0.2.7")
-
-# 检查是否为正式发布版本
+# 决定最终版本号
 if(RELEASE_VERSION)
-    # 正式发布版本
     set(PROJECT_VERSION "${BASE_VERSION}")
 else()
-    # 开发版本
     set(PROJECT_VERSION "${BASE_VERSION}-alpha.${GIT_COMMIT_COUNT}+${GIT_SHORT_HASH}")
 endif()
 

@@ -137,29 +137,33 @@ jobs:
       - name: Extract version information
         id: get_version
         run: |
-          # 从 CMakeLists.txt 中提取基础版本号
-          BASE_VERSION=$(grep -o 'set(BASE_VERSION "[^"]*")' CMakeLists.txt | cut -d'"' -f2)
+          FILE_BASE_VERSION=$(grep -o 'set(BASE_VERSION "[^"]*")' CMakeLists.txt | cut -d'"' -f2)
           
           if [ "${{ github.event.inputs.release_type }}" = "release" ]; then
-            # 正式发布版本
-            PROJECT_VERSION="${BASE_VERSION}"
-            TAG_VERSION="v${BASE_VERSION}"
+            # === 正式发布 ===
+            PROJECT_VERSION="${FILE_BASE_VERSION}"
+            TAG_VERSION="v${FILE_BASE_VERSION}"
+            RELEASE_TITLE="Release v${FILE_BASE_VERSION}"
           else
-            # 开发版本
-            # 尝试获取最近的正式版 tag
-            LAST_TAG=$(git describe --tags --match="v[0-9]*.[0-9]*.[0-9]*" --match="v[0-9]*.[0-9]*.[0-9]*.[0-9]*" --abbrev=0 2>/dev/null || echo "")
+            # === 开发版本 (Alpha) ===
           
-            if [ -n "$LAST_TAG" ]; then
-              GIT_COMMIT_COUNT=$(git rev-list --count "${LAST_TAG}"..HEAD)
+            LAST_STABLE_TAG=$(git describe --tags --match="v[0-9]*" --exclude="*-*" --abbrev=0 2>/dev/null || echo "")
+          
+            if [ -n "$LAST_STABLE_TAG" ]; then
+              # 如果找到了稳定版 Tag，计算从该 Tag 至今的 commit 数量
+              GIT_COMMIT_COUNT=$(git rev-list --count "${LAST_STABLE_TAG}..HEAD")
             else
-              GIT_COMMIT_COUNT=$(git rev-list --count HEAD)  # 无 tag 时回退
+              # 如果没找到任何稳定版 Tag，计算总 commit 数量
+              GIT_COMMIT_COUNT=$(git rev-list --count HEAD)
             fi
           
+            # 获取短哈希
             GIT_SHORT_HASH=$(git rev-parse --short HEAD)
           
-            # 组合成完整版本
-            PROJECT_VERSION="${BASE_VERSION}-alpha.${GIT_COMMIT_COUNT}+${GIT_SHORT_HASH}"
-            TAG_VERSION="v${BASE_VERSION}-alpha.${GIT_COMMIT_COUNT}"
+            # 组合版本号
+            PROJECT_VERSION="${FILE_BASE_VERSION}-alpha.${GIT_COMMIT_COUNT}+${GIT_SHORT_HASH}"
+            TAG_VERSION="v${FILE_BASE_VERSION}-alpha.${GIT_COMMIT_COUNT}"
+            RELEASE_TITLE="Development Build (based on v${FILE_BASE_VERSION})"
           fi
           
           echo "VERSION=${PROJECT_VERSION}" >> $GITHUB_OUTPUT
