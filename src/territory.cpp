@@ -293,27 +293,17 @@ void Territory::onLoad()
     //执行数据目录检查
     datafile_check();
     (void)Database.init_database();
-    LangTty = translate(language_path+getServer().getLanguage().getLocale()+".json");
-    LangTty.loadLanguage();
+    if (!std::filesystem::exists(language_path+"lang.json"))
+    {
+        LangTty = translate(language_path+getServer().getLanguage().getLocale()+".json");
+        LangTty.loadLanguage();
+    }
 }
 
 void Territory::onEnable()
 {
     getLogger().info("onEnable is called");
 
-    const string boot_logo_msg = R"(
-___________                 .__  __
-\__    ___/_________________|__|/  |_  ___________ ___.__.
-  |    |_/ __ \_  __ \_  __ \  \   __\/  _ \_  __ <   |  |
-  |    |\  ___/|  | \/|  | \/  ||  | (  <_> )  | \/\___  |
-  |____| \___  >__|   |__|  |__||__|  \____/|__|   / ____|
-             \/                                    \/\
-)";
-
-    getLogger().info(boot_logo_msg);
-    const auto [fst, snd] = LangTty.loadLanguage();
-    getLogger().info(snd);
-    const auto enable_msg = endstone::ColorFormat::Yellow + LangTty.getLocal("Territory插件已启用, Version: ") + getServer().getPluginManager().getPlugin("territory")->getDescription().getVersion();
     json json_msg = read_config();
     try {
         if (!json_msg.contains("error")) {
@@ -354,7 +344,7 @@ ___________                 .__  __
         getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置")+","+e.what());
     }
     LangTty = translate(language_path+language+".json");LangTty.loadLanguage();
-    translate::checkLanguageCommon(language_path,language_path+language+".json");
+    translate::checkLanguageCommon(language_path+language+".json",language_file);
     //注册事件监听
     registerEvent<endstone::BlockBreakEvent>(onBlockBreak);
     registerEvent<endstone::BlockPlaceEvent>(onBlockPlace);
@@ -364,14 +354,28 @@ ___________                 .__  __
     registerEvent<endstone::ActorDamageEvent>(onActorhit);
     //快速创建领地选择监听
     registerEvent<endstone::PlayerInteractEvent>(quickCreateTtyRightClick);
-
-    getLogger().info(enable_msg);
-    getLogger().info(endstone::ColorFormat::Yellow + "Project address: https://github.com/yuhangle/endstone-territory");
     //数据库读取
     readAllTerritories();
     //周期执行
     getServer().getScheduler().runTaskTimer(*this,[&]() { tips_online_players(); }, 0, 25);
     menu_ = std::make_unique<Menu>(*this);
+
+    //显示启动信息
+    const string boot_logo_msg = R"(
+___________                 .__  __
+\__    ___/_________________|__|/  |_  ___________ ___.__.
+  |    |_/ __ \_  __ \_  __ \  \   __\/  _ \_  __ <   |  |
+  |    |\  ___/|  | \/|  | \/  ||  | (  <_> )  | \/\___  |
+  |____| \___  >__|   |__|  |__||__|  \____/|__|   / ____|
+             \/                                    \/\
+)";
+
+    getLogger().info(boot_logo_msg);
+    const auto [fst, snd] = LangTty.loadLanguage();
+    getLogger().info(snd);
+    const auto enable_msg = endstone::ColorFormat::Yellow + LangTty.getLocal("Territory插件已启用, Version: ") + getServer().getPluginManager().getPlugin("territory")->getDescription().getVersion();
+    getLogger().info(enable_msg);
+    getLogger().info(endstone::ColorFormat::Yellow + "Project address: https://github.com/yuhangle/endstone-territory");
 }
 
 void Territory::onDisable()
@@ -445,7 +449,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             sender.sendMessage(LangTty.getLocal("成功添加领地"));
                             readAllTerritories();
                         } else {
-                            sender.sendErrorMessage(message);
+                            sender.sendErrorMessage(LangTty.getLocal(message));
                         }
                     } catch (const std::exception &e) {
                         sender.sendErrorMessage(e.what());
@@ -499,10 +503,10 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                 }
                             }
                             
-                            sender.sendMessage(LangTty.getLocal("成功添加子领地,归属于父领地: ") + child_territory_name);
+                            sender.sendMessage(LangTty.tr("成功添加子领地,归属于父领地: ", child_territory_name));
                             readAllTerritories();
                         } else {
-                            sender.sendErrorMessage(child_territory_name); // child_territory_name here contains error message
+                            sender.sendErrorMessage(LangTty.getLocal(child_territory_name)); // child_territory_name here contains error message
                         }
                     } catch (const std::exception &e) {
                         sender.sendErrorMessage(e.what());

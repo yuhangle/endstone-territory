@@ -62,13 +62,19 @@ void Menu::openManTtyMenu(endstone::Player* player) const {
     "textures/ui/trade_icon",
     [this](endstone::Player* p) { openTransferTtyMenu(p); }
   );
+  // 转让领地
+  endstone::Button resizeBtn(
+    LangTty.getLocal("§l§1更改自己的领地大小"),
+    "textures/ui/icon_preview",
+    [=](endstone::Player* p) { openResizeTtyMenu(p); }
+  );
   // 删除领地
   endstone::Button delBtn(
     LangTty.getLocal("§l§4删除自己的领地"),
     "textures/ui/book_trash_default",
     [this](endstone::Player* p) { openDelTtyMenu(p); }
   );
-  menu.setControls({setPermisBtn, setTpBtn, addMemberBtn, delMemberBtn, addManagerBtn, delManagerBtn, transferBtn, delBtn});
+  menu.setControls({setPermisBtn, setTpBtn, addMemberBtn, delMemberBtn, addManagerBtn, delManagerBtn, transferBtn, resizeBtn, delBtn});
 
   menu.setOnClose([this](endstone::Player* p) {
     openMainMenu(p);
@@ -91,7 +97,7 @@ void Menu::openMainMenu(endstone::Player* player) const{
     openQuickCreateMainMenu(p);
   });
   menu.addButton(LangTty.getLocal("§l§5重命名领地"), "textures/ui/book_edit_default", [this] (endstone::Player* p) {
-    auto names = Territory_Action::getPlayerTtyNames(p->getName());
+    const auto names = Territory_Action::getPlayerTtyNames(p->getName());
     if (names.empty()) {
       p->sendErrorMessage(LangTty.getLocal("未查找到领地"));
       return;
@@ -315,8 +321,7 @@ void Menu::openTpTtyMenu(endstone::Player* player) const {
 // 传送全部领地菜单
 void Menu::openTpAllTtyMenu(endstone::Player* player) const {
   // 获取玩家全部可见领地列表
-  auto ttyList = Territory_Action::getAllTtyNames();
-  if (ttyList.empty()) {
+  if (const auto ttyList = Territory_Action::getAllTtyNames(); ttyList.empty()) {
     player->sendErrorMessage(LangTty.getLocal("未查找到领地"));
     return;
   }
@@ -685,7 +690,7 @@ void Menu::openDelTtyManagerMenu(endstone::Player* player) const {
   form.setOnSubmit([this, ttyList](endstone::Player* p, const std::string& response) {
     try {
       auto parsed = nlohmann::json::parse(response);
-      int index = parsed[0].get<int>();
+      const int index = parsed[0].get<int>();
       if (index < 0 || index >= static_cast<int>(ttyList.size())) {
         p->sendErrorMessage(LangTty.getLocal("未知的错误"));
         return;
@@ -1004,6 +1009,61 @@ void Menu::openQuickCreateTtyMenu(endstone::Player* player,Territory_Action::Qui
   });
   menu.setOnClose([create_status](const endstone::Player* p) {
     if (!create_status) p->sendMessage(LangTty.getLocal("创建已取消"));
+  });
+  player->sendForm(menu);
+}
+
+//更改领地大小
+void Menu::openResizeTtyMenu(endstone::Player* player)
+{
+  const auto player_ttys = Territory_Action::getPlayerTtyNames(player->getName());
+  if (player_ttys.empty()) {
+    player->sendErrorMessage(LangTty.getLocal("未查找到领地"));
+    return;
+  }
+  endstone::ModalForm menu;
+  menu.setTitle(LangTty.getLocal("§l更改领地大小"));
+  endstone::Dropdown ttyDropdown;
+  ttyDropdown.setLabel(LangTty.getLocal("§l选择要更改的领地"));
+  ttyDropdown.setOptions(player_ttys);
+  menu.setControls({ttyDropdown});
+  menu.setOnSubmit([=](endstone::Player* p, const std::string& response) {
+    auto parse = nlohmann::json::parse(response);
+    const int index = parse[0];
+    const auto tty_data = Territory_Action::read_territory_by_name(player_ttys[index]);
+    openResizeTtySubMenu(p,*tty_data);
+  });
+  player->sendForm(menu);
+}
+
+//更改领地大小子菜单
+void Menu::openResizeTtySubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty)
+{
+  endstone::ModalForm menu;
+  menu.setTitle(LangTty.getLocal("§l更改领地大小"));
+  endstone::TextInput new_pos_input;
+  endstone::TextInput new_pos_input2;
+  new_pos_input.setLabel(LangTty.getLocal("§l输入新的领地边角坐标1"));
+  std::ostringstream old_pos1;
+  old_pos1 << get<0>(tty.pos1) << " " << get<1>(tty.pos1) << " " << get<2>(tty.pos1);
+  new_pos_input.setDefaultValue(old_pos1.str());
+  new_pos_input2.setLabel(LangTty.getLocal("§l输入新的领地边角坐标2"));
+  std::ostringstream old_pos2;
+  old_pos2 << get<0>(tty.pos2) << " " << get<1>(tty.pos2) << " " << get<2>(tty.pos2);
+  new_pos_input2.setDefaultValue(old_pos2.str());
+  menu.setControls({new_pos_input,new_pos_input2});
+  menu.setOnSubmit([=](const endstone::Player* p, const std::string& response) {
+    auto parse = nlohmann::json::parse(response);
+    const string pos1 = parse[0];
+    const string pos2 = parse[1];
+    if (pos1.empty() || pos2.empty())
+    {
+      p->sendErrorMessage(LangTty.getLocal("输入不能为空"));
+      return;
+    }
+    std::ostringstream cmd;
+    cmd << "tty resize \"" << tty.name << "\" " << pos1 << " " << pos2;
+    (void)p->performCommand(cmd.str());
   });
   player->sendForm(menu);
 }

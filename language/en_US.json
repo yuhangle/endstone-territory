@@ -203,5 +203,10 @@
     "普通领地": "Normal Territory",
     "§l选择领地类型": "Choose territory type",
     "更改领地大小失败": "Failed to change territory size",
-    "更改领地大小成功": "Successfully changed territory size"
+    "更改领地大小成功": "Successfully changed territory size",
+    "§l更改领地大小": "§lChange territory size",
+    "§l选择要更改的领地": "§lSelect the territory to change",
+    "§l输入新的领地边角坐标1": "§lEnter new territory corner coordinate 1",
+    "§l输入新的领地边角坐标2": "§lEnter new territory corner coordinate 2",
+    "§l§1更改自己的领地大小": "§1Change the size of your own territory"
 }
