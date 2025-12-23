@@ -398,7 +398,8 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                 }
             } else {
                 if (args[0] == "add") {
-                    try {
+                    try
+                    {
                         string player_name = sender.getName();
                         //玩家位置
                         int player_x = getServer().getPlayer(player_name)->getLocation().getBlockX();
@@ -428,34 +429,42 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             sender.sendErrorMessage(LangTty.getLocal("你的领地数量已达到上限,无法增加新的领地"));
                             return false;
                         }
-                        
-                        // 调用领地创建函数
-                        if (auto [success, message] = TA.create_territory(player_name, pos1, pos2, tppos, dim); success) {
-                            //检查是否启用经济以及资产是否足够
-                            if (money_with_umoney) {
-                                const int money = umoney_get_player_money(player_name);
-                                if (const int value = area * price; money >= value) {
-                                    (void)umoney_change_player_money(player_name,-value);
-                                    sender.sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
+                        // 检查资金
+                        if (money_with_umoney) {
+                            const int money = umoney_get_player_money(player_name);
+                            if (const int value = area * price; money >= value) {
+                                (void)umoney_change_player_money(player_name,-value);
+                                sender.sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
+                                // 调用领地创建函数
+                                if (auto [success, message] = TA.create_territory(player_name, pos1, pos2, tppos, dim); success) {
+                                    sender.sendMessage(LangTty.getLocal("成功添加领地"));
+                                    readAllTerritories();
                                 } else {
-                                    sender.sendErrorMessage(LangTty.getLocal("你的资产不足以设置此大小的领地,设置此领地所需要的资金为:") +
-                                                                                 to_string(value));
-                                    // 创建成功但付费失败，需要删除刚创建的领地
-                                    // 这里简化处理，实际应该有事务回滚机制
-                                    return false;
+                                    sender.sendErrorMessage(LangTty.getLocal(message));
+                                    (void)umoney_change_player_money(player_name,value); // 创建失败返还资金
                                 }
+                            } else {
+                                sender.sendErrorMessage(LangTty.getLocal("你的资产不足以设置此大小的领地,设置此领地所需要的资金为:") +
+                                                                             to_string(value));
+                                return false;
                             }
-                            
-                            sender.sendMessage(LangTty.getLocal("成功添加领地"));
-                            readAllTerritories();
-                        } else {
-                            sender.sendErrorMessage(LangTty.getLocal(message));
+                        }
+                        // 不使用经济
+                        else {
+                            // 调用领地创建函数
+                            if (auto [success, message] = TA.create_territory(player_name, pos1, pos2, tppos, dim); success) {
+                                sender.sendMessage(LangTty.getLocal("成功添加领地"));
+                                readAllTerritories();
+                            } else {
+                                sender.sendErrorMessage(LangTty.getLocal(message));
+                            }
                         }
                     } catch (const std::exception &e) {
                         sender.sendErrorMessage(e.what());
                     }
                 } else if (args[0] == "add_sub") {
-                    try {
+                    try
+                    {
                         string player_name = sender.getName();
                         //玩家位置
                         int player_x = getServer().getPlayer(player_name)->getLocation().getBlockX();
@@ -485,28 +494,35 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             sender.sendErrorMessage(LangTty.getLocal("你的领地数量已达到上限,无法增加新的领地"));
                             return false;
                         }
-                        
-                        // 调用子领地创建函数
-                        if (auto [success, child_territory_name] = TA.create_sub_territory(player_name, pos1, pos2, tppos, dim); success) {
-                            //检查是否启用经济以及资产是否足够
-                            if (money_with_umoney) {
-                                const int money = umoney_get_player_money(player_name);
-                                if (const int value = area * price; money >= value) {
-                                    (void)umoney_change_player_money(player_name,-value);
-                                    sender.sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
+
+                        // 检查资金
+                        if (money_with_umoney) {
+                            const int money = umoney_get_player_money(player_name);
+                            if (const int value = area * price; money >= value) {
+                                (void)umoney_change_player_money(player_name,-value);
+                                sender.sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
+                                // 调用子领地创建函数
+                                if (auto [success, child_territory_name] = TA.create_sub_territory(player_name, pos1, pos2, tppos, dim); success) {
+                                    sender.sendMessage(LangTty.tr("成功添加子领地,归属于父领地: ", child_territory_name));
+                                    readAllTerritories();
                                 } else {
-                                    sender.sendErrorMessage(LangTty.getLocal("你的资产不足以设置此大小的领地,设置此领地所需要的资金为:") +
-                                                                                 to_string(value));
-                                    // 创建成功但付费失败，需要删除刚创建的领地
-                                    // 这里简化处理，实际应该有事务回滚机制
-                                    return false;
+                                    sender.sendErrorMessage(LangTty.getLocal(child_territory_name)); // child_territory_name here contains error message
+                                    (void)umoney_change_player_money(player_name,value); // 创建失败返还资金
                                 }
+                            } else {
+                                sender.sendErrorMessage(LangTty.getLocal("你的资产不足以设置此大小的领地,设置此领地所需要的资金为:") +
+                                                                             to_string(value));
+                                return false;
                             }
-                            
-                            sender.sendMessage(LangTty.tr("成功添加子领地,归属于父领地: ", child_territory_name));
-                            readAllTerritories();
-                        } else {
-                            sender.sendErrorMessage(LangTty.getLocal(child_territory_name)); // child_territory_name here contains error message
+                        }
+                        else {
+                            // 调用子领地创建函数
+                            if (auto [success, child_territory_name] = TA.create_sub_territory(player_name, pos1, pos2, tppos, dim); success) {
+                                sender.sendMessage(LangTty.tr("成功添加子领地,归属于父领地: ", child_territory_name));
+                                readAllTerritories();
+                            } else {
+                                sender.sendErrorMessage(LangTty.getLocal(child_territory_name)); // child_territory_name here contains error message
+                            }
                         }
                     } catch (const std::exception &e) {
                         sender.sendErrorMessage(e.what());
@@ -547,10 +563,16 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                     try {
                         string player_name = sender.getName();
                         if (!args[1].empty()) {
-                            if (Territory_Action::read_territory_by_name(args[1]) != nullptr) {
-                                if (Territory_Action::check_tty_owner(args[1], player_name) == true) {
-                                    if (del_player_tty(args[1])) {
+                            if (const auto tty_data = Territory_Action::read_territory_by_name(args[1]); tty_data != nullptr) {
+                                if (Territory_Action::check_tty_owner(tty_data->name, player_name) == true) {
+                                    if (del_player_tty(tty_data->name)) {
                                         sender.sendMessage(LangTty.getLocal("已成功删除领地"));
+                                        if (money_with_umoney)
+                                        {
+                                            const int area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
+                                            const int value = area * price;
+                                            (void)umoney_change_player_money(sender.getName(),value);
+                                        }
                                     } else {
                                         sender.sendErrorMessage(LangTty.getLocal("删除领地失败"));
                                     }
@@ -664,16 +686,16 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             } else {
                                 if (Territory_Action::check_tty_owner(tty_name, player_name) == true) {
                                     if (args[1] == "add") {
-                                        if (pair status_msg = TA.change_territory_manager(tty_name, "add", args[2]); status_msg.first) {
-                                            sender.sendMessage(status_msg.second);
+                                        if (auto [fst, snd] = TA.change_territory_manager(tty_name, "add", args[2]); fst) {
+                                            sender.sendMessage(snd);
                                         } else {
-                                            sender.sendErrorMessage(status_msg.second);
+                                            sender.sendErrorMessage(snd);
                                         }
                                     } else if (args[1] == "remove") {
-                                        if (pair status_msg = TA.change_territory_manager(tty_name, "remove", args[2]); status_msg.first) {
-                                            sender.sendMessage(status_msg.second);
+                                        if (auto [fst, snd] = TA.change_territory_manager(tty_name, "remove", args[2]); fst) {
+                                            sender.sendMessage(snd);
                                         } else {
-                                            sender.sendErrorMessage(status_msg.second);
+                                            sender.sendErrorMessage(snd);
                                         }
                                     }
                                 } else {
@@ -820,10 +842,27 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             }
 
                             // 检查领地大小
-                            if (const int area = Territory_Action::get_tty_area(static_cast<int>(std::get<0>(pos1)),static_cast<int>(std::get<2>(pos1)),static_cast<int>(std::get<0>(pos2)),static_cast<int>(std::get<2>(pos2))); area >= max_tty_area && max_tty_area != -1) {
+                            const int area = Territory_Action::get_tty_area(static_cast<int>(std::get<0>(pos1)),static_cast<int>(std::get<2>(pos1)),static_cast<int>(std::get<0>(pos2)),static_cast<int>(std::get<2>(pos2)));
+                            if (area >= max_tty_area && max_tty_area != -1) {
                                 sender.sendErrorMessage(LangTty.getLocal("你的领地大小超过所能创建的最大面积,无法创建"));
                                 return false;
                             }
+                            // 资金检查
+                            int changed_money = 0;
+                            if (money_with_umoney)
+                            {
+                                const int old_area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(pos1)),static_cast<int>(get<2>(pos1)));
+                                const int old_value = old_area * price;
+                                const int new_value = area * price;
+                                changed_money = new_value - old_value;
+                                if (umoney_get_player_money(sender.getName()) < changed_money)
+                                {
+                                    sender.sendErrorMessage(LangTty.getLocal("你没有足够的资金"));
+                                    return false;
+                                }
+                                (void)umoney_change_player_money(sender.getName(), -changed_money);
+                            }
+
                             if (auto [fst, snd] = TA.resize_territory(pos1,pos2,*tty_data); fst)
                             {
                                 sender.sendMessage(LangTty.getLocal(snd));
@@ -831,6 +870,10 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             }  else
                             {
                                 sender.sendErrorMessage(LangTty.getLocal(snd));
+                                if (changed_money!=0)
+                                {
+                                    (void)umoney_change_player_money(sender.getName(), changed_money);
+                                }
                             }
 
                         } else
