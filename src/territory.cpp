@@ -197,16 +197,22 @@ void Territory::tips_online_players() const {
 
 // 删除玩家领地函数，删除名称为 tty_name 的领地，并更新相关数据
 bool Territory::del_player_tty(const std::string &tty_name) const {
-    if (TA.del_Tty_by_name(tty_name)) {
-        if (money_with_umoney) {
-            const auto tty_data = Territory_Action::read_territory_by_name(tty_name);
-            const int area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
-            (void)umoney_change_player_money(tty_data->owner,area*price);
-            if (const auto the_player = getServer().getPlayer(tty_data->owner)) {
-                the_player->sendMessage(LangTty.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(area*price));
-            }
+    const auto tty_data = Territory_Action::read_territory_by_name(tty_name);
+    const int area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
+    string owner;
+    if (money_with_umoney) {
+        (void)umoney_change_player_money(tty_data->owner,area*price);
+        if (const auto the_player = getServer().getPlayer(tty_data->owner)) {
+            owner = the_player->getName();
+            the_player->sendMessage(LangTty.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(area*price));
         }
+    }
+    if (TA.del_Tty_by_name(tty_name)) {
         return true;
+    }
+    if (!owner.empty())
+    {
+        (void)umoney_change_player_money(owner,area*price);
     }
     return false;
 }
@@ -381,6 +387,7 @@ ___________                 .__  __
 void Territory::onDisable()
 {
     getLogger().info("onDisable is called");
+    getServer().getScheduler().cancelTasks(*this);
 }
 
 bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Command &command, const std::vector<std::string> &args) {
@@ -567,12 +574,6 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                 if (Territory_Action::check_tty_owner(tty_data->name, player_name) == true) {
                                     if (del_player_tty(tty_data->name)) {
                                         sender.sendMessage(LangTty.getLocal("已成功删除领地"));
-                                        if (money_with_umoney)
-                                        {
-                                            const int area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
-                                            const int value = area * price;
-                                            (void)umoney_change_player_money(sender.getName(),value);
-                                        }
                                     } else {
                                         sender.sendErrorMessage(LangTty.getLocal("删除领地失败"));
                                     }
@@ -836,6 +837,8 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             Territory_Action::Point3D pos1 = Territory_Action::pos_to_tuple(args[2]);
                             //领地位置2
                             Territory_Action::Point3D pos2 = Territory_Action::pos_to_tuple(args[3]);
+                            //传送坐标
+                            Territory_Action::Point3D tppos = Territory_Action::pos_to_tuple(to_string(sender.asPlayer()->getLocation().getX()) + " " + to_string(sender.asPlayer()->getLocation().getY()) + " " + to_string(sender.asPlayer()->getLocation().getZ()));
                             if (get<1>(pos1) > 320 || get<1>(pos1) < -64 || get<1>(pos2) > 320 || get<1>(pos2) < -64) {
                                 sender.sendErrorMessage(LangTty.getLocal("无法在世界之外设置领地"));
                                 return false;
@@ -851,7 +854,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             int changed_money = 0;
                             if (money_with_umoney)
                             {
-                                const int old_area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(pos1)),static_cast<int>(get<2>(pos1)));
+                                const int old_area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
                                 const int old_value = old_area * price;
                                 const int new_value = area * price;
                                 changed_money = new_value - old_value;
@@ -860,10 +863,13 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                     sender.sendErrorMessage(LangTty.getLocal("你没有足够的资金"));
                                     return false;
                                 }
-                                (void)umoney_change_player_money(sender.getName(), -changed_money);
+                                if (changed_money != 0)
+                                {
+                                    (void)umoney_change_player_money(sender.getName(), -changed_money);
+                                }
                             }
 
-                            if (auto [fst, snd] = TA.resize_territory(pos1,pos2,*tty_data); fst)
+                            if (auto [fst, snd] = TA.resize_territory(pos1,pos2,*tty_data,tppos); fst)
                             {
                                 sender.sendMessage(LangTty.getLocal(snd));
                                 readAllTerritories();

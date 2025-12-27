@@ -452,38 +452,45 @@ public:
         return SQLITE_OK;
     }
 
-    int getTtyByFather(const std::string& tty_name, std::vector<std::map<std::string, std::string>> &result) const {
-        sqlite3* db;
+    int getTtyByFather(
+        const std::string& tty_name,
+        std::vector<std::map<std::string, std::string>>& result
+    ) const {
+        sqlite3* db = nullptr;
         int rc = sqlite3_open(db_filename.c_str(), &db);
-        if (rc) {
+        if (rc != SQLITE_OK) {
             std::cerr << "无法打开数据库: " << sqlite3_errmsg(db) << std::endl;
             return rc;
         }
-        
-        const std::string sql = "SELECT * FROM territories WHERE father_tty = ?;";
-        sqlite3_stmt* stmt;
-        rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+
+        const auto* sql =
+            "SELECT * FROM territories WHERE father_tty = ?;";
+
+        sqlite3_stmt* stmt = nullptr;
+        rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
         if (rc != SQLITE_OK) {
             std::cerr << "SQL 预处理失败: " << sqlite3_errmsg(db) << std::endl;
             sqlite3_close(db);
             return rc;
         }
-        
-        // 绑定参数
-        sqlite3_bind_text(stmt, 1, tty_name.c_str(), -1, SQLITE_STATIC);
-        
-        // 执行查询并获取结果
-        char* errmsg = nullptr;
-        rc = sqlite3_exec(db, sql.c_str(), queryCallback_many_dict, &result, &errmsg);
-        if (rc != SQLITE_OK) {
-            std::cerr << "SQL 查询失败: " << errmsg << std::endl;
-            sqlite3_free(errmsg);
-            sqlite3_finalize(stmt);
-            sqlite3_close(db);
-            return rc;
+
+        sqlite3_bind_text(stmt, 1, tty_name.c_str(), -1, SQLITE_TRANSIENT);
+
+        while ((sqlite3_step(stmt)) == SQLITE_ROW) {
+            std::map<std::string, std::string> row;
+
+            const int col_count = sqlite3_column_count(stmt);
+            for (int i = 0; i < col_count; ++i) {
+                const char* key = sqlite3_column_name(stmt, i);
+                const auto val = reinterpret_cast<const char*>(
+                    sqlite3_column_text(stmt, i)
+                );
+                row[key] = val ? val : "";
+            }
+
+            result.push_back(std::move(row));
         }
-        
-        // 清理资源
+
         sqlite3_finalize(stmt);
         sqlite3_close(db);
         return SQLITE_OK;

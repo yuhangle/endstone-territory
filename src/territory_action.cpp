@@ -365,13 +365,12 @@ bool Territory_Action::del_Tty_by_name(const std::string& territory_name) const 
     if (!tty_data) {
         return false;
     }
-    // 成功找到领地，执行删除
-    (void)Database.deleteTty(tty_data->name);
 
     // 获取子领地并修改它们的父领地
     for (const auto sub_ttys = getSubTty(territory_name); const auto &sub_tty: sub_ttys) {
         (void)Database.updateValue("territories","father_tty","","name",sub_tty);
     }
+    (void)Database.deleteTty(tty_data->name);
 
     // 在所有数据库操作完成后，统一刷新全局领地缓存
     all_tty = get_all_tty();
@@ -930,7 +929,7 @@ std::vector<Territory_Action::TerritoryData> Territory_Action::getPlayerTtyList(
 }
 
 //更改领地大小
-std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data) const
+std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data, const Point3D& tppos) const
 {
     //检查领地是否为一个点
     if (pos1 == pos2) {
@@ -953,6 +952,16 @@ std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& p
     if (!updateCoord("pos2_x", std::get<0>(pos2))) return failed_info;
     if (!updateCoord("pos2_y", std::get<1>(pos2))) return failed_info;
     if (!updateCoord("pos2_z", std::get<2>(pos2))) return failed_info;
+
+    //检查领地传送点位置
+    if (!isPointInCube(old_tty_data.tppos, pos1, pos2)) {
+        auto new_tppos = pos1;
+        if (std::get<1>(new_tppos) > 319 | std::get<1>(new_tppos) < 0)
+        {
+            std::get<1>(new_tppos) = std::get<1>(tppos);
+        }
+        (void)change_tty_tppos(old_tty_data.name, new_tppos, old_tty_data.dim);
+    }
 
     return {true,"领地大小更改成功"};
 }
