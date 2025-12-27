@@ -195,7 +195,7 @@ jobs:
             cp -r language/* ${BUILD_DIR}/territory/language/
             ZIP_NAME=territory_plugin_v${VERSION}_${OS}.zip
             cd ${BUILD_DIR}
-            zip -r ../${ZIP_NAME} endstone_territory.${EXT} territory_data
+            zip -r ../${ZIP_NAME} endstone_territory.${EXT} territory
             cd ..
             mv ${ZIP_NAME} artifacts/
             rm -rf ${BUILD_DIR}
