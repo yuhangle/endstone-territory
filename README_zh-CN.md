@@ -32,28 +32,30 @@ Windows:
 - plugins/
     - endstone_territory.dll # Windows插件文件
     - territory/ # 数据目录
-        - lang.json # 语言文件
+        - language # 语言文件夹
 
 Linux:
 - plugins/
     - endstone_territory.so # Linux插件文件
     - territory/ # 数据目录
-        - lang.json # 语言文件
+        - language # 语言文件夹
 
 **配置**
 
 首次运行插件后将自动在plugins目录创建territoty文件夹,里面包含配置文件config.json和领地数据库文件territory_data.db
 配置文件的默认配置如下:
 
-```bash
+```json
 {
     "actor_fire_attack_protect": true,
+    "language": "zh_CN",
     "max_tty_area": 4000000,
     "money_with_umoney": false,
     "player_max_tty_num": 20,
     "price": 1
 }
 ```
+`language` 为插件使用的语言，默认为中文，可根据语言文件夹内的语言文件更改配置。
 
 `actor_fire_attack_protect` 为是否开启生物火焰保护,默认开启;由于玩家对生物的直接攻击插件可以拦截，但是当玩家武器存在火焰附加附魔时,附魔效果依然会作用在生物身上造成杀伤导致保护不全;配置文件中开启生物火焰保护后,无权限玩家将无法对领地内生物造成包括火焰附加在内的任何伤害,但同时生物也将免疫部分火焰伤害
 
@@ -135,6 +137,12 @@ Linux:
 
 ```bash
 /tty tp 领地名
+```
+
+修改领地大小
+
+```bash
+/tty resize 领地名 新坐标1 新坐标2
 ```
 
 **管理员命令**

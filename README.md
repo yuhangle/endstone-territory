@@ -32,13 +32,13 @@ Windows:
 - plugins/
     - endstone_territory.dll # Plugin file for Windows
     - territory/ # Data directory
-        - lang.json # Language file
+        - language # Language directory
 
 Linux:
 - plugins/
     - endstone_territory.so # Plugin file for Linux
     - territory/ # Data directory
-        - lang.json # Language file
+        - language # Language directory
 
 **Language**
 
@@ -50,15 +50,17 @@ After running the plugin for the first time, a "territory" folder will be automa
 
 The default configuration of the configuration file is as follows:
 
-```bash
+```json
 {
     "actor_fire_attack_protect": true,
+    "language": "zh_CN",
     "max_tty_area": 4000000,
     "money_with_umoney": false,
     "player_max_tty_num": 20,
     "price": 1
 }
 ```
+`language` is the language used by the plugin, which is Chinese by default. You can change the configuration according to the language file in the language folder.
 
 `actor_fire_attack_protect` indicates whether to enable creature fire protection, which is enabled by default. While the plugin can intercept direct attacks from players on creatures, if a player's weapon has a fire aspect enchantment, the enchantment effect will still apply to the creatures, causing damage and resulting in incomplete protection. After enabling creature fire protection in the configuration file, unauthorized players will be unable to inflict any damage, including fire aspect damage, on creatures within the territory. However, creatures will also gain immunity to some fire damage.
 
@@ -147,6 +149,13 @@ Teleport to Territory
 
 ```bash
 /tty tp territory-name
+```
+
+Resize Territory
+
+```bash
+/tty resize territory-name new-coordinate-1 new-coordinate-2
+
 ```
 
 **Administrator Commands**
