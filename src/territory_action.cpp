@@ -123,6 +123,10 @@ bool Territory_Action::isTerritoryOverlapping(const std::tuple<double, double, d
                               if (resize && data.name == tty_name) {
                                     return false;
                               }
+                              if (resize && data.father_tty == tty_name)
+                              {
+                                  return false;
+                              }
                               const auto& existing_pos1 = data.pos1;
                               const auto& existing_pos2 = data.pos2;
                               const std::string& existing_dim = data.dim;

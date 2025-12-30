@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(territory CXX)
-set(BASE_VERSION "0.2.7")
+set(BASE_VERSION "0.2.7.1")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
