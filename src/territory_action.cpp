@@ -115,17 +115,40 @@ bool Territory_Action::isTerritoryOverlapping(const std::tuple<double, double, d
                             const std::string& new_dim, const bool resize, const std::string& tty_name) {
     // 构造表示新领地范围的 pair
     const auto new_tty = std::make_pair(new_pos1, new_pos2);
-
+    const auto resize_tty_data = read_territory_by_name(tty_name);
     return ranges::any_of(std::as_const(all_tty),
                           [&](const auto& entry) {
                               const TerritoryData& data = entry.second;
-                              // 如果是 resize 模式，跳过比较自身
-                              if (resize && data.name == tty_name) {
-                                    return false;
-                              }
-                              if (resize && data.father_tty == tty_name)
+
+                              if (resize)
                               {
-                                  return false;
+                                  if (resize_tty_data == nullptr)
+                                  {
+                                      return false;
+                                  }
+                                  //被检测领地为修改领地的父领地
+                                  if (data.name == resize_tty_data->father_tty)
+                                  {
+                                      //检查新的子领地是否超出父领地
+                                      if (!isSubsetCube(std::make_tuple(new_pos1,new_pos2), std::make_tuple(data.pos1,data.pos2)))
+                                      {
+                                          return true;
+                                      }
+                                      return false;
+                                  }
+                                  if (data.name == tty_name)
+                                  {
+                                      return false;
+                                  }
+                                  // 被检测领地是修改领地的子领地
+                                  if (data.father_tty == tty_name)
+                                  {
+                                      if (!isSubsetCube(std::make_tuple(data.pos1,data.pos2), std::make_tuple(new_pos1,new_pos2)))
+                                      {
+                                          return true;
+                                      }
+                                      return false;
+                                  }
                               }
                               const auto& existing_pos1 = data.pos1;
                               const auto& existing_pos2 = data.pos2;
@@ -942,7 +965,7 @@ std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& p
 
     // 检查新领地是否与其他领地重叠
     if (isTerritoryOverlapping(pos1, pos2, old_tty_data.dim, true, old_tty_data.name)) {
-        return {false, "此区域与其他玩家领地重叠"};
+        return {false, "领地新范围存在领地冲突,检查是否与其它领地重叠或者超过父领地及小于子领地范围"};
     }
     const auto updateCoord = [&](const char* column, const double value) -> bool {
         return Database.updateValue("territories", column, std::to_string(value), "name", old_tty_data.name);

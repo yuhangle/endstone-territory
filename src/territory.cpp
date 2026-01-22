@@ -1202,8 +1202,9 @@ void Territory::onPlayerjiaohust(endstone::PlayerInteractActorEvent& event)
 void Territory::onActorBomb(endstone::ActorExplodeEvent& event)
 {
     const string actor_dim = event.getActor().getLocation().getDimension()->getName();
+
+    //先检查实体是否在领地上
     const Territory_Action::Point3D actor_pos = {event.getActor().getLocation().getBlockX(),event.getActor().getLocation().getBlockY(),event.getActor().getLocation().getBlockZ()};
-    //检查实体是否在领地上
     if (const auto actor_in_tty = Territory_Action::list_in_tty(actor_pos,actor_dim); actor_in_tty != std::nullopt) {
         for (const auto&info : actor_in_tty.value()) {
             if (!(info.if_bomb)) {
@@ -1212,6 +1213,32 @@ void Territory::onActorBomb(endstone::ActorExplodeEvent& event)
             }
         }
     }
+
+    //再检查方块是否在领地上
+    auto& broken_blocks = event.getBlockList();  // vector<unique_ptr<endstone::Block>>&
+
+    std::erase_if(
+        broken_blocks,
+        [&](const std::unique_ptr<endstone::Block>& block) {
+            const Territory_Action::Point3D block_pos = {
+                block->getX(),
+                block->getY(),
+                block->getZ()
+            };
+
+            if (const auto block_in_tty = Territory_Action::list_in_tty(block_pos, actor_dim);
+                block_in_tty != std::nullopt) {
+
+                // 检查是否有任何领地将此方块标记为不允许爆炸
+                for (const auto& info : block_in_tty.value()) {
+                    if (!info.if_bomb) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+    );
 }
 
 //实体受击
@@ -1229,18 +1256,42 @@ void Territory::onActorhit(endstone::ActorDamageEvent& event)
                         actor_or_player->sendErrorMessage(LangTty.getLocal("你没有在此领地上伤害的权限"));
                         event.setCancelled(true);
                     }
+                    else
+                    {
+                        entity_can_die.push_back(event.getActor().getId());
+                    }
                     //火焰攻击类伤害
                 } else if (event.getDamageSource().getType() == "fire_tick") {
                     //非玩家实体才免疫
                     if (event.getActor().getType() != "minecraft:player") {
                         if (actor_fire_attack_protect) {
-                            event.setCancelled(true);
+                            if (ranges::find(entity_can_die, event.getActor().getId()) == entity_can_die.end())
+                            {
+                                event.setCancelled(true);
+                            }
                         }
                     }
                 }
-                return;
             }
+            //外部爆炸伤害
+            if (!(info.if_bomb))
+            {
+                if (event.getDamageSource().getType() == "entity_explosion")
+                {
+                    event.setCancelled(true);
+                }
+            }
+            return;
         }
+    }
+}
+
+//实体死亡
+void Territory::onActorDeath(const endstone::ActorDeathEvent& event)
+{
+    if (ranges::find(entity_can_die, event.getActor().getId()) != entity_can_die.end())
+    {
+        entity_can_die.erase(ranges::find(entity_can_die, event.getActor().getId()));
     }
 }
 

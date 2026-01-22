@@ -208,5 +208,6 @@
     "§l选择要更改的领地": "§lSelect the territory to change",
     "§l输入新的领地边角坐标1": "§lEnter new territory corner coordinate 1",
     "§l输入新的领地边角坐标2": "§lEnter new territory corner coordinate 2",
-    "§l§1更改自己的领地大小": "§1Change the size of your own territory"
+    "§l§1更改自己的领地大小": "§1Change the size of your own territory",
+    "领地新范围存在领地冲突,检查是否与其它领地重叠或者超过父领地及小于子领地范围": "Territory range conflict detected. Check for overlaps with other territories, ensure it does not exceed parent territory boundaries, and contains all sub-territories."
 }

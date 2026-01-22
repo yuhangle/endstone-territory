@@ -37,6 +37,7 @@ inline int price;
 inline int max_tty_area;
 inline bool welcome_all;
 inline string language = "en_US";
+inline vector<int64_t> entity_can_die;
 
 //初始化其它实例
 extern DataBase Database;
@@ -101,6 +102,9 @@ public:
 
     //实体受击
     static void onActorhit(endstone::ActorDamageEvent& event);
+
+    //实体死亡
+    static void onActorDeath(const endstone::ActorDeathEvent& event);
 
     //快速创建领地-右键事件
     static void quickCreateTtyRightClick(const endstone::PlayerInteractEvent& event);
