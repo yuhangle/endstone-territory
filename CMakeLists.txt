@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(territory CXX)
-set(BASE_VERSION "0.2.8")
+set(BASE_VERSION "0.2.9")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,7 +16,7 @@ include(FetchContent)
 FetchContent_Declare(
     endstone
     GIT_REPOSITORY https://github.com/EndstoneMC/endstone.git
-    GIT_TAG v0.10.17
+    GIT_TAG v0.11.0
 )
 FetchContent_MakeAvailable(endstone)
 

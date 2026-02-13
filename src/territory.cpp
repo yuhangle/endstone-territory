@@ -104,7 +104,7 @@ void Territory::readAllTerritories() {
 void Territory::tips_online_players() const {
     for (auto online_player_list = getServer().getOnlinePlayers(); const auto &player : online_player_list) {
         string player_name = player->getName();
-        string player_dim = player->getLocation().getDimension()->getName();
+        string player_dim = player->getLocation().getDimension().getName();
         Territory_Action::Point3D player_pos = {player->getLocation().getBlockX(), player->getLocation().getBlockY(),
                               player->getLocation().getBlockZ()};
 
@@ -422,7 +422,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             return false;
                         }
                         //维度
-                        string dim = getServer().getPlayer(player_name)->getLocation().getDimension()->getName();
+                        string dim = getServer().getPlayer(player_name)->getLocation().getDimension().getName();
                         
                         // 检查领地大小
                         const int area = Territory_Action::get_tty_area(static_cast<int>(std::get<0>(pos1)),static_cast<int>(std::get<2>(pos1)),static_cast<int>(std::get<0>(pos2)),static_cast<int>(std::get<2>(pos2)));
@@ -487,7 +487,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             return false;
                         }
                         //维度
-                        string dim = getServer().getPlayer(player_name)->getLocation().getDimension()->getName();
+                        string dim = getServer().getPlayer(player_name)->getLocation().getDimension().getName();
                         
                         // 检查领地大小
                         const int area = Territory_Action::get_tty_area(static_cast<int>(std::get<0>(pos1)),static_cast<int>(std::get<2>(pos1)),static_cast<int>(std::get<0>(pos2)),static_cast<int>(std::get<2>(pos2)));
@@ -715,7 +715,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             string player_name = sender.getName();
                             const string& tty_name = args[2];
                             string dim = getServer().getPlayer(
-                                    player_name)->getLocation().getDimension()->getName();
+                                    player_name)->getLocation().getDimension().getName();
                             if (Territory_Action::check_tty_op(tty_name, player_name) == true) {
                                 Territory_Action::Point3D tp_pos = Territory_Action::pos_to_tuple(args[1]);
                                 if (auto [fst, snd] = TA.change_tty_tppos(tty_name, tp_pos, dim); fst) {
@@ -765,7 +765,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                 if (tty_info->if_tp) {
                                     auto player = getServer().getPlayer(player_name);
                                     auto tty_Dim = getServer().getLevel()->getDimension(tty_info->dim);
-                                    endstone::Location loc(tty_Dim, static_cast<float>(get<0>(tty_info->tppos)),
+                                    endstone::Location loc(*tty_Dim, static_cast<float>(get<0>(tty_info->tppos)),
                                                            static_cast<float>(get<1>(tty_info->tppos)),
                                                            static_cast<float>(get<2>(tty_info->tppos)),
                                                            0.0, 0.0);
@@ -776,7 +776,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                            player_name == tty_info->owner) {
                                     auto player = getServer().getPlayer(player_name);
                                     auto tty_Dim = getServer().getLevel()->getDimension(tty_info->dim);
-                                    endstone::Location loc(tty_Dim, static_cast<float>(get<0>(tty_info->tppos)),
+                                    endstone::Location loc(*tty_Dim, static_cast<float>(get<0>(tty_info->tppos)),
                                                            static_cast<float>(get<1>(tty_info->tppos)),
                                                            static_cast<float>(get<2>(tty_info->tppos)),
                                                            0.0, 0.0);
@@ -1119,7 +1119,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
 void Territory::onBlockBreak(endstone::BlockBreakEvent& event)
 {
     const string player_name = event.getPlayer().getName();
-    const string player_dim = event.getPlayer().getLocation().getDimension()->getName();
+    const string player_dim = event.getPlayer().getLocation().getDimension().getName();
     const Territory_Action::Point3D block_pos = {event.getBlock().getLocation().getBlockX(),event.getBlock().getLocation().getBlockY(),event.getBlock().getLocation().getBlockZ()};
     //检查玩家是否在领地上
     if (const auto player_in_tty = Territory_Action::list_in_tty(block_pos,player_dim); player_in_tty != std::nullopt) {
@@ -1139,7 +1139,7 @@ void Territory::onBlockBreak(endstone::BlockBreakEvent& event)
 void Territory::onBlockPlace(endstone::BlockPlaceEvent& event)
 {
     const string player_name = event.getPlayer().getName();
-    const string player_dim = event.getPlayer().getLocation().getDimension()->getName();
+    const string player_dim = event.getPlayer().getLocation().getDimension().getName();
     const Territory_Action::Point3D block_pos = {event.getBlock().getLocation().getBlockX(),event.getBlock().getLocation().getBlockY(),event.getBlock().getLocation().getBlockZ()};
     //检查玩家是否在领地上
     if (const auto player_in_tty = Territory_Action::list_in_tty(block_pos,player_dim); player_in_tty != std::nullopt) {
@@ -1162,7 +1162,7 @@ void Territory::onPlayerjiaohu(endstone::PlayerInteractEvent& event)
         return;
     }
     const string player_name = event.getPlayer().getName();
-    const string player_dim = event.getPlayer().getLocation().getDimension()->getName();
+    const string player_dim = event.getPlayer().getLocation().getDimension().getName();
     const Territory_Action::Point3D block_pos = {event.getBlock()->getLocation().getBlockX(),event.getBlock()->getLocation().getBlockY(),event.getBlock()->getLocation().getBlockZ()};
     //检查玩家是否在领地上
     if (const auto player_in_tty = Territory_Action::list_in_tty(block_pos,player_dim); player_in_tty != std::nullopt) {
@@ -1182,7 +1182,7 @@ void Territory::onPlayerjiaohu(endstone::PlayerInteractEvent& event)
 void Territory::onPlayerjiaohust(endstone::PlayerInteractActorEvent& event)
 {
     const string player_name = event.getPlayer().getName();
-    const string player_dim = event.getPlayer().getLocation().getDimension()->getName();
+    const string player_dim = event.getPlayer().getLocation().getDimension().getName();
     const Territory_Action::Point3D actor_pos = {event.getActor().getLocation().getBlockX(),event.getActor().getLocation().getBlockY(),event.getActor().getLocation().getBlockZ()};
     //检查玩家是否在领地上
     if (const auto player_in_tty = Territory_Action::list_in_tty(actor_pos,player_dim); player_in_tty != std::nullopt) {
@@ -1201,7 +1201,7 @@ void Territory::onPlayerjiaohust(endstone::PlayerInteractActorEvent& event)
 //实体爆炸监听
 void Territory::onActorBomb(endstone::ActorExplodeEvent& event)
 {
-    const string actor_dim = event.getActor().getLocation().getDimension()->getName();
+    const string actor_dim = event.getActor().getLocation().getDimension().getName();
 
     //先检查实体是否在领地上
     const Territory_Action::Point3D actor_pos = {event.getActor().getLocation().getBlockX(),event.getActor().getLocation().getBlockY(),event.getActor().getLocation().getBlockZ()};
@@ -1244,7 +1244,7 @@ void Territory::onActorBomb(endstone::ActorExplodeEvent& event)
 //实体受击
 void Territory::onActorhit(endstone::ActorDamageEvent& event)
 {
-    const string actor_dim = event.getActor().getLocation().getDimension()->getName();
+    const string actor_dim = event.getActor().getLocation().getDimension().getName();
     const Territory_Action::Point3D actor_pos = {event.getActor().getLocation().getBlockX(),event.getActor().getLocation().getBlockY(),event.getActor().getLocation().getBlockZ()};
     //检查实体是否在领地上
     if (const auto actor_in_tty = Territory_Action::list_in_tty(actor_pos,actor_dim); actor_in_tty != std::nullopt) {
