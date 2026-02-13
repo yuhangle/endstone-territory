@@ -173,6 +173,21 @@ void Territory::tips_online_players() const {
                     //pEntity->sendToast("  ", msg);
                     //pEntity->sendMessage(msg);//聊天栏提示
                     pEntity->sendTip(msg);//tip提示
+                    //领地飞行校验权限
+                    if (Territory_Action::check_tty_op(selectedTerritory->name, player_name).value())
+                    {
+                        pEntity->setAllowFlight(true);
+                    }
+                    else
+                    {
+                        if (static_cast<int>(pEntity->getGameMode()) == 0 || static_cast<int>(pEntity->getGameMode()) == 3)
+                        {
+                            if (pEntity->getAllowFlight())
+                            {
+                                pEntity->setAllowFlight(false);
+                            }
+                        }
+                    }
                 }
                 // 更新全局记录的领地信息
                 get<1>(lastPlayerPositions[player_name]) = current_territory;
@@ -186,6 +201,13 @@ void Territory::tips_online_players() const {
                     //pEntity->sendToast("  ", msg);
                     //pEntity->sendMessage(msg);//聊天栏提示
                     pEntity->sendTip(msg);//tip提示
+                    if (static_cast<int>(pEntity->getGameMode()) == 0 || static_cast<int>(pEntity->getGameMode()) == 3)
+                    {
+                        if (pEntity->getAllowFlight())
+                        {
+                            pEntity->setAllowFlight(false);
+                        }
+                    }
                 }
                 // 清空记录
                 get<1>(lastPlayerPositions[player_name]) = "";
