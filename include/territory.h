@@ -106,6 +106,9 @@ public:
     //实体死亡
     static void onActorDeath(const endstone::ActorDeathEvent& event);
 
+    //领地边缘活塞监听
+    static void onEdgePiston(endstone::BlockPistonEvent& event);
+
     //快速创建领地-右键事件
     static void quickCreateTtyRightClick(const endstone::PlayerInteractEvent& event);
 

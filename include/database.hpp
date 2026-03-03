@@ -15,8 +15,6 @@
 #include <map>
 #include <random>
 
-#include "fmt/format.h"
-
 class DataBase {
 public:
     // 构造时需要指定数据库文件名
@@ -25,116 +23,109 @@ public:
 
     // 函数用于检查文件是否存在
     static bool fileExists(const std::string& filename) {
-        std::ifstream f(filename.c_str());
+        const std::ifstream f(filename.c_str());
         return f.good();
     }
+
+    struct Column {
+        std::string name;
+        std::string type;
+    };
 
     // 初始化数据库
     [[nodiscard]] int init_database() const {
         sqlite3* db;
-        int rc = sqlite3_open(db_filename.c_str(), &db);
-        if (rc) {
+        if (int rc = sqlite3_open(db_filename.c_str(), &db)) {
             std::cerr << "无法打开数据库: " << sqlite3_errmsg(db) << std::endl;
             return rc;
         }
 
-        // 创建 territories 表
-        std::string create_territory_table = "CREATE TABLE IF NOT EXISTS territories ("
-                                        "name TEXT PRIMARY KEY, "
-                                        "pos1_x REAL, pos1_y REAL, pos1_z REAL, "
-                                        "pos2_x REAL, pos2_y REAL, pos2_z REAL, "
-                                        "tppos_x REAL, tppos_y REAL, tppos_z REAL, "
-                                        "owner TEXT, manager TEXT, member TEXT, "
-                                        "if_jiaohu INTEGER, if_break INTEGER, if_tp INTEGER, "
-                                        "if_build INTEGER, if_bomb INTEGER, if_damage INTEGER, dim TEXT, father_tty TEXT);";
-        rc = sqlite3_exec(db, create_territory_table.c_str(), nullptr, nullptr, nullptr);
-        if (rc != SQLITE_OK) {
-            std::cerr << "创建 territories 表失败: " << sqlite3_errmsg(db) << std::endl;
-            sqlite3_close(db);
-            return rc;
-        }
+        // 权限字段列表
+        std::vector<Column> auth_columns = {
+            {"if_jiaohu", "INTEGER DEFAULT 0"},
+            {"if_break",  "INTEGER DEFAULT 0"},
+            {"if_tp",     "INTEGER DEFAULT 0"},
+            {"if_build",  "INTEGER DEFAULT 0"},
+            {"if_bomb",   "INTEGER DEFAULT 0"},
+            {"if_damage", "INTEGER DEFAULT 0"},
+            {"if_edge_piston", "INTEGER DEFAULT 0"}
+        };
 
-                //0.2.0更新数据库
-        // 检查并重新构建表结构以插入 if_damage 到 if_bomb 之后
+        // 检查当前表结构状态
         std::string checkSql = "PRAGMA table_info(territories);";
         sqlite3_stmt* stmt;
         sqlite3_prepare_v2(db, checkSql.c_str(), -1, &stmt, nullptr);
-        bool hasIfDamage = false;
+
+        std::vector<std::string> current_cols;
+        std::string last_col_name;
         while (sqlite3_step(stmt) == SQLITE_ROW) {
-            const unsigned char* columnName = sqlite3_column_text(stmt, 1);
-            if (strcmp(reinterpret_cast<const char *>(columnName), "if_damage") == 0) {
-                hasIfDamage = true;
-                break;
-            }
+            last_col_name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            current_cols.push_back(last_col_name);
         }
         sqlite3_finalize(stmt);
 
-        if (!hasIfDamage) {
-            // 如果没有 if_damage 字段，重新创建表结构
+        // 如果表不存在，直接创建最新版
+        if (current_cols.empty()) {
+            std::string create_sql = "CREATE TABLE territories ("
+                "name TEXT PRIMARY KEY, pos1_x REAL, pos1_y REAL, pos1_z REAL, "
+                "pos2_x REAL, pos2_y REAL, pos2_z REAL, tppos_x REAL, tppos_y REAL, tppos_z REAL, "
+                "owner TEXT, manager TEXT, member TEXT, dim TEXT, father_tty TEXT";
+            for (const auto& [name, type] : auth_columns) {
+                create_sql.append(", ").append(name).append(" ").append(type);
+            }
+            create_sql += ");";
+            sqlite3_exec(db, create_sql.c_str(), nullptr, nullptr, nullptr);
+        }
+        // 迁移旧版本数据库
+        else if (last_col_name == "father_tty") {
+            std::cout << "Update database to 0.3.0" << std::endl;
             char* err_msg = nullptr;
 
-            // 1. 创建一个新的表，具有期望的列顺序
-            std::string createTempTableSql = "CREATE TABLE territories_new ("
-                                             "name TEXT PRIMARY KEY, "
-                                             "pos1_x REAL, pos1_y REAL, pos1_z REAL, "
-                                             "pos2_x REAL, pos2_y REAL, pos2_z REAL, "
-                                             "tppos_x REAL, tppos_y REAL, tppos_z REAL, "
-                                             "owner TEXT, manager TEXT, member TEXT, "
-                                             "if_jiaohu INTEGER, if_break INTEGER, if_tp INTEGER, "
-                                             "if_build INTEGER, if_bomb INTEGER, if_damage INTEGER DEFAULT 0, "
-                                             "dim TEXT, father_tty TEXT);";
-            rc = sqlite3_exec(db, createTempTableSql.c_str(), nullptr, nullptr, &err_msg);
-            if (rc != SQLITE_OK) {
-                std::cerr << "Create new table failed" << err_msg << std::endl;
-                sqlite3_free(err_msg);
-                sqlite3_close(db);
-                return rc;
+            // 开启事务保证安全
+            sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+
+            // A. 创建新表 (权限字段全部在最后)
+            std::string create_new = "CREATE TABLE territories_new ("
+                "name TEXT PRIMARY KEY, pos1_x REAL, pos1_y REAL, pos1_z REAL, "
+                "pos2_x REAL, pos2_y REAL, pos2_z REAL, tppos_x REAL, tppos_y REAL, tppos_z REAL, "
+                "owner TEXT, manager TEXT, member TEXT, dim TEXT, father_tty TEXT";
+            for (const auto& [name, type] : auth_columns) {
+                create_new.append(", ").append(name).append(" ").append(type);
+            }
+            create_new += ");";
+
+            // 迁移数据
+            std::string common_cols = "name, pos1_x, pos1_y, pos1_z, pos2_x, pos2_y, pos2_z, tppos_x, tppos_y, tppos_z, owner, manager, member, dim, father_tty";
+            // 检查旧表里是否已经零散存了一些权限字段
+            for (const auto& [name, type] : auth_columns) {
+                if (std::ranges::find(current_cols, name) != current_cols.end()) {
+                    common_cols += ", " + name;
+                }
             }
 
-            // 2. 将旧表的数据插入到新表中
-            std::string copyDataSql = "INSERT INTO territories_new ("
-                                      "name, pos1_x, pos1_y, pos1_z, "
-                                      "pos2_x, pos2_y, pos2_z, "
-                                      "tppos_x, tppos_y, tppos_z, "
-                                      "owner, manager, member, "
-                                      "if_jiaohu, if_break, if_tp, "
-                                      "if_build, if_bomb, dim, father_tty) "
-                                      "SELECT "
-                                      "name, pos1_x, pos1_y, pos1_z, "
-                                      "pos2_x, pos2_y, pos2_z, "
-                                      "tppos_x, tppos_y, tppos_z, "
-                                      "owner, manager, member, "
-                                      "if_jiaohu, if_break, if_tp, "
-                                      "if_build, if_bomb, dim, father_tty "
-                                      "FROM territories;";
-            rc = sqlite3_exec(db, copyDataSql.c_str(), nullptr, nullptr, &err_msg);
-            if (rc != SQLITE_OK) {
-                std::cerr << "copy data to new table failed" << err_msg << std::endl;
-                sqlite3_free(err_msg);
-                sqlite3_close(db);
-                return rc;
-            }
+            std::string migrate_data = "INSERT INTO territories_new (" + common_cols + ") SELECT " + common_cols + " FROM territories;";
 
-            // 3. 删除旧表
-            std::string dropOldTableSql = "DROP TABLE territories;";
-            rc = sqlite3_exec(db, dropOldTableSql.c_str(), nullptr, nullptr, &err_msg);
-            if (rc != SQLITE_OK) {
-                std::cerr << "delete old table failed" << err_msg << std::endl;
-                sqlite3_free(err_msg);
-                sqlite3_close(db);
-                return rc;
-            }
-
-            // 4. 将新表重命名为旧表
-            std::string renameTableSql = "ALTER TABLE territories_new RENAME TO territories;";
-            rc = sqlite3_exec(db, renameTableSql.c_str(), nullptr, nullptr, &err_msg);
-            if (rc != SQLITE_OK) {
-                std::cerr << "rename new table failed" << err_msg << std::endl;
-                sqlite3_free(err_msg);
-                sqlite3_close(db);
-                return rc;
+            // 执行操作
+            if (sqlite3_exec(db, create_new.c_str(), nullptr, nullptr, &err_msg) == SQLITE_OK &&
+                sqlite3_exec(db, migrate_data.c_str(), nullptr, nullptr, &err_msg) == SQLITE_OK &&
+                sqlite3_exec(db, "DROP TABLE territories;", nullptr, nullptr, &err_msg) == SQLITE_OK &&
+                sqlite3_exec(db, "ALTER TABLE territories_new RENAME TO territories;", nullptr, nullptr, &err_msg) == SQLITE_OK) {
+                sqlite3_exec(db, "COMMIT;", nullptr, nullptr, nullptr);
             } else {
-                std::cerr << "0.2.0 update over" << std::endl;
+                std::cerr << "Territory database update failed: " << (err_msg ? err_msg : "Unknown error") << std::endl;
+                sqlite3_free(err_msg);
+                sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            }
+        }
+        // --- 5. 如果已经是新布局，但有新的权限字段（比如以后再加），则简单追加到末尾 ---
+        else {
+            for (const auto& [name, type] : auth_columns) {
+                if (std::ranges::find(current_cols, name) == current_cols.end()) {
+                    std::string add_col = "ALTER TABLE territories ADD COLUMN ";
+                    add_col.append(name).append(" ").append(type).append(";");
+                    sqlite3_exec(db, add_col.c_str(), nullptr, nullptr, nullptr);
+                    std::cout << "Add new permission: " << name << std::endl;
+                }
             }
         }
 
@@ -161,7 +152,7 @@ public:
     }
 
 // 通用查询 SQL（select查询使用回调函数返回结果为 vector<map<string, string>>）
-    static int queryCallback(void* data, int argc, char** argv, char** azColName) {
+    static int queryCallback(void* data, const int argc, char** argv, char** azColName) {
         auto* result = static_cast<std::vector<std::map<std::string, std::string>>*>(data);
         std::map<std::string, std::string> row;
         for (int i = 0; i < argc; i++) {
@@ -187,7 +178,7 @@ public:
     }
 
 // 批量查询 SQL（select查询使用回调函数返回结果为 vector<map<string, string>>）
-    static int queryCallback_many_dict(void* data, int argc, char** argv, char** azColName) {
+    static int queryCallback_many_dict(void* data, const int argc, char** argv, char** azColName) {
         auto* result = static_cast<std::vector<std::map<std::string, std::string>>*>(data);
         std::map<std::string, std::string> row;
         for (int i = 0; i < argc; i++) {
@@ -341,9 +332,11 @@ public:
                    const std::string& owner,
                    const std::string& manager,
                    const std::string& member,
+                   const std::string& dim,
+                   const std::string& father_tty,
                    const int if_jiaohu, const int if_break, const int if_tp,
-                   const int if_build, const int if_bomb, const int if_damage, const std::string& dim,
-                   const std::string& father_tty) const  {
+                   const int if_build, const int if_bomb, const int if_damage,
+                   const int if_edge_piston) const {
         sqlite3* db;
         int rc = sqlite3_open(db_filename.c_str(), &db);
         if (rc) {
@@ -353,16 +346,10 @@ public:
 
         const std::string sql = "INSERT INTO territories (name, pos1_x, pos1_y, pos1_z, "
                           "pos2_x, pos2_y, pos2_z, tppos_x, tppos_y, tppos_z, "
-                          "owner, manager, member, if_jiaohu, if_break, if_tp, "
-                          "if_build, if_bomb, if_damage, dim, father_tty) VALUES (?, "
-                          "?, ?, ?, "
-                          "?, ?, ?, "
-                          "?, ?, ?, "
-                          "?, ?, ?, "
-                          "?, ?, ?, "
-                          "?, ?, ?, "
-                          "?, ?);";
-                          
+                          "owner, manager, member, dim, father_tty, "
+                          "if_jiaohu, if_break, if_tp, if_build, if_bomb, if_damage, if_edge_piston) "
+                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+
         sqlite3_stmt* stmt;
         rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
         if (rc != SQLITE_OK) {
@@ -370,8 +357,8 @@ public:
             sqlite3_close(db);
             return rc;
         }
-        
-        // 绑定参数
+
+        // 绑定参数 (严格按照 SQL 中的顺序)
         sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
         sqlite3_bind_double(stmt, 2, pos1_x);
         sqlite3_bind_double(stmt, 3, pos1_y);
@@ -385,28 +372,29 @@ public:
         sqlite3_bind_text(stmt, 11, owner.c_str(), -1, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 12, manager.c_str(), -1, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 13, member.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_int(stmt, 14, if_jiaohu);
-        sqlite3_bind_int(stmt, 15, if_break);
-        sqlite3_bind_int(stmt, 16, if_tp);
-        sqlite3_bind_int(stmt, 17, if_build);
-        sqlite3_bind_int(stmt, 18, if_bomb);
-        sqlite3_bind_int(stmt, 19, if_damage);
-        sqlite3_bind_text(stmt, 20, dim.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 21, father_tty.c_str(), -1, SQLITE_STATIC);
-        
+
+        sqlite3_bind_text(stmt, 14, dim.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 15, father_tty.c_str(), -1, SQLITE_STATIC);
+
+        // 权限信息
+        sqlite3_bind_int(stmt, 16, if_jiaohu);
+        sqlite3_bind_int(stmt, 17, if_break);
+        sqlite3_bind_int(stmt, 18, if_tp);
+        sqlite3_bind_int(stmt, 19, if_build);
+        sqlite3_bind_int(stmt, 20, if_bomb);
+        sqlite3_bind_int(stmt, 21, if_damage);
+        sqlite3_bind_int(stmt, 22, if_edge_piston); // 新字段绑定
+
         // 执行 SQL 语句
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_DONE) {
             std::cerr << "SQL 插入失败: " << sqlite3_errmsg(db) << std::endl;
-            sqlite3_finalize(stmt);
-            sqlite3_close(db);
-            return rc;
         }
-        
+
         // 清理资源
         sqlite3_finalize(stmt);
         sqlite3_close(db);
-        return SQLITE_OK;
+        return (rc == SQLITE_DONE) ? SQLITE_OK : rc;
     }
 
     int getAllTty(std::vector<std::map<std::string, std::string>> &result) const {

@@ -41,6 +41,7 @@ std::map<std::string, Territory_Action::TerritoryData>& Territory_Action::get_al
         tty_data.if_build = DataBase::stringToInt(data.at("if_build"));
         tty_data.if_bomb = DataBase::stringToInt(data.at("if_bomb"));
         tty_data.if_damage = DataBase::stringToInt(data.at("if_damage"));
+        tty_data.if_edge_piston = DataBase::stringToInt(data.at("if_edge_piston"));
         tty_data.dim = data.at("dim");
         tty_data.father_tty = data.at("father_tty");
         new_all_tty[tty_data.name] = tty_data;
@@ -72,6 +73,40 @@ bool Territory_Action::isPointInCube(const tuple<double, double, double>& point,
     return (x_min <= get<0>(point) && get<0>(point) <= x_max &&
             y_min <= get<1>(point) && get<1>(point) <= y_max &&
             z_min <= get<2>(point) && get<2>(point) <= z_max);
+}
+
+// 检查点是否在立方体边界一格（外壳）
+bool Territory_Action::isPointInCubeEdge(const tuple<double, double, double>& point,
+                          const tuple<double, double, double>& corner1,
+                          const tuple<double, double, double>& corner2)
+{
+    const double px = get<0>(point);
+    const double py = get<1>(point);
+    const double pz = get<2>(point);
+
+    const double x_min = min(get<0>(corner1), get<0>(corner2));
+    const double x_max = max(get<0>(corner1), get<0>(corner2));
+    const double y_min = min(get<1>(corner1), get<1>(corner2));
+    const double y_max = max(get<1>(corner1), get<1>(corner2));
+    const double z_min = min(get<2>(corner1), get<2>(corner2));
+    const double z_max = max(get<2>(corner1), get<2>(corner2));
+
+    // 1. 基础检查：点必须在领地内
+    if (px < x_min || px > x_max || py < y_min || py > y_max || pz < z_min || pz > z_max) {
+        return false;
+    }
+
+    // 2. 边缘判定：
+    // 如果领地某一边宽度本身就小于 2 格，那么这一边所有点都算边缘。
+    // 否则，距离任意边界 <= 1.0 的点即为边缘。
+    constexpr double margin = 1.0;
+
+    const bool atX = (x_max - x_min <= margin * 2) ? true : (px < x_min + margin || px > x_max - margin);
+    const bool atY = (y_max - y_min <= margin * 2) ? true : (py < y_min + margin || py > y_max - margin);
+    const bool atZ = (z_max - z_min <= margin * 2) ? true : (pz < z_min + margin || pz > z_max - margin);
+
+    // 只要 X, Y, Z 任一维度处于边缘，即判定为在该立方体的“壳”上
+    return atX || atY || atZ;
 }
 
 // 检查立方体重合
@@ -157,6 +192,17 @@ bool Territory_Action::isTerritoryOverlapping(const std::tuple<double, double, d
                               return is_overlapping(new_tty, std::make_pair(existing_pos1, existing_pos2)) &&
                                      (new_dim == existing_dim);
                           });
+}
+
+//检查是否位于领地边缘
+bool Territory_Action::check_in_tty_edge(const string& tty_name, const Point3D& point)
+{
+    const auto tty_data = read_territory_by_name(tty_name);
+    if (!tty_data)
+    {
+        return false;
+    }
+    return isPointInCubeEdge(point, tty_data->pos1, tty_data->pos2);
 }
 
 // 检查玩家拥有领地数量的函数
@@ -256,12 +302,15 @@ std::pair<bool, std::string> Territory_Action::create_territory(const std::strin
 
     // 插入新领地数据到数据库
     if (const std::string name = ss.str(); Database.addTerritory(name,
-                                                                  std::get<0>(pos1), std::get<1>(pos1), std::get<2>(pos1),
-                                                                  std::get<0>(pos2), std::get<1>(pos2), std::get<2>(pos2),
-                                                                  std::get<0>(tppos), std::get<1>(tppos), std::get<2>(tppos),
-                                                                  player_name, "", "", false, false, false, false, false,false, dim, "")) {
+                                                                 std::get<0>(pos1), std::get<1>(pos1), std::get<2>(pos1),
+                                                                 std::get<0>(pos2), std::get<1>(pos2), std::get<2>(pos2),
+                                                                 std::get<0>(tppos), std::get<1>(tppos), std::get<2>(tppos),
+                                                                 player_name, "", "",  // owner, manager, member
+                                                                 dim, "",
+                                                                 0, 0, 0, 0, 0, 0, 0
+    ) != SQLITE_OK) {
         return {false, "数据库操作失败"};
-    }
+        }
 
     return {true, "成功创建领地"};
 }
@@ -310,12 +359,15 @@ std::pair<bool, std::string> Territory_Action::create_sub_territory(const std::s
 
     // 写入数据库
     if (Database.addTerritory(child_territory_name,
-                                get<0>(pos1),get<1>(pos1),get<2>(pos1),
-                                get<0>(pos2),get<1>(pos2),get<2>(pos2),
-                                get<0>(tppos),get<1>(tppos),get<2>(tppos),player_name,"","",
-                                false,false,false,false,false,false,dim,parent_name)) {
+                              std::get<0>(pos1), std::get<1>(pos1), std::get<2>(pos1),
+                              std::get<0>(pos2), std::get<1>(pos2), std::get<2>(pos2),
+                              std::get<0>(tppos), std::get<1>(tppos), std::get<2>(tppos),
+                              player_name, "", "",
+                              dim, parent_name,
+                              0, 0, 0, 0, 0, 0, 0
+        ) != SQLITE_OK) {
         return {false, "数据库操作失败"};
-    }
+        }
 
     return {true, child_territory_name};
 }
@@ -433,7 +485,7 @@ bool Territory_Action::rename_Tty(const std::string &territory_name, const std::
 }
 
 // 检查领地主人函数
-std::optional<bool> Territory_Action::check_tty_owner(const std::string &ttyname, const std::string &player_name) {
+std::optional<bool> Territory_Action::is_tty_owner(const std::string &ttyname, const std::string &player_name) {
     // 遍历全局缓存中的所有领地数据
     for (const auto &territory: all_tty | views::values) {
         if (territory.name == ttyname) {         // 找到对应领地
@@ -449,7 +501,7 @@ std::optional<bool> Territory_Action::check_tty_owner(const std::string &ttyname
 }
 
 // 检查玩家是否为领地主人或管理员
-std::optional<bool> Territory_Action::check_tty_op(const std::string &ttyname, const std::string &player_name) {
+std::optional<bool> Territory_Action::is_tty_op(const std::string &ttyname, const std::string &player_name) {
     // 遍历全局缓存中的每一条领地数据
     for (const auto &territory: all_tty | views::values) {
         if (territory.name == ttyname) {  // 找到对应领地
@@ -494,14 +546,15 @@ std::optional<std::vector<Territory_Action::InTtyInfo>> Territory_Action::list_i
                 combinedMembers.insert(combinedMembers.end(), members.begin(), members.end());
 
                 InTtyInfo info{
-                        territory.name,
-                        territory.if_jiaohu,
-                        territory.if_break,
-                        territory.if_build,
-                        territory.if_bomb,
-                        territory.if_damage,
-                        combinedMembers,
-                        territory.owner
+                    territory.name,
+                    combinedMembers,
+                    territory.owner,
+                    territory.if_jiaohu,
+                    territory.if_break,
+                    territory.if_build,
+                    territory.if_bomb,
+                    territory.if_damage,
+                    territory.if_edge_piston
                 };
 
                 // 如果是子领地（father_tty 非空），则清空之前收集的非子领地信息，仅保留该记录，然后直接返回结果
@@ -533,17 +586,9 @@ bool Territory_Action::change_tty_permissions(const std::string &ttyname, const 
 
 // 领地权限变更函数
 std::pair<bool, std::string> Territory_Action::change_territory_permissions(const std::string &ttyname,const std::string &permission, const int value) const{
-    // 参数：
-    //   ttyname: 领地名
-    //   permission: 权限名（允许的选项为 "if_jiaohu", "if_break", "if_tp", "if_build", "if_bomb","if_damage"）
-    //   value: 权限值
-    // 返回：
-    //   pair.first 为操作是否成功；pair.second 为相应提示信息
-
-    // 定义允许变更的权限列表
 
     // 检查权限名是否合法
-    if (std::vector<std::string> allowed_permissions = {"if_jiaohu", "if_break", "if_tp", "if_build", "if_bomb", "if_damage"}; ranges::find(allowed_permissions, permission) ==
+    if (std::vector<std::string> allowed_permissions = {"if_jiaohu", "if_break", "if_tp", "if_build", "if_bomb", "if_damage", "if_edge_piston"}; ranges::find(allowed_permissions, permission) ==
                                                                                                                                allowed_permissions.end()) {
         std::string msg = LangTty.getLocal("无效的权限名: ") + permission;
         return {false, msg};

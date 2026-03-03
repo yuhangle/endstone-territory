@@ -381,6 +381,7 @@ void Menu::openListTtyMenu(endstone::Player* player) {
             << LangTty.getLocal("\n是否允许放置方块: ") << (tty.if_build ? "true" : "false")
             << LangTty.getLocal("\n是否允许实体爆炸: ") << (tty.if_bomb ? "true" : "false")
             << LangTty.getLocal("\n是否允许实体伤害: ") << (tty.if_damage ? "true" : "false")
+            << LangTty.getLocal("\n是否允许领地边缘活塞活动: ") << (tty.if_edge_piston ? "true" : "false")
             << LangTty.getLocal("\n领地管理员: ") << tty.manager
             << LangTty.getLocal("\n领地成员: ") << tty.member << "\n"
             << "--------------------\n";
@@ -439,7 +440,7 @@ void Menu::openSetPermisDetailMenu(endstone::Player* player, const Territory_Act
   endstone::ModalForm form;
   form.setTitle(LangTty.getLocal("§l管理领地") + " " + tty.name + LangTty.getLocal("的权限"));
 
-  endstone::Toggle t_jiaohu, t_break, t_tp, t_build, t_bomb, t_damage;
+  endstone::Toggle t_jiaohu, t_break, t_tp, t_build, t_bomb, t_damage, t_piston;
   t_jiaohu.setLabel(LangTty.getLocal("§l是否允许外人领地内交互"));
   t_jiaohu.setDefaultValue(tty.if_jiaohu);
   t_break.setLabel(LangTty.getLocal("§l是否允许外人领地内破坏"));
@@ -452,23 +453,26 @@ void Menu::openSetPermisDetailMenu(endstone::Player* player, const Territory_Act
   t_bomb.setDefaultValue(tty.if_bomb);
   t_damage.setLabel(LangTty.getLocal("§l是否允许外人对实体攻击"));
   t_damage.setDefaultValue(tty.if_damage);
+  t_piston.setLabel(LangTty.getLocal("§l是否允许领地边缘活塞活动"));
+  t_piston.setDefaultValue(tty.if_edge_piston);
 
-  form.setControls({t_jiaohu, t_break, t_tp, t_build, t_bomb, t_damage});
+  form.setControls({t_jiaohu, t_break, t_tp, t_build, t_bomb, t_damage, t_piston});
 
   form.setOnSubmit([=](const endstone::Player* p, const std::string& response) {
     try {
       auto permis = nlohmann::json::parse(response);
-      if (!permis.is_array() || permis.size() != 6) {
+      if (!permis.is_array() || permis.size() != 7) {
         p->sendErrorMessage(LangTty.getLocal("未知的错误"));
         return;
       }
-      std::vector<std::pair<std::string, bool>> fields = {
+      const std::vector<std::pair<std::string, bool>> fields = {
         {"if_jiaohu", permis[0].get<bool>()},
         {"if_break", permis[1].get<bool>()},
         {"if_tp", permis[2].get<bool>()},
         {"if_build", permis[3].get<bool>()},
         {"if_bomb", permis[4].get<bool>()},
-        {"if_damage", permis[5].get<bool>()}
+        {"if_damage", permis[5].get<bool>()},
+        {"if_edge_piston", permis[6].get<bool>()}
       };
       bool changed = false;
       for (size_t i = 0; i < fields.size(); ++i) {
@@ -480,6 +484,7 @@ void Menu::openSetPermisDetailMenu(endstone::Player* player, const Territory_Act
           case 3: oldval = tty.if_build; break;
           case 4: oldval = tty.if_bomb; break;
           case 5: oldval = tty.if_damage; break;
+          case 6: oldval = tty.if_edge_piston; break;
           default: ;
         }
         if (fields[i].second != oldval) {
