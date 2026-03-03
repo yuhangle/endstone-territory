@@ -42,7 +42,8 @@ void Territory::datafile_check() const {
             {"price", 1},
             {"max_tty_area",4000000},
             {"welcome_all",true},
-            {"language","zh_CN"}
+            {"language","zh_CN"},
+            {"allow_fly_on_territory", true}
     };
 
     if (!(std::filesystem::exists(data_path))) {
@@ -109,7 +110,7 @@ void Territory::tips_online_players() const {
                               player->getLocation().getBlockZ()};
 
         // 检查玩家位置是否有变化
-        if (!welcome_all && get<0>(lastPlayerPositions[player_name]) == player_pos) {
+        if (!config_welcome_all && get<0>(lastPlayerPositions[player_name]) == player_pos) {
             // 玩家位置未改变
             continue;
         }
@@ -152,18 +153,18 @@ void Territory::tips_online_players() const {
             std::string current_father_territory = selectedTerritory->father_tty; // 若为空则为父领地，否则为子领地
 
             // 如果领地名称改变，说明玩家进入新领地（包括从父领地到子领地的切换）
-            if (previous_territory != current_territory || welcome_all) {
+            if (previous_territory != current_territory || config_welcome_all) {
                 std::string msg;
                 if (!current_father_territory.empty()) {
                     // 进入子领地
-                    if (welcome_all) {
+                    if (config_welcome_all) {
                         msg = LangTty.getLocal("§2[领地] §r您当前位于 ") + selectedTerritory->owner + LangTty.getLocal(" 的子领地 ") + current_territory;
                     } else {
                         msg = LangTty.getLocal("§2[领地] §r欢迎来到 ") + selectedTerritory->owner + LangTty.getLocal(" 的子领地 ") + current_territory;
                     }
                 } else {
                     // 进入普通领地
-                    if (welcome_all) {
+                    if (config_welcome_all) {
                         msg = LangTty.getLocal("§2[领地] §r您当前位于 ") + selectedTerritory->owner + LangTty.getLocal(" 的领地 ") + current_territory;
                     } else {
                         msg = LangTty.getLocal("§2[领地] §r欢迎来到 ") + selectedTerritory->owner + LangTty.getLocal(" 的领地 ") + current_territory;
@@ -174,17 +175,20 @@ void Territory::tips_online_players() const {
                     //pEntity->sendMessage(msg);//聊天栏提示
                     pEntity->sendTip(msg);//tip提示
                     //领地飞行校验权限
-                    if (Territory_Action::is_tty_op(selectedTerritory->name, player_name).value())
+                    if (config_fly_on_tty)
                     {
-                        pEntity->setAllowFlight(true);
-                    }
-                    else
-                    {
-                        if (static_cast<int>(pEntity->getGameMode()) == 0 || static_cast<int>(pEntity->getGameMode()) == 3)
+                        if (Territory_Action::is_tty_op(selectedTerritory->name, player_name).value())
                         {
-                            if (pEntity->getAllowFlight())
+                            pEntity->setAllowFlight(true);
+                        }
+                        else
+                        {
+                            if (static_cast<int>(pEntity->getGameMode()) == 0 || static_cast<int>(pEntity->getGameMode()) == 3)
                             {
-                                pEntity->setAllowFlight(false);
+                                if (pEntity->getAllowFlight())
+                                {
+                                    pEntity->setAllowFlight(false);
+                                }
                             }
                         }
                     }
@@ -201,11 +205,15 @@ void Territory::tips_online_players() const {
                     //pEntity->sendToast("  ", msg);
                     //pEntity->sendMessage(msg);//聊天栏提示
                     pEntity->sendTip(msg);//tip提示
-                    if (static_cast<int>(pEntity->getGameMode()) == 0 || static_cast<int>(pEntity->getGameMode()) == 3)
+                    //飞行校验权限
+                    if (config_fly_on_tty)
                     {
-                        if (pEntity->getAllowFlight())
+                        if (static_cast<int>(pEntity->getGameMode()) == 0 || static_cast<int>(pEntity->getGameMode()) == 3)
                         {
-                            pEntity->setAllowFlight(false);
+                            if (pEntity->getAllowFlight())
+                            {
+                                pEntity->setAllowFlight(false);
+                            }
                         }
                     }
                 }
@@ -222,11 +230,11 @@ bool Territory::del_player_tty(const std::string &tty_name) const {
     const auto tty_data = Territory_Action::read_territory_by_name(tty_name);
     const int area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
     string owner;
-    if (money_with_umoney) {
-        (void)umoney_change_player_money(tty_data->owner,area*price);
+    if (config_money_with_umoney) {
+        (void)umoney_change_player_money(tty_data->owner,area*config_price);
         if (const auto the_player = getServer().getPlayer(tty_data->owner)) {
             owner = the_player->getName();
-            the_player->sendMessage(LangTty.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(area*price));
+            the_player->sendMessage(LangTty.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(area*config_price));
         }
     }
     if (TA.del_Tty_by_name(tty_name)) {
@@ -234,7 +242,7 @@ bool Territory::del_player_tty(const std::string &tty_name) const {
     }
     if (!owner.empty())
     {
-        (void)umoney_change_player_money(owner,area*price);
+        (void)umoney_change_player_money(owner,area*config_price);
     }
     return false;
 }
@@ -333,42 +341,34 @@ void Territory::onEnable()
     getLogger().info("onEnable is called");
 
     json json_msg = read_config();
+    //默认配置
+    config_max_tty_num = 20;
+    config_actor_fire_attack_protect = true;
+    config_money_with_umoney = false;
+    config_price = 1;
+    config_max_tty_area = 4000000;
+    config_welcome_all = true;
+    config_fly_on_tty = true;
     try {
         if (!json_msg.contains("error")) {
-            max_tty_num = json_msg["player_max_tty_num"];
-            actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
-            max_tty_area = json_msg["max_tty_area"];
-            welcome_all = json_msg["welcome_all"];
+            config_max_tty_num = json_msg["player_max_tty_num"];
+            config_actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
+            config_max_tty_area = json_msg["max_tty_area"];
+            config_welcome_all = json_msg["welcome_all"];
+            config_fly_on_tty = json_msg["allow_fly_on_territory"];
             language = json_msg["language"];
             if (json_msg["money_with_umoney"]) {
                 if (json_msg["money_with_umoney"] && umoney_check_exists() && json_msg["price"] >0) {
-                    money_with_umoney = true;
-                    price = json_msg["price"];
+                    config_money_with_umoney = true;
+                    config_price = json_msg["price"];
                 } else {
-                    money_with_umoney = false;
-                    price = 1;
                     getLogger().error(LangTty.getLocal("经济配置错误,检查umoney插件是否安装,或者价格是否大于0;领地价格依然保持默认"));
                 }
-            } else {
-                money_with_umoney = false;
-                price = 1;
             }
         } else {
             getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置"));
-            max_tty_num = 20;
-            actor_fire_attack_protect = true;
-            money_with_umoney = false;
-            price = 1;
-            max_tty_area = 4000000;
-            welcome_all = true;
         }
     } catch (const std::exception& e) {
-        max_tty_num = 20;
-        actor_fire_attack_protect = true;
-        money_with_umoney = false;
-        price = 1;
-        max_tty_area = 4000000;
-        welcome_all = true;
         getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置")+","+e.what());
     }
     LangTty = translate(language_path+language+".json");LangTty.loadLanguage();
@@ -450,20 +450,20 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         
                         // 检查领地大小
                         const int area = Territory_Action::get_tty_area(static_cast<int>(std::get<0>(pos1)),static_cast<int>(std::get<2>(pos1)),static_cast<int>(std::get<0>(pos2)),static_cast<int>(std::get<2>(pos2)));
-                        if (area >= max_tty_area && max_tty_area != -1) {
+                        if (area >= config_max_tty_area && config_max_tty_area != -1) {
                             sender.sendErrorMessage(LangTty.getLocal("你的领地大小超过所能创建的最大面积,无法创建"));
                             return false;
                         }
                         
                         // 检查玩家领地数量是否达到上限
-                        if (Territory_Action::check_tty_num(player_name) >= max_tty_num) {
+                        if (Territory_Action::check_tty_num(player_name) >= config_max_tty_num) {
                             sender.sendErrorMessage(LangTty.getLocal("你的领地数量已达到上限,无法增加新的领地"));
                             return false;
                         }
                         // 检查资金
-                        if (money_with_umoney) {
+                        if (config_money_with_umoney) {
                             const int money = umoney_get_player_money(player_name);
-                            if (const int value = area * price; money >= value) {
+                            if (const int value = area * config_price; money >= value) {
                                 (void)umoney_change_player_money(player_name,-value);
                                 sender.sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
                                 // 调用领地创建函数
@@ -515,21 +515,21 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         
                         // 检查领地大小
                         const int area = Territory_Action::get_tty_area(static_cast<int>(std::get<0>(pos1)),static_cast<int>(std::get<2>(pos1)),static_cast<int>(std::get<0>(pos2)),static_cast<int>(std::get<2>(pos2)));
-                        if (area >= max_tty_area && max_tty_area != -1) {
+                        if (area >= config_max_tty_area && config_max_tty_area != -1) {
                             sender.sendErrorMessage(LangTty.getLocal("你的领地大小超过所能创建的最大面积,无法创建"));
                             return false;
                         }
                         
                         // 检查玩家领地数量是否达到上限
-                        if (Territory_Action::check_tty_num(player_name) >= max_tty_num) {
+                        if (Territory_Action::check_tty_num(player_name) >= config_max_tty_num) {
                             sender.sendErrorMessage(LangTty.getLocal("你的领地数量已达到上限,无法增加新的领地"));
                             return false;
                         }
 
                         // 检查资金
-                        if (money_with_umoney) {
+                        if (config_money_with_umoney) {
                             const int money = umoney_get_player_money(player_name);
-                            if (const int value = area * price; money >= value) {
+                            if (const int value = area * config_price; money >= value) {
                                 (void)umoney_change_player_money(player_name,-value);
                                 sender.sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
                                 // 调用子领地创建函数
@@ -871,17 +871,17 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
 
                             // 检查领地大小
                             const int area = Territory_Action::get_tty_area(static_cast<int>(std::get<0>(pos1)),static_cast<int>(std::get<2>(pos1)),static_cast<int>(std::get<0>(pos2)),static_cast<int>(std::get<2>(pos2)));
-                            if (area >= max_tty_area && max_tty_area != -1) {
+                            if (area >= config_max_tty_area && config_max_tty_area != -1) {
                                 sender.sendErrorMessage(LangTty.getLocal("你的领地大小超过所能创建的最大面积,无法创建"));
                                 return false;
                             }
                             // 资金检查
                             int changed_money = 0;
-                            if (money_with_umoney)
+                            if (config_money_with_umoney)
                             {
                                 const int old_area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
-                                const int old_value = old_area * price;
-                                const int new_value = area * price;
+                                const int old_value = old_area * config_price;
+                                const int new_value = area * config_price;
                                 changed_money = new_value - old_value;
                                 if (umoney_get_player_money(sender.getName()) < changed_money)
                                 {
@@ -970,36 +970,39 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                 json json_msg = read_config();
                 try {
                     if (!json_msg.contains("error")) {
-                        max_tty_num = json_msg["player_max_tty_num"];
-                        actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
-                        max_tty_area = json_msg["max_tty_area"];
+                        config_max_tty_num = json_msg["player_max_tty_num"];
+                        config_actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
+                        config_max_tty_area = json_msg["max_tty_area"];
+                        config_welcome_all = json_msg["welcome_all"];
+                        if (json_msg["allow_fly_on_territory"] == false || config_fly_on_tty == true)
+                        {
+                            for (const auto pEntity : getServer().getOnlinePlayers())
+                            {
+                                if (static_cast<int>(pEntity->getGameMode()) == 0 || static_cast<int>(pEntity->getGameMode()) == 3)
+                                {
+                                    if (pEntity->getAllowFlight())
+                                    {
+                                        pEntity->setAllowFlight(false);
+                                    }
+                                }
+                            }
+                            config_fly_on_tty = false;
+                        } else
+                        {
+                            config_fly_on_tty = json_msg["allow_fly_on_territory"];
+                        }
                         if (json_msg["money_with_umoney"]) {
                             if (json_msg["money_with_umoney"] && umoney_check_exists() && json_msg["price"] >0) {
-                                money_with_umoney = true;
-                                price = json_msg["price"];
+                                config_money_with_umoney = true;
+                                config_price = json_msg["price"];
                             } else {
-                                money_with_umoney = false;
-                                price = 1;
                                 getLogger().error(LangTty.getLocal("经济配置错误,检查umoney插件是否安装,或者价格是否大于0;领地价格依然保持默认"));
                             }
-                        } else {
-                            money_with_umoney = false;
-                            price = 1;
                         }
                     } else {
                         getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置"));
-                        max_tty_num = 20;
-                        actor_fire_attack_protect = true;
-                        money_with_umoney = false;
-                        price = 1;
-                        max_tty_area = 4000000;
                     }
                 } catch (const std::exception& e) {
-                    max_tty_num = 20;
-                    actor_fire_attack_protect = true;
-                    money_with_umoney = false;
-                    price = 1;
-                    max_tty_area = 4000000;
                     getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置")+","+e.what());
                 }
                 getLogger().info(LangTty.getLocal("重载领地配置和数据完成"));
@@ -1074,36 +1077,37 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                 json json_msg = read_config();
                 try {
                     if (!json_msg.contains("error")) {
-                        max_tty_num = json_msg["player_max_tty_num"];
-                        actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
-                        max_tty_area = json_msg["max_tty_area"];
+                        config_max_tty_num = json_msg["player_max_tty_num"];
+                        config_actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
+                        config_max_tty_area = json_msg["max_tty_area"];
+                        config_welcome_all = json_msg["welcome_all"];
+                        if (json_msg["allow_fly_on_territory"] == false || config_fly_on_tty == true)
+                        {
+                            for (const auto pEntity : getServer().getOnlinePlayers())
+                            {
+                                if (static_cast<int>(pEntity->getGameMode()) == 0 || static_cast<int>(pEntity->getGameMode()) == 3)
+                                {
+                                    if (pEntity->getAllowFlight())
+                                    {
+                                        pEntity->setAllowFlight(false);
+                                    }
+                                }
+                            }
+                            config_fly_on_tty = false;
+                        } else
+                        {
+                            config_fly_on_tty = json_msg["allow_fly_on_territory"];
+                        }
                         if (json_msg["money_with_umoney"]) {
                             if (json_msg["money_with_umoney"] && umoney_check_exists() && json_msg["price"] >0) {
-                                money_with_umoney = true;
-                                price = json_msg["price"];
+                                config_money_with_umoney = true;
+                                config_price = json_msg["price"];
                             } else {
-                                money_with_umoney = false;
-                                price = 1;
                                 sender.sendErrorMessage(LangTty.getLocal("经济配置错误,检查umoney插件是否安装,或者价格是否大于0;领地价格依然保持默认"));
                             }
-                        } else {
-                            money_with_umoney = false;
-                            price = 1;
                         }
-                    } else {
-                        sender.sendErrorMessage(LangTty.getLocal("配置文件错误,使用默认配置"));
-                        max_tty_num = 20;
-                        actor_fire_attack_protect = true;
-                        money_with_umoney = false;
-                        price = 1;
-                        max_tty_area = 4000000;
                     }
                 } catch (const std::exception& e) {
-                    max_tty_num = 20;
-                    actor_fire_attack_protect = true;
-                    money_with_umoney = false;
-                    price = 1;
-                    max_tty_area = 4000000;
                     sender.sendErrorMessage(LangTty.getLocal("配置文件错误,使用默认配置")+","+e.what());
                 }
                 sender.sendMessage(LangTty.getLocal("重载领地配置和数据完成"));
@@ -1310,14 +1314,14 @@ void Territory::onActorhit(endstone::ActorDamageEvent& event)
                     }
                     else
                     {
-                        entity_can_die.push_back(event.getActor().getId());
+                        config_entity_can_die.push_back(event.getActor().getId());
                     }
                     //火焰攻击类伤害
                 } else if (event.getDamageSource().getType() == "fire_tick") {
                     //非玩家实体才免疫
                     if (event.getActor().getType() != "minecraft:player") {
-                        if (actor_fire_attack_protect) {
-                            if (ranges::find(entity_can_die, event.getActor().getId()) == entity_can_die.end())
+                        if (config_actor_fire_attack_protect) {
+                            if (ranges::find(config_entity_can_die, event.getActor().getId()) == config_entity_can_die.end())
                             {
                                 event.setCancelled(true);
                             }
@@ -1341,9 +1345,9 @@ void Territory::onActorhit(endstone::ActorDamageEvent& event)
 //实体死亡
 void Territory::onActorDeath(const endstone::ActorDeathEvent& event)
 {
-    if (ranges::find(entity_can_die, event.getActor().getId()) != entity_can_die.end())
+    if (ranges::find(config_entity_can_die, event.getActor().getId()) != config_entity_can_die.end())
     {
-        entity_can_die.erase(ranges::find(entity_can_die, event.getActor().getId()));
+        config_entity_can_die.erase(ranges::find(config_entity_can_die, event.getActor().getId()));
     }
 }
 

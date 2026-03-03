@@ -30,14 +30,16 @@ inline const std::string umoney_file = "plugins/umoney/money.json";
 inline const std::string language_path = "plugins/territory/language/";
 
 //一些全局变量
-inline int max_tty_num;
-inline bool actor_fire_attack_protect;
-inline bool money_with_umoney;
-inline int price;
-inline int max_tty_area;
-inline bool welcome_all;
+
+inline int config_max_tty_num;
+inline bool config_actor_fire_attack_protect;
+inline bool config_money_with_umoney;
+inline int config_price;
+inline int config_max_tty_area;
+inline bool config_welcome_all;
 inline string language = "en_US";
-inline vector<int64_t> entity_can_die;
+inline vector<int64_t> config_entity_can_die;
+inline bool config_fly_on_tty;
 
 //初始化其它实例
 extern DataBase Database;

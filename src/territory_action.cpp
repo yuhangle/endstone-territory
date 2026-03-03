@@ -707,7 +707,7 @@ int Territory_Action::change_tty_owner(const std::string &ttyname,const std::str
     //   std::pair<bool, std::string>，first 为是否成功，second 为提示信息
 
     // 1. 检查新领地主人的领地数量是否达到上限
-    if (check_tty_num(new_owner_name) >= max_tty_num) {
+    if (check_tty_num(new_owner_name) >= config_max_tty_num) {
         std::string msg = LangTty.getLocal("玩家 ") + new_owner_name + LangTty.getLocal(" 的领地数量已达到上限, 无法增加新的领地, 转让领地失败");
         return {false, msg};
     }
