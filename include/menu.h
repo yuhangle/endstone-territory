@@ -82,10 +82,10 @@ public:
   static void openQuickCreateTtyMenu(endstone::Player* player,Territory_Action::QuickTtyData& quick_tty_data);
 
   // 更改领地大小菜单
-  static void openResizeTtyMenu(endstone::Player* player) ;
+  void openResizeTtyMenu(endstone::Player* player) const;
 
   // 更改领地大小子菜单
-  static void openResizeTtySubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) ;
+  void openResizeTtySubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const;
 
 private:
   endstone::Plugin &plugin_;

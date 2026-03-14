@@ -66,7 +66,7 @@ void Menu::openManTtyMenu(endstone::Player* player) const {
   endstone::Button resizeBtn(
     LangTty.getLocal("§l§1更改自己的领地大小"),
     "textures/ui/icon_preview",
-    [=](endstone::Player* p) { openResizeTtyMenu(p); }
+    [this](endstone::Player* p) { openResizeTtyMenu(p); }
   );
   // 删除领地
   endstone::Button delBtn(
@@ -1019,7 +1019,7 @@ void Menu::openQuickCreateTtyMenu(endstone::Player* player,Territory_Action::Qui
 }
 
 //更改领地大小
-void Menu::openResizeTtyMenu(endstone::Player* player)
+void Menu::openResizeTtyMenu(endstone::Player* player) const
 {
   const auto player_ttys = Territory_Action::getPlayerTtyNames(player->getName());
   if (player_ttys.empty()) {
@@ -1032,17 +1032,20 @@ void Menu::openResizeTtyMenu(endstone::Player* player)
   ttyDropdown.setLabel(LangTty.getLocal("§l选择要更改的领地"));
   ttyDropdown.setOptions(player_ttys);
   menu.setControls({ttyDropdown});
-  menu.setOnSubmit([=](endstone::Player* p, const std::string& response) {
+  menu.setOnSubmit([this, player_ttys](endstone::Player* p, const std::string& response) {
     auto parse = nlohmann::json::parse(response);
     const int index = parse[0];
     const auto tty_data = Territory_Action::read_territory_by_name(player_ttys[index]);
     openResizeTtySubMenu(p,*tty_data);
   });
+  menu.setOnClose([this](endstone::Player* p) {
+    openManTtyMenu(p);
+  });
   player->sendForm(menu);
 }
 
 //更改领地大小子菜单
-void Menu::openResizeTtySubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty)
+void Menu::openResizeTtySubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const
 {
   endstone::ModalForm menu;
   menu.setTitle(LangTty.getLocal("§l更改领地大小"));
@@ -1069,6 +1072,9 @@ void Menu::openResizeTtySubMenu(endstone::Player* player, const Territory_Action
     std::ostringstream cmd;
     cmd << "tty resize \"" << tty.name << "\" " << pos1 << " " << pos2;
     (void)p->performCommand(cmd.str());
+  });
+  menu.setOnClose([this](endstone::Player* p) {
+    openResizeTtyMenu(p);
   });
   player->sendForm(menu);
 }

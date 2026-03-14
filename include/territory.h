@@ -64,7 +64,7 @@ public:
     static void readAllTerritories();
 
     // 提示领地信息函数
-    void tips_online_players() const;
+    //void tips_online_players() const;
 
     // 删除玩家领地函数，删除名称为 tty_name 的领地，并更新相关数据
     [[nodiscard]] bool del_player_tty(const std::string &tty_name) const;
@@ -113,6 +113,9 @@ public:
 
     //快速创建领地-右键事件
     static void quickCreateTtyRightClick(const endstone::PlayerInteractEvent& event);
+
+    //玩家移动事件
+    static void onPlayerMove(endstone::PlayerMoveEvent& event);
 
 private:
     std::unique_ptr<Menu> menu_;

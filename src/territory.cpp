@@ -100,7 +100,7 @@ void Territory::datafile_check() const {
 void Territory::readAllTerritories() {
     (void)TA.get_all_tty();
 }
-
+/*
 // 提示领地信息函数
 void Territory::tips_online_players() const {
     for (auto online_player_list = getServer().getOnlinePlayers(); const auto &player : online_player_list) {
@@ -224,6 +224,7 @@ void Territory::tips_online_players() const {
         }
     }
 }
+*/
 
 // 删除玩家领地函数，删除名称为 tty_name 的领地，并更新相关数据
 bool Territory::del_player_tty(const std::string &tty_name) const {
@@ -384,10 +385,12 @@ void Territory::onEnable()
     registerEvent<endstone::BlockPistonExtendEvent>(onEdgePiston);
     //快速创建领地选择监听
     registerEvent<endstone::PlayerInteractEvent>(quickCreateTtyRightClick);
+    //玩家移动监听
+    registerEvent<endstone::PlayerMoveEvent>(onPlayerMove);
     //数据库读取
     readAllTerritories();
     //周期执行
-    getServer().getScheduler().runTaskTimer(*this,[&]() { tips_online_players(); }, 0, 25);
+    //getServer().getScheduler().runTaskTimer(*this,[&]() { tips_online_players(); }, 0, 25);
     menu_ = std::make_unique<Menu>(*this);
 
     //显示启动信息
@@ -1391,6 +1394,115 @@ void Territory::quickCreateTtyRightClick(const endstone::PlayerInteractEvent& ev
         quick_create_player_data[player.getName()] = tmp;
         if (!tmp.dim2.empty()) {
             Menu::openQuickCreateTtyMenu(&player,tmp);
+        }
+    }
+}
+
+void Territory::onPlayerMove(endstone::PlayerMoveEvent& event)
+{
+    auto& player = event.getPlayer();
+    std::string player_name = player.getName();
+
+    // 获取移动后的位置信息
+    auto to_loc = event.getTo();
+    std::string player_dim = to_loc.getDimension().getName();
+
+    // 构造当前位置的 Point3D (tuple<double, double, double>)
+    Territory_Action::Point3D player_pos = {
+        static_cast<double>(to_loc.getBlockX()),
+        static_cast<double>(to_loc.getBlockY()),
+        static_cast<double>(to_loc.getBlockZ())
+    };
+
+    // 获取该玩家上一次记录的状态引用
+    auto& [last_pos, last_tty, last_father] = lastPlayerPositions[player_name];
+
+    // 1. 检查坐标变化
+    if (!config_welcome_all && last_pos == player_pos) {
+        return;
+    }
+
+    // 2. 初始化检查 (对应 tuple{0.0, 0.0, 0.0})
+    if (std::get<0>(last_pos) == 0.0 && std::get<1>(last_pos) == 0.0 && std::get<2>(last_pos) == 0.0) {
+        last_pos = player_pos;
+        return;
+    }
+
+    // 更新位置记录
+    std::string previous_territory = last_tty;
+    std::string previous_father_territory = last_father;
+    last_pos = player_pos;
+
+    // 3. 寻找当前最精细的领地
+    const auto& all_tty = Territory_Action::getAllTty();
+    const Territory_Action::TerritoryData* selectedTerritory = nullptr;
+
+    for (const auto &val : all_tty | std::views::values) {
+        const auto &data = val;
+        if (data.dim == player_dim && Territory_Action::isPointInCube(player_pos, data.pos1, data.pos2)) {
+            if (selectedTerritory == nullptr) {
+                selectedTerritory = &data;
+            } else {
+                // 子领地优先逻辑
+                if (!data.father_tty.empty() && selectedTerritory->father_tty.empty()) {
+                    selectedTerritory = &data;
+                }
+            }
+        }
+    }
+
+    // 4. 发送提示与权限处理
+    if (selectedTerritory != nullptr) {
+        std::string current_territory = selectedTerritory->name;
+        std::string current_father_territory = selectedTerritory->father_tty;
+
+        // 领地名改变或强制欢迎
+        if (previous_territory != current_territory || config_welcome_all) {
+            std::string msg;
+            bool is_sub = !current_father_territory.empty();
+
+            std::string action_str = config_welcome_all ?
+                LangTty.getLocal("§2[领地] §r您当前位于 ") :
+                LangTty.getLocal("§2[领地] §r欢迎来到 ");
+
+            std::string type_str = is_sub ?
+                LangTty.getLocal(" 的子领地 ") :
+                LangTty.getLocal(" 的领地 ");
+
+            msg = action_str + selectedTerritory->owner + type_str + current_territory;
+            player.sendTip(msg);
+
+            // 飞行校验
+            if (config_fly_on_tty) {
+                if (Territory_Action::is_tty_op(current_territory, player_name).value()) {
+                    player.setAllowFlight(true);
+                } else {
+                    if (int gm = static_cast<int>(player.getGameMode()); (gm == 0 || gm == 3) && player.getAllowFlight()) {
+                        player.setAllowFlight(false);
+                    }
+                }
+            }
+
+            // 更新记录值
+            last_tty = current_territory;
+            last_father = current_father_territory;
+        }
+    }
+    else {
+        // 5. 离开领地逻辑
+        if (!previous_territory.empty()) {
+            std::string msg = LangTty.getLocal("§2[领地] §r您已离开领地 ") + previous_territory + LangTty.getLocal(", 欢迎下次再来");
+            player.sendTip(msg);
+
+            if (config_fly_on_tty) {
+                if (int gm = static_cast<int>(player.getGameMode()); (gm == 0 || gm == 3) && player.getAllowFlight()) {
+                    player.setAllowFlight(false);
+                }
+            }
+
+            // 清空记录值
+            last_tty = "";
+            last_father = "";
         }
     }
 }
