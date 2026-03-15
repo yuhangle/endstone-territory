@@ -87,6 +87,9 @@ public:
   // 更改领地大小子菜单
   void openResizeTtySubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const;
 
+  // 删除领地二次确认菜单
+  void openDelTtyConfirmMenu(endstone::Player* player, string cmd) const;
+
 private:
   endstone::Plugin &plugin_;
 };

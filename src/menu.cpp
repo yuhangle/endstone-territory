@@ -288,29 +288,17 @@ void Menu::openTpTtyMenu(endstone::Player* player) const {
     player->sendErrorMessage(LangTty.getLocal("未查找到领地"));
     return;
   }
-
-  endstone::ModalForm form;
+  endstone::ActionForm form;
   form.setTitle(LangTty.getLocal("传送领地"));
-
-  endstone::Dropdown ttyDropdown;
-  ttyDropdown.setLabel(LangTty.getLocal("§l选择你要传送的领地"));
-  ttyDropdown.setOptions(ttyList);
-
-  form.addControl(ttyDropdown);
-
-  form.setOnSubmit([=](const endstone::Player* p, const std::string& response) {
-    try {
-      auto parsed = nlohmann::json::parse(response);
-      const int ttyIndex = parsed[0].get<int>();
-      const std::string& ttyname = ttyList.at(ttyIndex);
+  form.addLabel(LangTty.getLocal("§l选择你要传送的领地"));
+  form.addDivider();
+  for (auto one_tty : ttyList)
+  {
+    form.addButton(one_tty, nullopt, [=](const endstone::Player* p) {
       std::ostringstream cmd;
-      cmd << "tty tp \"" << ttyname << "\"";
-      (void)p->performCommand(cmd.str());
-    } catch (...) {
-      p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-    }
-  });
-
+      cmd << "tty tp \"" << one_tty << "\"";
+      (void)p->performCommand(cmd.str());});
+  }
   form.setOnClose([this](endstone::Player* p) {
     openMainMenu(p);
   });
@@ -396,37 +384,25 @@ void Menu::openListTtyMenu(endstone::Player* player) {
 
 // 管理自己管理的领地权限
 void Menu::openSetPermisMenu(endstone::Player* player) const {
-  auto ttyList = Territory_Action::getOpTtyList(player->getName());
+  // 获取拥有操作权限（Op）的领地列表
+  const auto ttyList = Territory_Action::getOpTtyList(player->getName());
+
   if (ttyList.empty()) {
     player->sendErrorMessage(LangTty.getLocal("未查找到领地"));
     return;
   }
 
-  endstone::ModalForm form;
+  endstone::ActionForm form;
   form.setTitle(LangTty.getLocal("§l领地权限管理界面"));
+  form.addLabel(LangTty.getLocal("§l选择你要管理的领地"));
+  form.addDivider();
 
-  endstone::Dropdown ttyDropdown;
-  ttyDropdown.setLabel(LangTty.getLocal("§l选择要管理的领地"));
-  std::vector<std::string> ttyNames;
-  ttyNames.reserve(ttyList.size());
-  for (const auto& tty : ttyList) ttyNames.push_back(tty.name);
-  ttyDropdown.setOptions(ttyNames);
-
-  form.addControl(ttyDropdown);
-
-  form.setOnSubmit([this, ttyList](endstone::Player* p, const std::string& response) {
-    try {
-      auto parsed = nlohmann::json::parse(response);
-      const int index = parsed[0].get<int>();
-      if (index < 0 || index >= static_cast<int>(ttyList.size())) {
-        p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-        return;
-      }
-      openSetPermisDetailMenu(p, ttyList[index]);
-    } catch (...) {
-      p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-    }
-  });
+  // 遍历领地列表，为每个领地创建一个按钮
+  for (const auto& tty : ttyList) {
+    form.addButton(tty.name, std::nullopt, [this, tty](endstone::Player* p) {
+      openSetPermisDetailMenu(p, tty);
+    });
+  }
 
   form.setOnClose([this](endstone::Player* p) {
     openManTtyMenu(p);
@@ -503,7 +479,7 @@ void Menu::openSetPermisDetailMenu(endstone::Player* player, const Territory_Act
   });
 
   form.setOnClose([this](endstone::Player* p) {
-    openManTtyMenu(p);
+    openSetPermisMenu(p);
   });
 
   player->sendForm(form);
@@ -511,36 +487,22 @@ void Menu::openSetPermisDetailMenu(endstone::Player* player, const Territory_Act
 
 // 删除自己管理的领地成员
 void Menu::openDelTtyMemberMenu(endstone::Player* player) const {
-  auto ttyList = Territory_Action::getOpTtyList(player->getName());
+  const auto ttyList = Territory_Action::getOpTtyList(player->getName());
   if (ttyList.empty()) {
     player->sendErrorMessage(LangTty.getLocal("未查找到领地"));
     return;
   }
-  endstone::ModalForm form;
+
+  endstone::ActionForm form;
   form.setTitle(LangTty.getLocal("§l领地成员删除界面"));
+  form.addLabel(LangTty.getLocal("§l选择你要删除成员的领地"));
+  form.addDivider();
 
-  endstone::Dropdown ttyDropdown;
-  ttyDropdown.setLabel(LangTty.getLocal("§l选择要删除成员的领地"));
-  std::vector<std::string> ttyNames;
-  ttyNames.reserve(ttyList.size());
-  for (const auto& tty : ttyList) ttyNames.push_back(tty.name);
-  ttyDropdown.setOptions(ttyNames);
-
-  form.addControl(ttyDropdown);
-
-  form.setOnSubmit([this, ttyList](endstone::Player* p, const std::string& response) {
-    try {
-      auto parsed = nlohmann::json::parse(response);
-      const int index = parsed[0].get<int>();
-      if (index < 0 || index >= static_cast<int>(ttyList.size())) {
-        p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-        return;
-      }
-      openDelTtyMemberSubMenu(p, ttyList[index]);
-    } catch (...) {
-      p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-    }
-  });
+  for (const auto& tty : ttyList) {
+    form.addButton(tty.name, std::nullopt, [this, tty](endstone::Player* p) {
+      openDelTtyMemberSubMenu(p, tty);
+    });
+  }
 
   form.setOnClose([this](endstone::Player* p) {
     openManTtyMenu(p);
@@ -584,7 +546,7 @@ void Menu::openDelTtyMemberSubMenu(endstone::Player* player, const Territory_Act
   });
 
   form.setOnClose([this](endstone::Player* p) {
-    openManTtyMenu(p);
+    openDelTtyMemberMenu(p);
   });
 
   player->sendForm(form);
@@ -592,36 +554,22 @@ void Menu::openDelTtyMemberSubMenu(endstone::Player* player, const Territory_Act
 
 // 添加自己管理的领地成员
 void Menu::openAddTtyMemberMenu(endstone::Player* player) const {
-  auto ttyList = Territory_Action::getOpTtyList(player->getName());
+  const auto ttyList = Territory_Action::getOpTtyList(player->getName());
   if (ttyList.empty()) {
     player->sendErrorMessage(LangTty.getLocal("未查找到领地"));
     return;
   }
-  endstone::ModalForm form;
+
+  endstone::ActionForm form;
   form.setTitle(LangTty.getLocal("§l领地成员添加界面"));
+  form.addLabel(LangTty.getLocal("§l选择你要添加成员的领地"));
+  form.addDivider();
 
-  endstone::Dropdown ttyDropdown;
-  ttyDropdown.setLabel(LangTty.getLocal("§l选择要添加成员的领地"));
-  std::vector<std::string> ttyNames;
-  ttyNames.reserve(ttyList.size());
-  for (const auto& tty : ttyList) ttyNames.push_back(tty.name);
-  ttyDropdown.setOptions(ttyNames);
-
-  form.addControl(ttyDropdown);
-
-  form.setOnSubmit([this, ttyList](endstone::Player* p, const std::string& response) {
-    try {
-      auto parsed = nlohmann::json::parse(response);
-      const int index = parsed[0].get<int>();
-      if (index < 0 || index >= static_cast<int>(ttyList.size())) {
-        p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-        return;
-      }
-      openAddTtyMemberSubMenu(p, ttyList[index]);
-    } catch (...) {
-      p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-    }
-  });
+  for (const auto& tty : ttyList) {
+    form.addButton(tty.name, std::nullopt, [this, tty](endstone::Player* p) {
+      openAddTtyMemberSubMenu(p, tty);
+    });
+  }
 
   form.setOnClose([this](endstone::Player* p) {
     openManTtyMenu(p);
@@ -667,7 +615,7 @@ void Menu::openAddTtyMemberSubMenu(endstone::Player* player, const Territory_Act
   });
 
   form.setOnClose([this](endstone::Player* p) {
-    openManTtyMenu(p);
+    openAddTtyMemberMenu(p);
   });
 
   player->sendForm(form);
@@ -675,36 +623,22 @@ void Menu::openAddTtyMemberSubMenu(endstone::Player* player, const Territory_Act
 
 // 删除自己领地的领地管理员
 void Menu::openDelTtyManagerMenu(endstone::Player* player) const {
-  auto ttyList = Territory_Action::getPlayerTtyList(player->getName());
+  const auto ttyList = Territory_Action::getPlayerTtyList(player->getName());
   if (ttyList.empty()) {
     player->sendErrorMessage(LangTty.getLocal("未查找到领地"));
     return;
   }
-  endstone::ModalForm form;
+
+  endstone::ActionForm form;
   form.setTitle(LangTty.getLocal("§l领地管理员删除界面"));
+  form.addLabel(LangTty.getLocal("§l选择你要删除管理员的领地"));
+  form.addDivider();
 
-  endstone::Dropdown ttyDropdown;
-  ttyDropdown.setLabel(LangTty.getLocal("§l选择要删除领地管理员的领地"));
-  std::vector<std::string> ttyNames;
-  ttyNames.reserve(ttyList.size());
-  for (const auto& tty : ttyList) ttyNames.push_back(tty.name);
-  ttyDropdown.setOptions(ttyNames);
-
-  form.addControl(ttyDropdown);
-
-  form.setOnSubmit([this, ttyList](endstone::Player* p, const std::string& response) {
-    try {
-      auto parsed = nlohmann::json::parse(response);
-      const int index = parsed[0].get<int>();
-      if (index < 0 || index >= static_cast<int>(ttyList.size())) {
-        p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-        return;
-      }
-      openDelTtyManagerSubMenu(p, ttyList[index]);
-    } catch (...) {
-      p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-    }
-  });
+  for (const auto& tty : ttyList) {
+    form.addButton(tty.name, std::nullopt, [this, tty](endstone::Player* p) {
+      openDelTtyManagerSubMenu(p, tty);
+    });
+  }
 
   form.setOnClose([this](endstone::Player* p) {
     openManTtyMenu(p);
@@ -743,7 +677,7 @@ void Menu::openDelTtyManagerSubMenu(endstone::Player* player, const Territory_Ac
   });
 
   form.setOnClose([this](endstone::Player* p) {
-    openManTtyMenu(p);
+    openDelTtyManagerMenu(p);
   });
 
   player->sendForm(form);
@@ -751,36 +685,22 @@ void Menu::openDelTtyManagerSubMenu(endstone::Player* player, const Territory_Ac
 
 // 添加自己领地的领地管理员
 void Menu::openAddTtyManagerMenu(endstone::Player* player) const {
-  auto ttyList = Territory_Action::getPlayerTtyList(player->getName());
+  const auto ttyList = Territory_Action::getPlayerTtyList(player->getName());
   if (ttyList.empty()) {
     player->sendErrorMessage(LangTty.getLocal("未查找到领地"));
     return;
   }
-  endstone::ModalForm form;
+
+  endstone::ActionForm form;
   form.setTitle(LangTty.getLocal("§l领地管理员添加界面"));
+  form.addLabel(LangTty.getLocal("§l选择你要添加管理员的领地"));
+  form.addDivider();
 
-  endstone::Dropdown ttyDropdown;
-  ttyDropdown.setLabel(LangTty.getLocal("§l选择要添加领地管理员的领地"));
-  std::vector<std::string> ttyNames;
-  ttyNames.reserve(ttyList.size());
-  for (const auto& tty : ttyList) ttyNames.push_back(tty.name);
-  ttyDropdown.setOptions(ttyNames);
-
-  form.addControl(ttyDropdown);
-
-  form.setOnSubmit([this, ttyList](endstone::Player* p, const std::string& response) {
-    try {
-      auto parsed = nlohmann::json::parse(response);
-      int index = parsed[0].get<int>();
-      if (index < 0 || index >= static_cast<int>(ttyList.size())) {
-        p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-        return;
-      }
-      openAddTtyManagerSubMenu(p, ttyList[index]);
-    } catch (...) {
-      p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-    }
-  });
+  for (const auto& tty : ttyList) {
+    form.addButton(tty.name, std::nullopt, [this, tty](endstone::Player* p) {
+      openAddTtyManagerSubMenu(p, tty);
+    });
+  }
 
   form.setOnClose([this](endstone::Player* p) {
     openManTtyMenu(p);
@@ -830,7 +750,7 @@ void Menu::openAddTtyManagerSubMenu(endstone::Player* player, const Territory_Ac
   });
 
   form.setOnClose([this](endstone::Player* p) {
-    openManTtyMenu(p);
+    openAddTtyManagerMenu(p);
   });
 
   player->sendForm(form);
@@ -938,39 +858,42 @@ void Menu::openDelTtyMenu(endstone::Player* player) const {
     player->sendErrorMessage(LangTty.getLocal("未查找到领地"));
     return;
   }
-  endstone::ModalForm form;
+
+  endstone::ActionForm form;
   form.setTitle(LangTty.getLocal("§l删除领地"));
+  form.addLabel(LangTty.getLocal("§l§4请谨慎选择要删除的领地，此操作不可恢复！"));
+  form.addDivider();
 
-  endstone::Dropdown ttyDropdown;
-  ttyDropdown.setLabel(LangTty.getLocal("§l选择要删除的领地"));
-  std::vector<std::string> ttyNames;
-  ttyNames.reserve(ttyList.size());
-  for (const auto& tty : ttyList) ttyNames.push_back(tty.name);
-  ttyDropdown.setOptions(ttyNames);
-
-  endstone::Label warnLabel;
-  warnLabel.setText(LangTty.getLocal("§l§4删除领地不可恢复!"));
-
-  form.setControls({ttyDropdown, warnLabel});
-
-  form.setOnSubmit([=](const endstone::Player* p, const std::string& response) {
-    try {
-      auto parsed = nlohmann::json::parse(response);
-      const int index = parsed[0].get<int>();
-      if (index < 0 || index >= static_cast<int>(ttyList.size())) {
-        p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-        return;
-      }
+  for (const auto& tty : ttyList) {
+    form.addButton(tty.name, std::nullopt, [this, ttyName = tty.name](endstone::Player* p) {
       std::ostringstream cmd;
-      cmd << "tty del \"" << ttyList[index].name << "\"";
-      (void)p->performCommand(cmd.str());
-    } catch (...) {
-      p->sendErrorMessage(LangTty.getLocal("未知的错误"));
-    }
-  });
+      cmd << "tty del \"" << ttyName << "\"";
+      openDelTtyConfirmMenu(p, cmd.str());
+    });
+  }
 
   form.setOnClose([this](endstone::Player* p) {
     openManTtyMenu(p);
+  });
+
+  player->sendForm(form);
+}
+
+// 删除领地二次确认
+void Menu::openDelTtyConfirmMenu(endstone::Player* player, std::string cmd) const {
+  endstone::MessageForm form;
+  form.setTitle(LangTty.getLocal("确认删除"));
+  form.setContent(LangTty.getLocal("§l§4警告：删除领地不可恢复！\n§r您确定要执行此操作吗？"));
+
+  form.setButton1(LangTty.getLocal("确认"));
+  form.setButton2(LangTty.getLocal("取消"));
+
+  form.setOnSubmit([this, cmd](endstone::Player* p, const int index) {
+    if (index == 0) {
+      (void)p->performCommand(cmd);
+    } else {
+      openDelTtyMenu(p);
+    }
   });
 
   player->sendForm(form);
@@ -1019,29 +942,33 @@ void Menu::openQuickCreateTtyMenu(endstone::Player* player,Territory_Action::Qui
 }
 
 //更改领地大小
-void Menu::openResizeTtyMenu(endstone::Player* player) const
-{
+void Menu::openResizeTtyMenu(endstone::Player* player) const {
   const auto player_ttys = Territory_Action::getPlayerTtyNames(player->getName());
   if (player_ttys.empty()) {
     player->sendErrorMessage(LangTty.getLocal("未查找到领地"));
     return;
   }
-  endstone::ModalForm menu;
-  menu.setTitle(LangTty.getLocal("§l更改领地大小"));
-  endstone::Dropdown ttyDropdown;
-  ttyDropdown.setLabel(LangTty.getLocal("§l选择要更改的领地"));
-  ttyDropdown.setOptions(player_ttys);
-  menu.setControls({ttyDropdown});
-  menu.setOnSubmit([this, player_ttys](endstone::Player* p, const std::string& response) {
-    auto parse = nlohmann::json::parse(response);
-    const int index = parse[0];
-    const auto tty_data = Territory_Action::read_territory_by_name(player_ttys[index]);
-    openResizeTtySubMenu(p,*tty_data);
-  });
-  menu.setOnClose([this](endstone::Player* p) {
+
+  endstone::ActionForm form;
+  form.setTitle(LangTty.getLocal("§l更改领地大小"));
+  form.addLabel(LangTty.getLocal("§l选择要更改的领地"));
+  form.addDivider();
+
+  for (const auto& ttyName : player_ttys) {
+    form.addButton(ttyName, std::nullopt, [this, ttyName](endstone::Player* p) {
+      if (const auto tty_data = Territory_Action::read_territory_by_name(ttyName)) {
+        openResizeTtySubMenu(p, *tty_data);
+      } else {
+        p->sendErrorMessage(LangTty.getLocal("未查找到领地"));
+      }
+    });
+  }
+
+  form.setOnClose([this](endstone::Player* p) {
     openManTtyMenu(p);
   });
-  player->sendForm(menu);
+
+  player->sendForm(form);
 }
 
 //更改领地大小子菜单
