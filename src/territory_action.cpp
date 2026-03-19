@@ -5,7 +5,10 @@
 #include "../include/territory_action.h"
 #include "translate.hpp"
 #include "../include/territory.h"
-Territory_Action::Territory_Action(DataBase database) : Database(std::move(database)) {}
+Territory_Action::Territory_Action(DataBase database, Territory* territory_)
+    : territory_(territory_),
+      Database(std::move(database))
+{}
 
 // 从外部获取all_tty数据
 const std::map<std::string, Territory_Action::TerritoryData>&
@@ -455,6 +458,30 @@ bool Territory_Action::del_Tty_by_name(const std::string& territory_name) const 
     all_tty = get_all_tty();
 
     return true;
+}
+
+// 删除玩家领地函数，删除名称为 tty_name 的领地，并更新相关数据
+bool Territory_Action::del_player_tty(const std::string &tty_name) const
+{
+    const auto tty_data = read_territory_by_name(tty_name);
+    const int area = get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
+    string owner;
+    if (config_money_with_umoney) {
+        (void)territory_->umoney_change_player_money(tty_data->owner,area*config_price);
+        const auto& server_ = territory_->getServer();
+        if (const auto the_player = server_.getPlayer(tty_data->owner)) {
+            owner = the_player->getName();
+            the_player->sendMessage(LangTty.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(area*config_price));
+        }
+    }
+    if (del_Tty_by_name(tty_name)) {
+        return true;
+    }
+    if (!owner.empty())
+    {
+        (void)territory_->umoney_change_player_money(owner,area*config_price);
+    }
+    return false;
 }
 
 //重命名领地

@@ -8,12 +8,9 @@
 #include "database.hpp"
 #include <endstone/endstone.hpp>
 #include <nlohmann/json.hpp>
-#include <fstream>
 #include <string>
-#include <filesystem>
 #include <tuple>
 #include <vector>
-#include <random>
 #include "territory_action.h"
 #include "menu.h"
 #include "translate.hpp"
@@ -41,11 +38,8 @@ inline string language = "en_US";
 inline vector<int64_t> config_entity_can_die;
 inline bool config_fly_on_tty;
 
-//初始化其它实例
-extern DataBase Database;
-extern Territory_Action TA;
 //翻译类
-extern translate LangTty;
+inline translate LangTty;
 //全局玩家位置信息
 extern std::unordered_map<std::string, std::tuple<Territory_Action::Point3D, string, string>> lastPlayerPositions;
 
@@ -66,9 +60,6 @@ public:
     // 提示领地信息函数
     //void tips_online_players() const;
 
-    // 删除玩家领地函数，删除名称为 tty_name 的领地，并更新相关数据
-    [[nodiscard]] bool del_player_tty(const std::string &tty_name) const;
-
     //接入umoney
     //检查插件存在
     [[nodiscard]] bool umoney_check_exists() const;
@@ -80,6 +71,7 @@ public:
     [[nodiscard]] bool umoney_change_player_money(const std::string& player_name, int money) const;
 
     //插件初始化
+    static Territory& getInstance();
     void onLoad() override;
     void onEnable() override;
     void onDisable() override;
@@ -118,7 +110,10 @@ public:
     static void onPlayerMove(endstone::PlayerMoveEvent& event);
 
 private:
+    static Territory* instance_;
     std::unique_ptr<Menu> menu_;
+    std::unique_ptr<DataBase> database_;
+    std::unique_ptr<Territory_Action> action_;
 };
 
 

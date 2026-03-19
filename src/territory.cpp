@@ -6,10 +6,12 @@
 #include "translate.hpp"
 #include "version.h"
 
-//初始化其它实例
-DataBase Database(db_file);
-Territory_Action TA(Database);
-translate LangTty;
+// 初始化静态成员
+Territory* Territory::instance_ = nullptr;
+
+Territory& Territory::getInstance() {
+    return *instance_;
+}
 
 //全局玩家位置信息
 std::unordered_map<std::string, std::tuple<Territory_Action::Point3D, string, string>> lastPlayerPositions;
@@ -98,7 +100,9 @@ void Territory::datafile_check() const {
 
 // 从数据库读取所有领地数据
 void Territory::readAllTerritories() {
-    (void)TA.get_all_tty();
+    if (instance_) {
+        (void)instance_->action_->get_all_tty();
+    }
 }
 /*
 // 提示领地信息函数
@@ -226,28 +230,6 @@ void Territory::tips_online_players() const {
 }
 */
 
-// 删除玩家领地函数，删除名称为 tty_name 的领地，并更新相关数据
-bool Territory::del_player_tty(const std::string &tty_name) const {
-    const auto tty_data = Territory_Action::read_territory_by_name(tty_name);
-    const int area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
-    string owner;
-    if (config_money_with_umoney) {
-        (void)umoney_change_player_money(tty_data->owner,area*config_price);
-        if (const auto the_player = getServer().getPlayer(tty_data->owner)) {
-            owner = the_player->getName();
-            the_player->sendMessage(LangTty.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(area*config_price));
-        }
-    }
-    if (TA.del_Tty_by_name(tty_name)) {
-        return true;
-    }
-    if (!owner.empty())
-    {
-        (void)umoney_change_player_money(owner,area*config_price);
-    }
-    return false;
-}
-
 //检查插件存在
 bool Territory::umoney_check_exists() const {
     if (getServer().getPluginManager().getPlugin("umoney")) {
@@ -327,12 +309,16 @@ bool Territory::umoney_change_player_money(const std::string& player_name, const
 void Territory::onLoad()
 {
     getLogger().info("onLoad is called");
-    //执行数据目录检查
+    instance_ = this;
+    //检查文件
     datafile_check();
-    (void)Database.init_database();
-    if (!std::filesystem::exists(language_path+"lang.json"))
+    //初始化各个类
+    database_ = std::make_unique<DataBase>(db_file);
+    action_ = std::make_unique<Territory_Action>(*database_, this);
+    (void)database_->init_database();
+    if (!std::filesystem::exists(language_path + "lang.json"))
     {
-        LangTty = translate(language_path+getServer().getLanguage().getLocale()+".json");
+        LangTty = translate(language_path + getServer().getLanguage().getLocale() + ".json");
         LangTty.loadLanguage();
     }
 }
@@ -470,7 +456,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                 (void)umoney_change_player_money(player_name,-value);
                                 sender.sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
                                 // 调用领地创建函数
-                                if (auto [success, message] = TA.create_territory(player_name, pos1, pos2, tppos, dim); success) {
+                                if (auto [success, message] = action_->create_territory(player_name, pos1, pos2, tppos, dim); success) {
                                     sender.sendMessage(LangTty.getLocal("成功添加领地"));
                                     readAllTerritories();
                                 } else {
@@ -486,7 +472,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         // 不使用经济
                         else {
                             // 调用领地创建函数
-                            if (auto [success, message] = TA.create_territory(player_name, pos1, pos2, tppos, dim); success) {
+                            if (auto [success, message] = action_->create_territory(player_name, pos1, pos2, tppos, dim); success) {
                                 sender.sendMessage(LangTty.getLocal("成功添加领地"));
                                 readAllTerritories();
                             } else {
@@ -536,7 +522,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                 (void)umoney_change_player_money(player_name,-value);
                                 sender.sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
                                 // 调用子领地创建函数
-                                if (auto [success, child_territory_name] = TA.create_sub_territory(player_name, pos1, pos2, tppos, dim); success) {
+                                if (auto [success, child_territory_name] = action_->create_sub_territory(player_name, pos1, pos2, tppos, dim); success) {
                                     sender.sendMessage(LangTty.tr("成功添加子领地,归属于父领地: ", child_territory_name));
                                     readAllTerritories();
                                 } else {
@@ -551,7 +537,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         }
                         else {
                             // 调用子领地创建函数
-                            if (auto [success, child_territory_name] = TA.create_sub_territory(player_name, pos1, pos2, tppos, dim); success) {
+                            if (auto [success, child_territory_name] = action_->create_sub_territory(player_name, pos1, pos2, tppos, dim); success) {
                                 sender.sendMessage(LangTty.tr("成功添加子领地,归属于父领地: ", child_territory_name));
                                 readAllTerritories();
                             } else {
@@ -600,7 +586,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         if (!args[1].empty()) {
                             if (const auto tty_data = Territory_Action::read_territory_by_name(args[1]); tty_data != nullptr) {
                                 if (Territory_Action::is_tty_owner(tty_data->name, player_name) == true) {
-                                    if (del_player_tty(tty_data->name)) {
+                                    if (action_->del_player_tty(tty_data->name)) {
                                         sender.sendMessage(LangTty.getLocal("已成功删除领地"));
                                     } else {
                                         sender.sendErrorMessage(LangTty.getLocal("删除领地失败"));
@@ -628,7 +614,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         } else {
                             if (!args[1].empty() && !args[2].empty()) {
                                 if (Territory_Action::is_tty_owner(args[1], player_name) == true) {
-                                    if (auto [fst, snd] = TA.rename_player_tty(args[1], args[2]); fst) {
+                                    if (auto [fst, snd] = action_->rename_player_tty(args[1], args[2]); fst) {
                                         sender.sendMessage(snd);
                                     } else {
                                         sender.sendErrorMessage(snd);
@@ -658,7 +644,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                     } else {
                                         per_val = 0;
                                     }
-                                    if (auto [fst, snd] = TA.change_territory_permissions(tty_name, args[1], per_val); fst) {
+                                    if (auto [fst, snd] = action_->change_territory_permissions(tty_name, args[1], per_val); fst) {
                                         sender.sendMessage(snd);
                                     } else {
                                         sender.sendErrorMessage(snd);
@@ -683,13 +669,13 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             } else {
                                 if (Territory_Action::is_tty_op(tty_name, player_name) == true) {
                                     if (args[1] == "add") {
-                                        if (auto [fst, snd] = TA.change_territory_member(tty_name, "add", args[2]); fst) {
+                                        if (auto [fst, snd] = action_->change_territory_member(tty_name, "add", args[2]); fst) {
                                             sender.sendMessage(snd);
                                         } else {
                                             sender.sendErrorMessage(snd);
                                         }
                                     } else if (args[1] == "remove") {
-                                        if (auto [fst, snd] = TA.change_territory_member(tty_name, "remove", args[2]); fst) {
+                                        if (auto [fst, snd] = action_->change_territory_member(tty_name, "remove", args[2]); fst) {
                                             sender.sendMessage(snd);
                                         } else {
                                             sender.sendErrorMessage(snd);
@@ -715,13 +701,13 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             } else {
                                 if (Territory_Action::is_tty_owner(tty_name, player_name) == true) {
                                     if (args[1] == "add") {
-                                        if (auto [fst, snd] = TA.change_territory_manager(tty_name, "add", args[2]); fst) {
+                                        if (auto [fst, snd] = action_->change_territory_manager(tty_name, "add", args[2]); fst) {
                                             sender.sendMessage(snd);
                                         } else {
                                             sender.sendErrorMessage(snd);
                                         }
                                     } else if (args[1] == "remove") {
-                                        if (auto [fst, snd] = TA.change_territory_manager(tty_name, "remove", args[2]); fst) {
+                                        if (auto [fst, snd] = action_->change_territory_manager(tty_name, "remove", args[2]); fst) {
                                             sender.sendMessage(snd);
                                         } else {
                                             sender.sendErrorMessage(snd);
@@ -746,7 +732,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                     player_name)->getLocation().getDimension().getName();
                             if (Territory_Action::is_tty_op(tty_name, player_name) == true) {
                                 Territory_Action::Point3D tp_pos = Territory_Action::pos_to_tuple(args[1]);
-                                if (auto [fst, snd] = TA.change_tty_tppos(tty_name, tp_pos, dim); fst) {
+                                if (auto [fst, snd] = action_->change_tty_tppos(tty_name, tp_pos, dim); fst) {
                                     sender.sendMessage(snd);
                                 } else {
                                     sender.sendErrorMessage(snd);
@@ -769,7 +755,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                 sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                             } else {
                                 if (Territory_Action::is_tty_owner(tty_name, player_name) == true) {
-                                    if (auto [fst, snd] = TA.change_territory_owner(tty_name, player_name, args[2]); fst) {
+                                    if (auto [fst, snd] = action_->change_territory_owner(tty_name, player_name, args[2]); fst) {
                                         sender.sendMessage(snd);
                                     } else {
                                         sender.sendErrorMessage(snd);
@@ -897,7 +883,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                 }
                             }
 
-                            if (auto [fst, snd] = TA.resize_territory(pos1,pos2,*tty_data,tppos); fst)
+                            if (auto [fst, snd] = action_->resize_territory(pos1,pos2,*tty_data,tppos); fst)
                             {
                                 sender.sendMessage(LangTty.getLocal(snd));
                                 readAllTerritories();
@@ -939,7 +925,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
             if (args[0] == "del") {
                 if (!args[1].empty()) {
                     if (Territory_Action::read_territory_by_name(args[1]) != nullptr) {
-                        if (del_player_tty(args[1])) {
+                        if (action_->del_player_tty(args[1])) {
                             getLogger().info(LangTty.getLocal("已删除领地"));
                         } else {
                             getLogger().error(LangTty.getLocal("领地删除失败"));
@@ -958,7 +944,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         getLogger().info(
                                 LangTty.getLocal("正在删除玩家 ") + args[1] + LangTty.getLocal(" 的全部领地"));
                         for (const auto &the_tty: tty_info) {
-                            if (del_player_tty(the_tty.name)) {
+                            if (action_->del_player_tty(the_tty.name)) {
                                 getLogger().info(LangTty.getLocal("成功删除领地: ") + the_tty.name);
                             } else {
                                 getLogger().error(LangTty.getLocal("删除领地失败: ") + the_tty.name);
@@ -1023,7 +1009,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             } else {
                                 per_val = 0;
                             }
-                            auto [fst, snd] = TA.change_territory_permissions(tty_name, args[1], per_val);
+                            auto [fst, snd] = action_->change_territory_permissions(tty_name, args[1], per_val);
                             if (fst) {
                                 getLogger().info(snd);
                             } else {
@@ -1046,7 +1032,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
             if (args[0] == "del") {
                 if (!args[1].empty()) {
                     if (Territory_Action::read_territory_by_name(args[1]) != nullptr) {
-                        if (del_player_tty(args[1])) {
+                        if (action_->del_player_tty(args[1])) {
                             sender.sendMessage(LangTty.getLocal("已删除领地"));
                         } else {
                             sender.sendErrorMessage(LangTty.getLocal("领地删除失败"));
@@ -1065,7 +1051,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         sender.sendMessage(
                                 LangTty.getLocal("正在删除玩家 ") + args[1] + LangTty.getLocal(" 的全部领地"));
                         for (const auto &the_tty: tty_info) {
-                            if (del_player_tty(the_tty.name)) {
+                            if (action_->del_player_tty(the_tty.name)) {
                                 sender.sendMessage(LangTty.getLocal("成功删除领地: ") + the_tty.name);
                             } else {
                                 sender.sendErrorMessage("删除领地失败: " + the_tty.name);
@@ -1128,7 +1114,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             } else {
                                 per_val = 0;
                             }
-                            if (auto [fst, snd] = TA.change_territory_permissions(tty_name, args[1], per_val); fst) {
+                            if (auto [fst, snd] = action_->change_territory_permissions(tty_name, args[1], per_val); fst) {
                                 sender.sendMessage(snd);
                             } else {
                                 sender.sendErrorMessage(snd);

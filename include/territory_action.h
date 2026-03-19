@@ -9,10 +9,11 @@
 #include <optional>
 #include "database.hpp"
 using namespace std;
+class Territory;
 
 class Territory_Action {
 public:
-    explicit Territory_Action(DataBase database);
+    explicit Territory_Action(DataBase database, Territory* territory_);
 
     //定义领地数据结构
     struct TerritoryData {
@@ -86,6 +87,7 @@ public:
     static std::vector<TerritoryData> list_player_tty(const std::string& player_name);
     [[nodiscard]] std::vector<std::string> getSubTty(const std::string& tty_name) const;
     [[nodiscard]] bool del_Tty_by_name(const std::string& territory_name) const;
+    [[nodiscard]] bool del_player_tty(const std::string &tty_name) const;
     [[nodiscard]] bool rename_Tty(const std::string& territory_name,const std::string& new_tty_name) const;
     [[nodiscard]] std::pair<bool, std::string> rename_player_tty(const std::string &oldname, const std::string &newname) const;
     static std::optional<bool> is_tty_owner(const std::string &ttyname, const std::string &player_name);
@@ -110,6 +112,7 @@ public:
 
 
 private:
+    Territory* territory_;
     DataBase Database;
     inline static std::map<std::string, TerritoryData> all_tty;
 };

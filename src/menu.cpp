@@ -880,7 +880,7 @@ void Menu::openDelTtyMenu(endstone::Player* player) const {
 }
 
 // 删除领地二次确认
-void Menu::openDelTtyConfirmMenu(endstone::Player* player, std::string cmd) const {
+void Menu::openDelTtyConfirmMenu(endstone::Player* player, const std::string& cmd) const {
   endstone::MessageForm form;
   form.setTitle(LangTty.getLocal("确认删除"));
   form.setContent(LangTty.getLocal("§l§4警告：删除领地不可恢复！\n§r您确定要执行此操作吗？"));
