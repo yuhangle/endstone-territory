@@ -101,6 +101,7 @@ public:
     static std::vector<TerritoryData> getOpTtyList(const std::string& player_name);
     static std::vector<TerritoryData>getPlayerTtyList(const std::string& player_name);
     [[nodiscard]] std::pair<bool,std::string> resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data, const Point3D& tppos) const;
+    static void clearCache();
 
 
 private:

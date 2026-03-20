@@ -14,6 +14,7 @@
 #include "territory_action.h"
 #include "menu.h"
 #include "translate.hpp"
+#include "event_listener.h"
 
 using json = nlohmann::json;
 using namespace std;
@@ -78,42 +79,12 @@ public:
 
     bool onCommand(endstone::CommandSender &sender, const endstone::Command &command, const std::vector<std::string> &args) override;
 
-    // 事件监听
-    //方块破坏监听
-    static void onBlockBreak(endstone::BlockBreakEvent& event);
-
-    //方块放置监听
-    static void onBlockPlace(endstone::BlockPlaceEvent& event);
-
-    //玩家交互监听
-    static void onPlayerjiaohu(endstone::PlayerInteractEvent& event);
-
-    //玩家实体交互监听
-    static void onPlayerjiaohust(endstone::PlayerInteractActorEvent& event);
-
-    //实体爆炸监听
-    static void onActorBomb(endstone::ActorExplodeEvent& event);
-
-    //实体受击
-    static void onActorhit(endstone::ActorDamageEvent& event);
-
-    //实体死亡
-    static void onActorDeath(const endstone::ActorDeathEvent& event);
-
-    //领地边缘活塞监听
-    static void onEdgePiston(endstone::BlockPistonEvent& event);
-
-    //快速创建领地-右键事件
-    static void quickCreateTtyRightClick(const endstone::PlayerInteractEvent& event);
-
-    //玩家移动事件
-    static void onPlayerMove(endstone::PlayerMoveEvent& event);
-
 private:
     static Territory* instance_;
     std::unique_ptr<Menu> menu_;
     std::unique_ptr<DataBase> database_;
     std::unique_ptr<Territory_Action> action_;
+    std::unique_ptr<EventListener> event_listener_;
 };
 
 

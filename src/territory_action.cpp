@@ -1064,3 +1064,8 @@ std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& p
 
     return {true,"领地大小更改成功"};
 }
+
+void Territory_Action::clearCache()
+{
+    all_tty.clear();
+}

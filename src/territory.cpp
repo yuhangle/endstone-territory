@@ -5,6 +5,52 @@
 #include "territory.h"
 #include "translate.hpp"
 #include "version.h"
+#include "event_listener.h"
+
+//插件信息
+ENDSTONE_PLUGIN("territory", TERRITORY_PLUGIN_VERSION, Territory)
+{
+    description = "a territory plugin for endstone with C++";
+    website = "https://github.com/yuhangle/endstone-territory";
+    authors = {"yuhang2006 <yuhang2006@hotmail.com>"};
+
+    command("tty")
+            .description("Territory command")
+            .usages("/tty (add)[opt: opt_add] [pos: pos] [pos: pos]",
+                    "/tty (add_sub)[opt: opt_addsub] [pos: pos] [pos: pos]",
+                    "/tty (quick)<opt: opt_quick> (add|add_sub)<opt: opt_qa>",
+                    "/tty (list)[opt: opt_list]",
+                    "/tty (del)[opt: opt_del] [territory: str]",
+                    "/tty (rename)[opt: opt_rename] [old_name: str] [new_name: str]",
+                    "/tty (set)<opt: opt_setper> (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston)<opt: opt_permission> <bool: bool> <territory: str>",
+                    "/tty (member)<opt: opt_member> (add|remove)<opt: opt_mem> <player: target> <territory: str>",
+                    "/tty (manager)<opt: opt_manager> (add|remove)<opt: opt_man> <player: target> <territory: str>",
+                    "/tty (settp)<opt: opt_settp> [pos: pos] <territory: str>",
+                    "/tty (transfer)<opt: opt_transfer> <territory: str> <player: target>",
+                    "/tty (tp)<opt: opt_tp> <territory: str>",
+                    "/tty (resize)<opt: resize> <territory: str> [pos: pos] [pos: pos]",
+                    "/tty (help)<opt: opt_help>"
+                    )
+            .permissions("territory.command.member");
+
+    command("optty")
+            .description("Territory op command")
+            .usages("/optty (del)[opt: opt_op_del] [msg: message]",
+                    "/optty (del_all)[opt: opt_op_del_all] <player: target>",
+                    "/optty (set)<opt: opt_op_setper> (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage)<opt: opt_op_permission> <bool: bool> <msg: message>",
+                    "/optty (reload)[opt: opt_reloadtty]"
+            )
+            .permissions("territory.command.op");
+
+    permission("territory.command.member")
+            .description("member command")
+            .default_(endstone::PermissionDefault::True);
+
+    permission("territory.command.op")
+            .description("op command")
+            .default_(endstone::PermissionDefault::Operator);
+}
+
 
 // 初始化静态成员
 Territory* Territory::instance_ = nullptr;
@@ -321,6 +367,7 @@ void Territory::onLoad()
         LangTty = translate(language_path + getServer().getLanguage().getLocale() + ".json");
         LangTty.loadLanguage();
     }
+    event_listener_ = std::make_unique<EventListener>(*this);
 }
 
 void Territory::onEnable()
@@ -361,18 +408,18 @@ void Territory::onEnable()
     LangTty = translate(language_path+language+".json");LangTty.loadLanguage();
     translate::checkLanguageCommon(language_path+language+".json",language_file);
     //注册事件监听
-    registerEvent<endstone::BlockBreakEvent>(onBlockBreak);
-    registerEvent<endstone::BlockPlaceEvent>(onBlockPlace);
-    registerEvent<endstone::ActorExplodeEvent>(onActorBomb);
-    registerEvent<endstone::PlayerInteractEvent>(onPlayerjiaohu);
-    registerEvent<endstone::PlayerInteractActorEvent>(onPlayerjiaohust);
-    registerEvent<endstone::ActorDamageEvent>(onActorhit);
-    registerEvent<endstone::BlockPistonRetractEvent>(onEdgePiston);
-    registerEvent<endstone::BlockPistonExtendEvent>(onEdgePiston);
+    registerEvent<endstone::BlockBreakEvent>(EventListener::onBlockBreak);
+    registerEvent<endstone::BlockPlaceEvent>(EventListener::onBlockPlace);
+    registerEvent<endstone::ActorExplodeEvent>(EventListener::onActorBomb);
+    registerEvent<endstone::PlayerInteractEvent>(EventListener::onPlayerjiaohu);
+    registerEvent<endstone::PlayerInteractActorEvent>(EventListener::onPlayerjiaohust);
+    registerEvent<endstone::ActorDamageEvent>(EventListener::onActorhit);
+    registerEvent<endstone::BlockPistonRetractEvent>(EventListener::onEdgePiston);
+    registerEvent<endstone::BlockPistonExtendEvent>(EventListener::onEdgePiston);
     //快速创建领地选择监听
-    registerEvent<endstone::PlayerInteractEvent>(quickCreateTtyRightClick);
+    registerEvent<endstone::PlayerInteractEvent>(EventListener::quickCreateTtyRightClick);
     //玩家移动监听
-    registerEvent<endstone::PlayerMoveEvent>(onPlayerMove);
+    registerEvent<endstone::PlayerMoveEvent>(EventListener::onPlayerMove);
     //数据库读取
     readAllTerritories();
     //周期执行
@@ -400,7 +447,8 @@ ___________                 .__  __
 void Territory::onDisable()
 {
     getLogger().info("onDisable is called");
-    getServer().getScheduler().cancelTasks(*this);
+    //getServer().getScheduler().cancelTasks(*this);
+    Territory_Action::clearCache();
 }
 
 bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Command &command, const std::vector<std::string> &args) {
@@ -1130,409 +1178,4 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
         }
     }
     return true;
-}
-
-// 事件监听
-//方块破坏监听
-void Territory::onBlockBreak(endstone::BlockBreakEvent& event)
-{
-    const string player_name = event.getPlayer().getName();
-    const string player_dim = event.getPlayer().getLocation().getDimension().getName();
-    const Territory_Action::Point3D block_pos = {event.getBlock().getLocation().getBlockX(),event.getBlock().getLocation().getBlockY(),event.getBlock().getLocation().getBlockZ()};
-    //检查玩家是否在领地上
-    if (const auto player_in_tty = Territory_Action::list_in_tty(block_pos,player_dim); player_in_tty != std::nullopt) {
-        for (const auto&info : player_in_tty.value()) {
-            if (!(info.if_break)) {
-                if (ranges::find(info.members,player_name) == info.members.end()) {
-                    event.setCancelled(true);
-                    event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上破坏的权限"));
-                    return;
-                }
-            }
-        }
-    }
-}
-
-//方块放置监听
-void Territory::onBlockPlace(endstone::BlockPlaceEvent& event)
-{
-    const string player_name = event.getPlayer().getName();
-    const string player_dim = event.getPlayer().getLocation().getDimension().getName();
-    const Territory_Action::Point3D block_pos = {event.getBlock().getLocation().getBlockX(),event.getBlock().getLocation().getBlockY(),event.getBlock().getLocation().getBlockZ()};
-    //检查玩家是否在领地上
-    if (const auto player_in_tty = Territory_Action::list_in_tty(block_pos,player_dim); player_in_tty != std::nullopt) {
-        for (const auto&info : player_in_tty.value()) {
-            if (!(info.if_build)) {
-                if (ranges::find(info.members,player_name) == info.members.end()) {
-                    event.setCancelled(true);
-                    event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上放置的权限"));
-                    return;
-                }
-            }
-        }
-    }
-}
-
-//玩家交互监听
-void Territory::onPlayerjiaohu(endstone::PlayerInteractEvent& event)
-{
-    if (!event.getBlock()) {
-        return;
-    }
-    const string player_name = event.getPlayer().getName();
-    const string player_dim = event.getPlayer().getLocation().getDimension().getName();
-    const Territory_Action::Point3D block_pos = {event.getBlock()->getLocation().getBlockX(),event.getBlock()->getLocation().getBlockY(),event.getBlock()->getLocation().getBlockZ()};
-    //检查玩家是否在领地上
-    if (const auto player_in_tty = Territory_Action::list_in_tty(block_pos,player_dim); player_in_tty != std::nullopt) {
-        for (const auto&info : player_in_tty.value()) {
-            if (!(info.if_jiaohu)) {
-                if (ranges::find(info.members,player_name) == info.members.end()) {
-                    event.setCancelled(true);
-                    event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上交互的权限"));
-                    return;
-                }
-            }
-        }
-    }
-}
-
-//玩家实体交互监听
-void Territory::onPlayerjiaohust(endstone::PlayerInteractActorEvent& event)
-{
-    const string player_name = event.getPlayer().getName();
-    const string player_dim = event.getPlayer().getLocation().getDimension().getName();
-    const Territory_Action::Point3D actor_pos = {event.getActor().getLocation().getBlockX(),event.getActor().getLocation().getBlockY(),event.getActor().getLocation().getBlockZ()};
-    //检查玩家是否在领地上
-    if (const auto player_in_tty = Territory_Action::list_in_tty(actor_pos,player_dim); player_in_tty != std::nullopt) {
-        for (const auto&info : player_in_tty.value()) {
-            if (!(info.if_jiaohu)) {
-                if (ranges::find(info.members,player_name) == info.members.end()) {
-                    event.setCancelled(true);
-                    event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上交互的权限"));
-                    return;
-                }
-            }
-        }
-    }
-}
-
-//实体爆炸监听
-void Territory::onActorBomb(endstone::ActorExplodeEvent& event)
-{
-    const string actor_dim = event.getActor().getLocation().getDimension().getName();
-
-    //先检查实体是否在领地上
-    const Territory_Action::Point3D actor_pos = {event.getActor().getLocation().getBlockX(),event.getActor().getLocation().getBlockY(),event.getActor().getLocation().getBlockZ()};
-    if (const auto actor_in_tty = Territory_Action::list_in_tty(actor_pos,actor_dim); actor_in_tty != std::nullopt) {
-        for (const auto&info : actor_in_tty.value()) {
-            if (!(info.if_bomb)) {
-                event.setCancelled(true);
-                return;
-            }
-        }
-    }
-
-    //再检查方块是否在领地上
-    auto& broken_blocks = event.getBlockList();
-
-    std::erase_if(
-        broken_blocks,
-        [&](const std::unique_ptr<endstone::Block>& block) {
-            const Territory_Action::Point3D block_pos = {
-                block->getX(),
-                block->getY(),
-                block->getZ()
-            };
-
-            if (const auto block_in_tty = Territory_Action::list_in_tty(block_pos, actor_dim);
-                block_in_tty != std::nullopt) {
-
-                // 检查是否有任何领地将此方块标记为不允许爆炸
-                for (const auto& info : block_in_tty.value()) {
-                    if (!info.if_bomb) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-    );
-}
-
-// 领地边缘活塞监听
-void Territory::onEdgePiston(endstone::BlockPistonEvent& event)
-{
-    // 获取活塞所在的维度和坐标
-    const string piston_dim = event.getBlock().getLocation().getDimension().getName();
-    const Territory_Action::Point3D piston_pos = {
-        static_cast<double>(event.getBlock().getLocation().getBlockX()),
-        static_cast<double>(event.getBlock().getLocation().getBlockY()),
-        static_cast<double>(event.getBlock().getLocation().getBlockZ())
-    };
-
-    if (const auto tty_list = Territory_Action::list_in_tty(piston_pos, piston_dim); tty_list != std::nullopt) {
-
-        for (const auto& info : tty_list.value()) {
-            if (!(info.if_edge_piston)) {
-                if (Territory_Action::check_in_tty_edge(info.name, piston_pos)) {
-
-                    // 如果在边缘且权限关闭，取消事件
-                    event.setCancelled(true);
-
-                    return;
-                }
-            }
-        }
-    }
-}
-
-//实体受击
-void Territory::onActorhit(endstone::ActorDamageEvent& event)
-{
-    const string actor_dim = event.getActor().getLocation().getDimension().getName();
-    const Territory_Action::Point3D actor_pos = {event.getActor().getLocation().getBlockX(),event.getActor().getLocation().getBlockY(),event.getActor().getLocation().getBlockZ()};
-    //检查实体是否在领地上
-    if (const auto actor_in_tty = Territory_Action::list_in_tty(actor_pos,actor_dim); actor_in_tty != std::nullopt) {
-        for (const auto&info : actor_in_tty.value()) {
-            if (!(info.if_damage)) {
-                // 玩家导致伤害
-                if (const auto actor_or_player = event.getDamageSource().getActor(); actor_or_player && actor_or_player->getType() == "minecraft:player") {
-                    if (ranges::find(info.members,actor_or_player->getName()) == info.members.end()) {
-                        actor_or_player->sendErrorMessage(LangTty.getLocal("你没有在此领地上伤害的权限"));
-                        event.setCancelled(true);
-                    }
-                    else
-                    {
-                        config_entity_can_die.push_back(event.getActor().getId());
-                    }
-                    //火焰攻击类伤害
-                } else if (event.getDamageSource().getType() == "fire_tick") {
-                    //非玩家实体才免疫
-                    if (event.getActor().getType() != "minecraft:player") {
-                        if (config_actor_fire_attack_protect) {
-                            if (ranges::find(config_entity_can_die, event.getActor().getId()) == config_entity_can_die.end())
-                            {
-                                event.setCancelled(true);
-                            }
-                        }
-                    }
-                }
-            }
-            //外部爆炸伤害
-            if (!(info.if_bomb))
-            {
-                if (event.getDamageSource().getType() == "entity_explosion")
-                {
-                    event.setCancelled(true);
-                }
-            }
-            return;
-        }
-    }
-}
-
-//实体死亡
-void Territory::onActorDeath(const endstone::ActorDeathEvent& event)
-{
-    if (ranges::find(config_entity_can_die, event.getActor().getId()) != config_entity_can_die.end())
-    {
-        config_entity_can_die.erase(ranges::find(config_entity_can_die, event.getActor().getId()));
-    }
-}
-
-//快速创建领地-右键事件
-void Territory::quickCreateTtyRightClick(const endstone::PlayerInteractEvent& event) {
-    if (!quick_create_player_data.contains(event.getPlayer().getName())) {
-        return;
-    }
-    if (!event.getItem()) {
-        return;
-    }
-    if (event.getItem()->getType().getId() == "minecraft:stick") {
-        if (!event.getBlock()) {
-            return;
-        }
-        //在玩家处于快速创建模式且手持木棍点击非空气时开始提示
-        auto& player = event.getPlayer();
-        auto tmp = quick_create_player_data[player.getName()];
-        if (tmp.dim1.empty()) {
-            tmp.dim1 = player.getDimension().getName();
-            tmp.pos1 = Territory_Action::Point3D{event.getBlock()->getLocation().getBlockX(),event.getBlock()->getLocation().getBlockY(),event.getBlock()->getLocation().getBlockZ()};
-            player.sendMessage(LangTty.getLocal("已记录此坐标为第一个坐标，请选择第二个坐标"));
-        } else if (!tmp.dim2.empty()){
-            //点二已存在数据，去重
-            return;
-        } else {
-            tmp.dim2 = player.getDimension().getName();
-            //进行维度检查
-            if (tmp.dim1 != tmp.dim2) {
-                player.sendErrorMessage(LangTty.getLocal("坐标在不同维度，无法创建领地"));
-                return;
-            }
-            tmp.pos2 = Territory_Action::Point3D{event.getBlock()->getLocation().getBlockX(),event.getBlock()->getLocation().getBlockY(),event.getBlock()->getLocation().getBlockZ()};
-            //由于交互事件可能多次触发，检查点重复
-            if (tmp.pos1 == tmp.pos2) {
-                return;
-            }
-            player.sendMessage(LangTty.getLocal("已记录此坐标为第二个坐标，请通过提示完成领地创建"));
-        }
-        //存储坐标数据
-        quick_create_player_data[player.getName()] = tmp;
-        if (!tmp.dim2.empty()) {
-            Menu::openQuickCreateTtyMenu(&player,tmp);
-        }
-    }
-}
-
-void Territory::onPlayerMove(endstone::PlayerMoveEvent& event)
-{
-    auto& player = event.getPlayer();
-    std::string player_name = player.getName();
-
-    // 获取移动后的位置信息
-    auto to_loc = event.getTo();
-    std::string player_dim = to_loc.getDimension().getName();
-
-    // 构造当前位置的 Point3D (tuple<double, double, double>)
-    Territory_Action::Point3D player_pos = {
-        static_cast<double>(to_loc.getBlockX()),
-        static_cast<double>(to_loc.getBlockY()),
-        static_cast<double>(to_loc.getBlockZ())
-    };
-
-    // 获取该玩家上一次记录的状态引用
-    auto& [last_pos, last_tty, last_father] = lastPlayerPositions[player_name];
-
-    // 1. 检查坐标变化
-    if (!config_welcome_all && last_pos == player_pos) {
-        return;
-    }
-
-    // 2. 初始化检查 (对应 tuple{0.0, 0.0, 0.0})
-    if (std::get<0>(last_pos) == 0.0 && std::get<1>(last_pos) == 0.0 && std::get<2>(last_pos) == 0.0) {
-        last_pos = player_pos;
-        return;
-    }
-
-    // 更新位置记录
-    std::string previous_territory = last_tty;
-    std::string previous_father_territory = last_father;
-    last_pos = player_pos;
-
-    // 3. 寻找当前最精细的领地
-    const auto& all_tty = Territory_Action::getAllTty();
-    const Territory_Action::TerritoryData* selectedTerritory = nullptr;
-
-    for (const auto &val : all_tty | std::views::values) {
-        const auto &data = val;
-        if (data.dim == player_dim && Territory_Action::isPointInCube(player_pos, data.pos1, data.pos2)) {
-            if (selectedTerritory == nullptr) {
-                selectedTerritory = &data;
-            } else {
-                // 子领地优先逻辑
-                if (!data.father_tty.empty() && selectedTerritory->father_tty.empty()) {
-                    selectedTerritory = &data;
-                }
-            }
-        }
-    }
-
-    // 4. 发送提示与权限处理
-    if (selectedTerritory != nullptr) {
-        std::string current_territory = selectedTerritory->name;
-        std::string current_father_territory = selectedTerritory->father_tty;
-
-        // 领地名改变或强制欢迎
-        if (previous_territory != current_territory || config_welcome_all) {
-            std::string msg;
-            bool is_sub = !current_father_territory.empty();
-
-            std::string action_str = config_welcome_all ?
-                LangTty.getLocal("§2[领地] §r您当前位于 ") :
-                LangTty.getLocal("§2[领地] §r欢迎来到 ");
-
-            std::string type_str = is_sub ?
-                LangTty.getLocal(" 的子领地 ") :
-                LangTty.getLocal(" 的领地 ");
-
-            msg = action_str + selectedTerritory->owner + type_str + current_territory;
-            player.sendTip(msg);
-
-            // 飞行校验
-            if (config_fly_on_tty) {
-                if (Territory_Action::is_tty_op(current_territory, player_name).value()) {
-                    player.setAllowFlight(true);
-                } else {
-                    if (int gm = static_cast<int>(player.getGameMode()); (gm == 0 || gm == 3) && player.getAllowFlight()) {
-                        player.setAllowFlight(false);
-                    }
-                }
-            }
-
-            // 更新记录值
-            last_tty = current_territory;
-            last_father = current_father_territory;
-        }
-    }
-    else {
-        // 5. 离开领地逻辑
-        if (!previous_territory.empty()) {
-            std::string msg = LangTty.getLocal("§2[领地] §r您已离开领地 ") + previous_territory + LangTty.getLocal(", 欢迎下次再来");
-            player.sendTip(msg);
-
-            if (config_fly_on_tty) {
-                if (int gm = static_cast<int>(player.getGameMode()); (gm == 0 || gm == 3) && player.getAllowFlight()) {
-                    player.setAllowFlight(false);
-                }
-            }
-
-            // 清空记录值
-            last_tty = "";
-            last_father = "";
-        }
-    }
-}
-
-//插件信息
-ENDSTONE_PLUGIN("territory", TERRITORY_PLUGIN_VERSION, Territory)
-{
-    description = "a territory plugin for endstone with C++";
-    website = "https://github.com/yuhangle/endstone-territory";
-    authors = {"yuhang2006 <yuhang2006@hotmail.com>"};
-
-    command("tty")
-            .description("Territory command")
-            .usages("/tty (add)[opt: opt_add] [pos: pos] [pos: pos]",
-                    "/tty (add_sub)[opt: opt_addsub] [pos: pos] [pos: pos]",
-                    "/tty (quick)<opt: opt_quick> (add|add_sub)<opt: opt_qa>",
-                    "/tty (list)[opt: opt_list]",
-                    "/tty (del)[opt: opt_del] [territory: str]",
-                    "/tty (rename)[opt: opt_rename] [old_name: str] [new_name: str]",
-                    "/tty (set)<opt: opt_setper> (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston)<opt: opt_permission> <bool: bool> <territory: str>",
-                    "/tty (member)<opt: opt_member> (add|remove)<opt: opt_mem> <player: target> <territory: str>",
-                    "/tty (manager)<opt: opt_manager> (add|remove)<opt: opt_man> <player: target> <territory: str>",
-                    "/tty (settp)<opt: opt_settp> [pos: pos] <territory: str>",
-                    "/tty (transfer)<opt: opt_transfer> <territory: str> <player: target>",
-                    "/tty (tp)<opt: opt_tp> <territory: str>",
-                    "/tty (resize)<opt: resize> <territory: str> [pos: pos] [pos: pos]",
-                    "/tty (help)<opt: opt_help>"
-                    )
-            .permissions("territory.command.member");
-
-    command("optty")
-            .description("Territory op command")
-            .usages("/optty (del)[opt: opt_op_del] [msg: message]",
-                    "/optty (del_all)[opt: opt_op_del_all] <player: target>",
-                    "/optty (set)<opt: opt_op_setper> (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage)<opt: opt_op_permission> <bool: bool> <msg: message>",
-                    "/optty (reload)[opt: opt_reloadtty]"
-            )
-            .permissions("territory.command.op");
-
-    permission("territory.command.member")
-            .description("member command")
-            .default_(endstone::PermissionDefault::True);
-
-    permission("territory.command.op")
-            .description("op command")
-            .default_(endstone::PermissionDefault::Operator);
 }
