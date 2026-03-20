@@ -412,7 +412,7 @@ void Menu::openSetPermisMenu(endstone::Player* player) const {
 }
 
 // 领地权限详细设置
-void Menu::openSetPermisDetailMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const {
+void Menu::openSetPermisDetailMenu(endstone::Player* player, const TerritoryData& tty) const {
   endstone::ModalForm form;
   form.setTitle(LangTty.getLocal("§l管理领地") + " " + tty.name + LangTty.getLocal("的权限"));
 
@@ -512,7 +512,7 @@ void Menu::openDelTtyMemberMenu(endstone::Player* player) const {
 }
 
 // 删除成员子菜单
-void Menu::openDelTtyMemberSubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const {
+void Menu::openDelTtyMemberSubMenu(endstone::Player* player, const TerritoryData& tty) const {
   std::vector<std::string> members = DataBase::splitString(tty.member);
   if (members.empty() || (members.size() == 1 && members[0].empty())) {
     player->sendErrorMessage(LangTty.getLocal("在领地") + tty.name + LangTty.getLocal("中没有任何成员"));
@@ -579,7 +579,7 @@ void Menu::openAddTtyMemberMenu(endstone::Player* player) const {
 }
 
 // 添加成员子菜单
-void Menu::openAddTtyMemberSubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const {
+void Menu::openAddTtyMemberSubMenu(endstone::Player* player, const TerritoryData& tty) const {
   const auto onlinePlayers = getOnlinePlayerList();
   endstone::ModalForm form;
   form.setTitle(LangTty.getLocal("§l添加成员到领地") + " " + tty.name + LangTty.getLocal("中"));
@@ -648,7 +648,7 @@ void Menu::openDelTtyManagerMenu(endstone::Player* player) const {
 }
 
 // 删除管理员子菜单
-void Menu::openDelTtyManagerSubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const {
+void Menu::openDelTtyManagerSubMenu(endstone::Player* player, const TerritoryData& tty) const {
   std::vector<std::string> managers = DataBase::splitString(tty.manager);
   if (managers.empty() || (managers.size() == 1 && managers[0].empty())) {
     player->sendErrorMessage(LangTty.getLocal("在领地") + tty.name + LangTty.getLocal("中没有任何领地管理员"));
@@ -710,7 +710,7 @@ void Menu::openAddTtyManagerMenu(endstone::Player* player) const {
 }
 
 // 添加管理员子菜单
-void Menu::openAddTtyManagerSubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const {
+void Menu::openAddTtyManagerSubMenu(endstone::Player* player, const TerritoryData& tty) const {
   const auto onlinePlayers = getOnlinePlayerList();
   endstone::ModalForm form;
   form.setTitle(LangTty.getLocal("§l添加领地管理员到领地") + " " + tty.name + LangTty.getLocal("中"));
@@ -972,7 +972,7 @@ void Menu::openResizeTtyMenu(endstone::Player* player) const {
 }
 
 //更改领地大小子菜单
-void Menu::openResizeTtySubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const
+void Menu::openResizeTtySubMenu(endstone::Player* player, const TerritoryData& tty) const
 {
   endstone::ModalForm menu;
   menu.setTitle(LangTty.getLocal("§l更改领地大小"));

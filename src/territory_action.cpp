@@ -2,22 +2,23 @@
 // Created by yuhang on 2025/9/3.
 //
 
-#include "../include/territory_action.h"
+#include "territory_action.h"
 #include "translate.hpp"
-#include "../include/territory.h"
+#include "territory.h"
+
 Territory_Action::Territory_Action(DataBase& database, Territory* territory_)
     : territory_(territory_),
       database_(database)
 {}
 
 // 从外部获取all_tty数据
-const std::map<std::string, Territory_Action::TerritoryData>&
+const std::map<std::string, TerritoryData>&
 Territory_Action::getAllTty() {
     return all_tty;
 }
 
 //从数据库读取全部领地数据并载入全局变量all_tty
-std::map<std::string, Territory_Action::TerritoryData>& Territory_Action::get_all_tty() const{
+std::map<std::string, TerritoryData>& Territory_Action::get_all_tty() const{
     vector<map<string,string>> result;
     database_.getAllTty(result);
     if (result.empty()) {
@@ -27,7 +28,6 @@ std::map<std::string, Territory_Action::TerritoryData>& Territory_Action::get_al
         all_tty = emptyDatas;
         return all_tty;
     }
-    all_tty.clear();
     std::map<std::string, TerritoryData> new_all_tty;
     for (const auto& data : result) {
         TerritoryData tty_data;
@@ -49,12 +49,13 @@ std::map<std::string, Territory_Action::TerritoryData>& Territory_Action::get_al
         tty_data.father_tty = data.at("father_tty");
         new_all_tty[tty_data.name] = tty_data;
     }
-    all_tty = new_all_tty;
+    all_tty.clear();
+    all_tty = std::move(new_all_tty);
     return all_tty;
 };
 
 // 根据名字读取领地信息的函数
-Territory_Action::TerritoryData* Territory_Action::read_territory_by_name(const std::string& territory_name) {
+TerritoryData* Territory_Action::read_territory_by_name(const std::string& territory_name) {
     const auto it = all_tty.find(territory_name);
     if (it != all_tty.end()) {
         return &it->second;
@@ -415,7 +416,7 @@ std::pair<bool, std::string> Territory_Action::listTrueFatherTTY(const std::stri
 }
 
 // 列出玩家领地的函数
-std::vector<Territory_Action::TerritoryData> Territory_Action::list_player_tty(const std::string& player_name) {
+std::vector<TerritoryData> Territory_Action::list_player_tty(const std::string& player_name) {
     std::vector<TerritoryData> player_all_tty;
     for (const auto &territory: all_tty | views::values) {
         if (territory.owner == player_name) {
@@ -547,7 +548,7 @@ std::optional<bool> Territory_Action::is_tty_op(const std::string &ttyname, cons
 }
 
 // 函数功能：列出与给定坐标点及维度匹配的全部领地信息
-std::optional<std::vector<Territory_Action::InTtyInfo>> Territory_Action::list_in_tty(const Point3D &pos, const std::string &dim) {
+std::optional<std::vector<InTtyInfo>> Territory_Action::list_in_tty(const Point3D &pos, const std::string &dim) {
     /* 参数：
     //   pos: 点坐标
     //   dim: 点所在的维度
@@ -1000,7 +1001,7 @@ std::vector<std::string> Territory_Action::getAllTtyNames() {
 }
 
 // 获取玩家拥有管理权限的全部领地名字函数
-std::vector<Territory_Action::TerritoryData> Territory_Action::getOpTtyList(const std::string &player_name) {
+std::vector<TerritoryData> Territory_Action::getOpTtyList(const std::string &player_name) {
     vector<TerritoryData> ttys;
     for (const auto &val: all_tty | views::values) {
         const TerritoryData& territory = val;
@@ -1017,7 +1018,7 @@ std::vector<Territory_Action::TerritoryData> Territory_Action::getOpTtyList(cons
 }
 
 //获取玩家所拥有的全部领地函数
-std::vector<Territory_Action::TerritoryData> Territory_Action::getPlayerTtyList(const std::string &player_name) {
+std::vector<TerritoryData> Territory_Action::getPlayerTtyList(const std::string &player_name) {
     vector<TerritoryData> ttys;
     for (const auto &val: all_tty | views::values) {
         if (const TerritoryData& territory = val; territory.owner == player_name) {
@@ -1068,4 +1069,12 @@ std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& p
 void Territory_Action::clearCache()
 {
     all_tty.clear();
+}
+
+std::shared_ptr<TerritoryInstance> Territory_Action::getInstance(const std::string& name) {
+    return std::make_shared<TerritoryInstance>(name, this);
+}
+
+std::map<std::string, TerritoryData>& Territory_Action::getAllTtyMutable() {
+    return all_tty;
 }

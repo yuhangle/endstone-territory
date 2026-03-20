@@ -43,31 +43,31 @@ public:
   void openSetPermisMenu(endstone::Player* player) const;
 
   // 领地权限详细设置
-  void openSetPermisDetailMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const;
+  void openSetPermisDetailMenu(endstone::Player* player, const TerritoryData& tty) const;
 
   // 删除自己管理的领地成员
   void openDelTtyMemberMenu(endstone::Player* player) const;
 
   // 删除成员子菜单
-  void openDelTtyMemberSubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const;
+  void openDelTtyMemberSubMenu(endstone::Player* player, const TerritoryData& tty) const;
 
   // 添加自己管理的领地成员
   void openAddTtyMemberMenu(endstone::Player* player) const;
 
   // 添加成员子菜单
-  void openAddTtyMemberSubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const;
+  void openAddTtyMemberSubMenu(endstone::Player* player, const TerritoryData& tty) const;
 
   // 删除自己领地的领地管理员
   void openDelTtyManagerMenu(endstone::Player* player) const;
 
   // 删除管理员子菜单
-  void openDelTtyManagerSubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const;
+  void openDelTtyManagerSubMenu(endstone::Player* player, const TerritoryData& tty) const;
 
   // 添加自己领地的领地管理员
   void openAddTtyManagerMenu(endstone::Player* player) const;
 
   // 添加管理员子菜单
-  void openAddTtyManagerSubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const;
+  void openAddTtyManagerSubMenu(endstone::Player* player, const TerritoryData& tty) const;
 
   // 设置自己管理的领地的传送点
   void openSetTpTtyMenu(endstone::Player* player) const;
@@ -85,7 +85,7 @@ public:
   void openResizeTtyMenu(endstone::Player* player) const;
 
   // 更改领地大小子菜单
-  void openResizeTtySubMenu(endstone::Player* player, const Territory_Action::TerritoryData& tty) const;
+  void openResizeTtySubMenu(endstone::Player* player, const TerritoryData& tty) const;
 
   // 删除领地二次确认菜单
   void openDelTtyConfirmMenu(endstone::Player* player, const std::string& cmd) const;

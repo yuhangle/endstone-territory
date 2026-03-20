@@ -8,6 +8,9 @@
 #include <vector>
 #include <optional>
 #include "database.hpp"
+#include "territory_instance.h"
+#include "territory_types.h"
+
 using namespace std;
 class Territory;
 
@@ -15,41 +18,10 @@ class Territory_Action {
 public:
     explicit Territory_Action(DataBase& database, Territory* territory_);
 
-    //定义领地数据结构
-    struct TerritoryData {
-        std::string name;
-        std::tuple<double, double, double> pos1 = {0,0,0};
-        std::tuple<double, double, double> pos2 = {0,0,0};
-        std::tuple<double, double, double> tppos = {0,0,0};
-        std::string owner;
-        std::string manager;
-        std::string member;
-        std::string dim;
-        std::string father_tty;
-        bool if_jiaohu = false;
-        bool if_break = false;
-        bool if_tp = false;
-        bool if_build = false;
-        bool if_bomb = false;
-        bool if_damage = false;
-        bool if_edge_piston = false;
-    };
     // 定义三维坐标类型别名
     using Point3D = std::tuple<double, double, double>;
     //定义立方体类别
     using Cube = std::tuple<Point3D, Point3D>;
-    // 定义领地事件检测返回信息结构（按顺序对应：领地名、交互、破坏、放置、爆炸权限，合并后的成员列表，领地主）
-    struct InTtyInfo {
-        std::string name;
-        std::vector<std::string> members;
-        std::string owner;
-        bool if_jiaohu;
-        bool if_break;
-        bool if_build;
-        bool if_bomb;
-        bool if_damage;
-        bool if_edge_piston;
-    };
 
     //定义快速创建领地数据
     struct QuickTtyData {
@@ -102,6 +74,8 @@ public:
     static std::vector<TerritoryData>getPlayerTtyList(const std::string& player_name);
     [[nodiscard]] std::pair<bool,std::string> resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data, const Point3D& tppos) const;
     static void clearCache();
+    std::shared_ptr<TerritoryInstance> getInstance(const std::string& name);
+    static std::map<std::string, TerritoryData>& getAllTtyMutable();
 
 
 private:

@@ -10,155 +10,99 @@ using namespace std;
 
 // 事件监听
 //方块破坏监听
-void EventListener::onBlockBreak(endstone::BlockBreakEvent& event)
-{
+void EventListener::onBlockBreak(endstone::BlockBreakEvent& event) {
     const string player_name = event.getPlayer().getName();
     const string player_dim = event.getPlayer().getLocation().getDimension().getName();
-    const Territory_Action::Point3D block_pos = {event.getBlock().getLocation().getBlockX(),event.getBlock().getLocation().getBlockY(),event.getBlock().getLocation().getBlockZ()};
-    //检查玩家是否在领地上
-    if (const auto player_in_tty = Territory_Action::list_in_tty(block_pos,player_dim); player_in_tty != std::nullopt) {
-        for (const auto&info : player_in_tty.value()) {
-            if (!(info.if_break)) {
-                if (ranges::find(info.members,player_name) == info.members.end()) {
-                    event.setCancelled(true);
-                    event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上破坏的权限"));
-                    return;
-                }
-            }
-        }
+    const TerritoryInstance::Point3D block_pos = {
+        event.getBlock().getLocation().getBlockX(),
+        event.getBlock().getLocation().getBlockY(),
+        event.getBlock().getLocation().getBlockZ()
+    };
+    if (const auto result = TerritoryInstance::canBreak(player_name, block_pos, player_dim); result.has_value() && !result.value()) {
+        event.setCancelled(true);
+        event.getPlayer().sendPopup(endstone::ColorFormat::Red + LangTty.getLocal("你没有在此领地上破坏的权限"));
     }
 }
 
 //方块放置监听
-void EventListener::onBlockPlace(endstone::BlockPlaceEvent& event)
-{
+void EventListener::onBlockPlace(endstone::BlockPlaceEvent& event) {
     const string player_name = event.getPlayer().getName();
     const string player_dim = event.getPlayer().getLocation().getDimension().getName();
-    const Territory_Action::Point3D block_pos = {event.getBlock().getLocation().getBlockX(),event.getBlock().getLocation().getBlockY(),event.getBlock().getLocation().getBlockZ()};
-    //检查玩家是否在领地上
-    if (const auto player_in_tty = Territory_Action::list_in_tty(block_pos,player_dim); player_in_tty != std::nullopt) {
-        for (const auto&info : player_in_tty.value()) {
-            if (!(info.if_build)) {
-                if (ranges::find(info.members,player_name) == info.members.end()) {
-                    event.setCancelled(true);
-                    event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上放置的权限"));
-                    return;
-                }
-            }
-        }
+    const TerritoryInstance::Point3D block_pos = {
+        event.getBlock().getLocation().getBlockX(),
+        event.getBlock().getLocation().getBlockY(),
+        event.getBlock().getLocation().getBlockZ()
+    };
+    if (const auto result = TerritoryInstance::canBuild(player_name, block_pos, player_dim); result.has_value() && !result.value()) {
+        event.setCancelled(true);
+        event.getPlayer().sendPopup(endstone::ColorFormat::Red + LangTty.getLocal("你没有在此领地上放置的权限"));
     }
 }
 
 //玩家交互监听
-void EventListener::onPlayerjiaohu(endstone::PlayerInteractEvent& event)
-{
-    if (!event.getBlock()) {
-        return;
-    }
+void EventListener::onPlayerjiaohu(endstone::PlayerInteractEvent& event) {
+    if (!event.getBlock()) return;
     const string player_name = event.getPlayer().getName();
     const string player_dim = event.getPlayer().getLocation().getDimension().getName();
-    const Territory_Action::Point3D block_pos = {event.getBlock()->getLocation().getBlockX(),event.getBlock()->getLocation().getBlockY(),event.getBlock()->getLocation().getBlockZ()};
-    //检查玩家是否在领地上
-    if (const auto player_in_tty = Territory_Action::list_in_tty(block_pos,player_dim); player_in_tty != std::nullopt) {
-        for (const auto&info : player_in_tty.value()) {
-            if (!(info.if_jiaohu)) {
-                if (ranges::find(info.members,player_name) == info.members.end()) {
-                    event.setCancelled(true);
-                    event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上交互的权限"));
-                    return;
-                }
-            }
-        }
+    const TerritoryInstance::Point3D block_pos = {
+        event.getBlock()->getLocation().getBlockX(),
+        event.getBlock()->getLocation().getBlockY(),
+        event.getBlock()->getLocation().getBlockZ()
+    };
+    if (const auto result = TerritoryInstance::canInteract(player_name, block_pos, player_dim); result.has_value() && !result.value()) {
+        event.setCancelled(true);
+        event.getPlayer().sendPopup(endstone::ColorFormat::Red + LangTty.getLocal("你没有在此领地上交互的权限"));
     }
 }
 
 //玩家实体交互监听
-void EventListener::onPlayerjiaohust(endstone::PlayerInteractActorEvent& event)
-{
+void EventListener::onPlayerjiaohust(endstone::PlayerInteractActorEvent& event) {
     const string player_name = event.getPlayer().getName();
     const string player_dim = event.getPlayer().getLocation().getDimension().getName();
-    const Territory_Action::Point3D actor_pos = {event.getActor().getLocation().getBlockX(),event.getActor().getLocation().getBlockY(),event.getActor().getLocation().getBlockZ()};
-    //检查玩家是否在领地上
-    if (const auto player_in_tty = Territory_Action::list_in_tty(actor_pos,player_dim); player_in_tty != std::nullopt) {
-        for (const auto&info : player_in_tty.value()) {
-            if (!(info.if_jiaohu)) {
-                if (ranges::find(info.members,player_name) == info.members.end()) {
-                    event.setCancelled(true);
-                    event.getPlayer().sendErrorMessage(LangTty.getLocal("你没有在此领地上交互的权限"));
-                    return;
-                }
-            }
-        }
+    const TerritoryInstance::Point3D actor_pos = {
+        event.getActor().getLocation().getBlockX(),
+        event.getActor().getLocation().getBlockY(),
+        event.getActor().getLocation().getBlockZ()
+    };
+    if (const auto result = TerritoryInstance::canInteract(player_name, actor_pos, player_dim); result.has_value() && !result.value()) {
+        event.setCancelled(true);
+        event.getPlayer().sendPopup(endstone::ColorFormat::Red + LangTty.getLocal("你没有在此领地上交互的权限"));
     }
 }
 
 //实体爆炸监听
-void EventListener::onActorBomb(endstone::ActorExplodeEvent& event)
-{
+void EventListener::onActorBomb(endstone::ActorExplodeEvent& event) {
     const string actor_dim = event.getActor().getLocation().getDimension().getName();
-
-    //先检查实体是否在领地上
-    const Territory_Action::Point3D actor_pos = {event.getActor().getLocation().getBlockX(),event.getActor().getLocation().getBlockY(),event.getActor().getLocation().getBlockZ()};
-    if (const auto actor_in_tty = Territory_Action::list_in_tty(actor_pos,actor_dim); actor_in_tty != std::nullopt) {
-        for (const auto&info : actor_in_tty.value()) {
-            if (!(info.if_bomb)) {
-                event.setCancelled(true);
-                return;
-            }
-        }
+    const TerritoryInstance::Point3D actor_pos = {
+        event.getActor().getLocation().getBlockX(),
+        event.getActor().getLocation().getBlockY(),
+        event.getActor().getLocation().getBlockZ()
+    };
+    // 检查实体位置是否允许爆炸
+    if (const auto actorResult = TerritoryInstance::canExplode(actor_pos, actor_dim); actorResult.has_value() && !actorResult.value()) {
+        event.setCancelled(true);
+        return;
     }
 
-    //再检查方块是否在领地上
+    // 过滤被破坏的方块
     auto& broken_blocks = event.getBlockList();
-
-    std::erase_if(
-        broken_blocks,
-        [&](const std::unique_ptr<endstone::Block>& block) {
-            const Territory_Action::Point3D block_pos = {
-                block->getX(),
-                block->getY(),
-                block->getZ()
-            };
-
-            if (const auto block_in_tty = Territory_Action::list_in_tty(block_pos, actor_dim);
-                block_in_tty != std::nullopt) {
-
-                // 检查是否有任何领地将此方块标记为不允许爆炸
-                for (const auto& info : block_in_tty.value()) {
-                    if (!info.if_bomb) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-    );
+    std::erase_if(broken_blocks, [&](const std::unique_ptr<endstone::Block>& block) {
+        const TerritoryInstance::Point3D block_pos = {block->getX(), block->getY(), block->getZ()};
+        const auto blockResult = TerritoryInstance::canExplode(block_pos, actor_dim);
+        return blockResult.has_value() && !blockResult.value();
+    });
 }
 
 // 领地边缘活塞监听
-void EventListener::onEdgePiston(endstone::BlockPistonEvent& event)
-{
-    // 获取活塞所在的维度和坐标
+void EventListener::onEdgePiston(endstone::BlockPistonEvent& event) {
     const string piston_dim = event.getBlock().getLocation().getDimension().getName();
-    const Territory_Action::Point3D piston_pos = {
+    const TerritoryInstance::Point3D piston_pos = {
         static_cast<double>(event.getBlock().getLocation().getBlockX()),
         static_cast<double>(event.getBlock().getLocation().getBlockY()),
         static_cast<double>(event.getBlock().getLocation().getBlockZ())
     };
-
-    if (const auto tty_list = Territory_Action::list_in_tty(piston_pos, piston_dim); tty_list != std::nullopt) {
-
-        for (const auto& info : tty_list.value()) {
-            if (!(info.if_edge_piston)) {
-                if (Territory_Action::check_in_tty_edge(info.name, piston_pos)) {
-
-                    // 如果在边缘且权限关闭，取消事件
-                    event.setCancelled(true);
-
-                    return;
-                }
-            }
-        }
+    if (const auto result = TerritoryInstance::canPiston(piston_pos, piston_dim); result.has_value() && !result.value()) {
+        event.setCancelled(true);
     }
 }
 
@@ -174,7 +118,10 @@ void EventListener::onActorhit(endstone::ActorDamageEvent& event)
                 // 玩家导致伤害
                 if (const auto actor_or_player = event.getDamageSource().getActor(); actor_or_player && actor_or_player->getType() == "minecraft:player") {
                     if (ranges::find(info.members,actor_or_player->getName()) == info.members.end()) {
-                        actor_or_player->sendErrorMessage(LangTty.getLocal("你没有在此领地上伤害的权限"));
+                        if (const auto player = actor_or_player->asPlayer())
+                        {
+                            player->sendPopup(endstone::ColorFormat::Red + LangTty.getLocal("你没有在此领地上伤害的权限"));
+                        }
                         event.setCancelled(true);
                     }
                     else
@@ -297,7 +244,7 @@ void EventListener::onPlayerMove(endstone::PlayerMoveEvent& event)
 
     // 3. 寻找当前最精细的领地
     const auto& all_tty = Territory_Action::getAllTty();
-    const Territory_Action::TerritoryData* selectedTerritory = nullptr;
+    const TerritoryData* selectedTerritory = nullptr;
 
     for (const auto &val : all_tty | std::views::values) {
         const auto &data = val;

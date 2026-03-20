@@ -178,9 +178,9 @@ void Territory::tips_online_players() const {
         get<0>(lastPlayerPositions[player_name]) = player_pos;
         const auto& all_tty = Territory_Action::getAllTty();
         // 遍历所有领地数据，确定玩家所在的最精细的领地（若存在子领地，则取子领地）
-        const Territory_Action::TerritoryData* selectedTerritory = nullptr;
+        const TerritoryData* selectedTerritory = nullptr;
         for (const auto &val: all_tty | views::values) {
-            const Territory_Action::TerritoryData &data = val;
+            const TerritoryData &data = val;
             if (data.dim == player_dim && Territory_Action::isPointInCube(player_pos, data.pos1, data.pos2)) {
                 // 第一次匹配到的领地先赋值
                 if (selectedTerritory == nullptr) {
@@ -657,7 +657,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                     try {
                         string player_name = sender.getName();
                         const string& tty_name = args[1];
-                        if (Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
+                        if (TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
                             sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                         } else {
                             if (!args[1].empty() && !args[2].empty()) {
@@ -682,7 +682,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         string player_name = sender.getName();
                         if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
                             const string& tty_name = args[3];
-                            if (Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
+                            if (TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
                                 sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                             } else {
                                 if (Territory_Action::is_tty_op(tty_name, player_name) == true) {
@@ -712,7 +712,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         string player_name = sender.getName();
                         if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
                             const string& tty_name = args[3];
-                            if (Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
+                            if (TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
                                 sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                             } else {
                                 if (Territory_Action::is_tty_op(tty_name, player_name) == true) {
@@ -744,7 +744,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         string player_name = sender.getName();
                         if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
                             const string& tty_name = args[3];
-                            if (Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
+                            if (TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
                                 sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                             } else {
                                 if (Territory_Action::is_tty_owner(tty_name, player_name) == true) {
@@ -799,7 +799,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         string player_name = sender.getName();
                         if (!args[1].empty() && !args[2].empty()) {
                             const string& tty_name = args[1];
-                            if (Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
+                            if (TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
                                 sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                             } else {
                                 if (Territory_Action::is_tty_owner(tty_name, player_name) == true) {
@@ -823,7 +823,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         if (!args[1].empty()) {
                             string player_name = sender.getName();
                             const string& tty_name = args[1];
-                            if (Territory_Action::TerritoryData *tty_info = Territory_Action::read_territory_by_name(tty_name); tty_info != nullptr) {
+                            if (TerritoryData *tty_info = Territory_Action::read_territory_by_name(tty_name); tty_info != nullptr) {
                                 if (tty_info->if_tp) {
                                     auto player = getServer().getPlayer(player_name);
                                     auto tty_Dim = getServer().getLevel()->getDimension(tty_info->dim);
@@ -1048,7 +1048,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                     string player_name = sender.getName();
                     if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
                         const string& tty_name = args[3];
-                        if (Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
+                        if (TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
                             getLogger().error(LangTty.getLocal("未知的领地"));
                         } else {
                             int per_val;
@@ -1153,7 +1153,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                     string player_name = sender.getName();
                     if (!args[1].empty() && !args[2].empty() && !args[3].empty()) {
                         const string& tty_name = args[3];
-                        if (Territory_Action::TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
+                        if (TerritoryData *tty_data = Territory_Action::read_territory_by_name(tty_name); tty_data == nullptr) {
                             sender.sendErrorMessage(LangTty.getLocal("未知的领地"));
                         } else {
                             int per_val;
