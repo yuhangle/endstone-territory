@@ -5,9 +5,9 @@
 #include "../include/territory_action.h"
 #include "translate.hpp"
 #include "../include/territory.h"
-Territory_Action::Territory_Action(DataBase database, Territory* territory_)
+Territory_Action::Territory_Action(DataBase& database, Territory* territory_)
     : territory_(territory_),
-      Database(std::move(database))
+      database_(database)
 {}
 
 // 从外部获取all_tty数据
@@ -19,7 +19,7 @@ Territory_Action::getAllTty() {
 //从数据库读取全部领地数据并载入全局变量all_tty
 std::map<std::string, Territory_Action::TerritoryData>& Territory_Action::get_all_tty() const{
     vector<map<string,string>> result;
-    Database.getAllTty(result);
+    database_.getAllTty(result);
     if (result.empty()) {
         TerritoryData emptyData = {""};
         std::map<std::string, TerritoryData> emptyDatas;
@@ -304,7 +304,7 @@ std::pair<bool, std::string> Territory_Action::create_territory(const std::strin
 #endif
 
     // 插入新领地数据到数据库
-    if (const std::string name = ss.str(); Database.addTerritory(name,
+    if (const std::string name = ss.str(); database_.addTerritory(name,
                                                                  std::get<0>(pos1), std::get<1>(pos1), std::get<2>(pos1),
                                                                  std::get<0>(pos2), std::get<1>(pos2), std::get<2>(pos2),
                                                                  std::get<0>(tppos), std::get<1>(tppos), std::get<2>(tppos),
@@ -361,7 +361,7 @@ std::pair<bool, std::string> Territory_Action::create_sub_territory(const std::s
     std::string child_territory_name = parent_name + "_" + ss.str();
 
     // 写入数据库
-    if (Database.addTerritory(child_territory_name,
+    if (database_.addTerritory(child_territory_name,
                               std::get<0>(pos1), std::get<1>(pos1), std::get<2>(pos1),
                               std::get<0>(pos2), std::get<1>(pos2), std::get<2>(pos2),
                               std::get<0>(tppos), std::get<1>(tppos), std::get<2>(tppos),
@@ -428,7 +428,7 @@ std::vector<Territory_Action::TerritoryData> Territory_Action::list_player_tty(c
 //列出父领地的所有子领地名
 std::vector<std::string> Territory_Action::getSubTty(const std::string &tty_name) const {
     std::vector<std::map<std::string, std::string>> result;
-    Database.getTtyByFather(tty_name,result);
+    database_.getTtyByFather(tty_name,result);
     if (result.empty()) {
         return {};
     }
@@ -450,9 +450,9 @@ bool Territory_Action::del_Tty_by_name(const std::string& territory_name) const 
 
     // 获取子领地并修改它们的父领地
     for (const auto sub_ttys = getSubTty(territory_name); const auto &sub_tty: sub_ttys) {
-        (void)Database.updateValue("territories","father_tty","","name",sub_tty);
+        (void)database_.updateValue("territories","father_tty","","name",sub_tty);
     }
-    (void)Database.deleteTty(tty_data->name);
+    (void)database_.deleteTty(tty_data->name);
 
     // 在所有数据库操作完成后，统一刷新全局领地缓存
     all_tty = get_all_tty();
@@ -489,13 +489,13 @@ bool Territory_Action::rename_Tty(const std::string &territory_name, const std::
     if (read_territory_by_name(new_tty_name)) {
         return false;
     }
-    (void)Database.updateValue("territories","name",new_tty_name,"name",territory_name);
+    (void)database_.updateValue("territories","name",new_tty_name,"name",territory_name);
     const auto sub_ttys = getSubTty(territory_name);
     if (sub_ttys.empty()) {
         return true;
     }
     for (const auto &sub_tty: sub_ttys) {
-        (void)Database.updateValue("territories","father_tty",new_tty_name,"name",sub_tty);
+        (void)database_.updateValue("territories","father_tty",new_tty_name,"name",sub_tty);
     }
     return true;
 }
@@ -608,7 +608,7 @@ bool Territory_Action::change_tty_permissions(const std::string &ttyname, const 
     if (const auto tty = read_territory_by_name(ttyname); tty == nullptr) {
         return false;
     }
-    return Database.updateValue("territories",permission,std::to_string(value),"name",ttyname);
+    return database_.updateValue("territories",permission,std::to_string(value),"name",ttyname);
 }
 
 // 领地权限变更函数
@@ -652,7 +652,7 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
     } else {
         return -2; // 非法操作类型
     }
-    if (const auto new_tty_members = DataBase::vectorToString(tty_members); Database.updateValue("territories","member",new_tty_members,"name",ttyname)) {
+    if (const auto new_tty_members = DataBase::vectorToString(tty_members); database_.updateValue("territories","member",new_tty_members,"name",ttyname)) {
         return 0;
     }
     return -2;
@@ -716,7 +716,7 @@ int Territory_Action::change_tty_owner(const std::string &ttyname,const std::str
     if (const auto tty_owner = tty_data->owner; tty_owner != old_owner_name || tty_owner == new_owner_name) {
         return -2;
     }
-    if (Database.updateValue("territories","owner",new_owner_name,"name",ttyname)) {
+    if (database_.updateValue("territories","owner",new_owner_name,"name",ttyname)) {
         return 0;
     }
     return 1;
@@ -780,7 +780,7 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
     } else {
         return -2; // 非法操作类型
     }
-    if (const auto new_tty_managers = DataBase::vectorToString(tty_manager); Database.updateValue("territories","manager",new_tty_managers,"name",ttyname)) {
+    if (const auto new_tty_managers = DataBase::vectorToString(tty_manager); database_.updateValue("territories","manager",new_tty_managers,"name",ttyname)) {
         return 0;
     }
     return -2;
@@ -1040,7 +1040,7 @@ std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& p
         return {false, "领地新范围存在领地冲突,检查是否与其它领地重叠或者超过父领地及小于子领地范围"};
     }
     const auto updateCoord = [&](const char* column, const double value) -> bool {
-        return Database.updateValue("territories", column, std::to_string(value), "name", old_tty_data.name);
+        return database_.updateValue("territories", column, std::to_string(value), "name", old_tty_data.name);
     };
 
     std::pair failed_info = {false, "更改领地大小失败"};

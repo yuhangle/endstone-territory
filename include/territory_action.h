@@ -13,7 +13,7 @@ class Territory;
 
 class Territory_Action {
 public:
-    explicit Territory_Action(DataBase database, Territory* territory_);
+    explicit Territory_Action(DataBase& database, Territory* territory_);
 
     //定义领地数据结构
     struct TerritoryData {
@@ -38,14 +38,6 @@ public:
     using Point3D = std::tuple<double, double, double>;
     //定义立方体类别
     using Cube = std::tuple<Point3D, Point3D>;
-    /*
-    //定义领地内玩家数据结构
-    struct TtyEveryone {
-        std::string owner;
-        std::string manager;
-        std::string member;
-    };
-     */
     // 定义领地事件检测返回信息结构（按顺序对应：领地名、交互、破坏、放置、爆炸权限，合并后的成员列表，领地主）
     struct InTtyInfo {
         std::string name;
@@ -113,7 +105,7 @@ public:
 
 private:
     Territory* territory_;
-    DataBase Database;
+    DataBase& database_;
     inline static std::map<std::string, TerritoryData> all_tty;
 };
 
