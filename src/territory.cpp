@@ -419,7 +419,7 @@ void Territory::onEnable()
     //快速创建领地选择监听
     registerEvent<endstone::PlayerInteractEvent>(EventListener::quickCreateTtyRightClick);
     //玩家移动监听
-    registerEvent<endstone::PlayerMoveEvent>(EventListener::onPlayerMove);
+    registerEvent(&EventListener::onPlayerMove, *event_listener_);
     //数据库读取
     readAllTerritories();
     //周期执行

@@ -212,6 +212,19 @@ void EventListener::onPlayerMove(endstone::PlayerMoveEvent& event)
     auto& player = event.getPlayer();
     std::string player_name = player.getName();
 
+    //时间节流逻辑
+    auto now = std::chrono::steady_clock::now();
+
+    // 检查是否已经记录过该玩家且间隔小于 1 秒
+    if (lastProcessTime.contains(player_name)) {
+        if (auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastProcessTime[player_name]); duration < CHECK_INTERVAL) {
+            return;
+        }
+    }
+
+    // 更新该玩家的最后处理时间
+    lastProcessTime[player_name] = now;
+
     // 获取移动后的位置信息
     auto to_loc = event.getTo();
     std::string player_dim = to_loc.getDimension().getName();

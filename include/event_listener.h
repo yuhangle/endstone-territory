@@ -40,9 +40,13 @@ public:
     static void quickCreateTtyRightClick(const endstone::PlayerInteractEvent& event);
 
     //玩家移动事件
-    static void onPlayerMove(endstone::PlayerMoveEvent& event);
+    void onPlayerMove(endstone::PlayerMoveEvent& event);
 private:
     endstone::Plugin &plugin_;
+    // 记录每个玩家上次触发领地逻辑的时间
+    std::unordered_map<std::string, std::chrono::steady_clock::time_point> lastProcessTime;
+    // 检查间隔：1秒
+    const std::chrono::milliseconds CHECK_INTERVAL{1000};
 };
 
 
