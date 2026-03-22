@@ -6,9 +6,10 @@
 #include "translate.hpp"
 #include "territory.h"
 
-Territory_Action::Territory_Action(DataBase& database, Territory* territory_)
+Territory_Action::Territory_Action(DataBase& database, Territory* territory_, translate& lang_tty)
     : territory_(territory_),
-      database_(database)
+      database_(database),
+      lang_tty_(lang_tty)
 {}
 
 // 从外部获取all_tty数据
@@ -379,7 +380,8 @@ std::pair<bool, std::string> Territory_Action::create_sub_territory(const std::s
 //列出符合条件父领地的函数
 std::pair<bool, std::string> Territory_Action::listTrueFatherTTY(const std::string& playerName,
                                                const Cube& childCube,
-                                               const std::string& childDim) {
+                                               const std::string& childDim) const
+{
     std::vector<std::string> trueTTYInfo;
 
     for (const auto &val: all_tty | views::values) {
@@ -404,15 +406,15 @@ std::pair<bool, std::string> Territory_Action::listTrueFatherTTY(const std::stri
     }
 
     if (trueTTYInfo.size() > 1) {
-        return {false, LangTty.getLocal("无法在子领地内创建子领地")};
+        return {false, lang_tty_.getLocal("无法在子领地内创建子领地")};
     }
     if (trueTTYInfo.empty()) {
-        return {false, LangTty.getLocal("未查找到符合条件的父领地, 子领地创建失败")};
+        return {false, lang_tty_.getLocal("未查找到符合条件的父领地, 子领地创建失败")};
     }
     if (trueTTYInfo.size() == 1) {
         return {true, trueTTYInfo.front()};
     }
-    return {false, LangTty.getLocal("未知错误")};
+    return {false, lang_tty_.getLocal("未知错误")};
 }
 
 // 列出玩家领地的函数
@@ -467,12 +469,12 @@ bool Territory_Action::del_player_tty(const std::string &tty_name) const
     const auto tty_data = read_territory_by_name(tty_name);
     const int area = get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
     string owner;
-    if (config_money_with_umoney) {
-        (void)territory_->umoney_change_player_money(tty_data->owner,area*config_price);
+    if (territory_->config_money_with_umoney) {
+        (void)territory_->umoney_change_player_money(tty_data->owner,area*territory_->config_price);
         const auto& server_ = territory_->getServer();
         if (const auto the_player = server_.getPlayer(tty_data->owner)) {
             owner = the_player->getName();
-            the_player->sendMessage(LangTty.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(area*config_price));
+            the_player->sendMessage(lang_tty_.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(area*territory_->config_price));
         }
     }
     if (del_Tty_by_name(tty_name)) {
@@ -480,7 +482,7 @@ bool Territory_Action::del_player_tty(const std::string &tty_name) const
     }
     if (!owner.empty())
     {
-        (void)territory_->umoney_change_player_money(owner,area*config_price);
+        (void)territory_->umoney_change_player_money(owner,area*territory_->config_price);
     }
     return false;
 }
@@ -504,11 +506,11 @@ bool Territory_Action::rename_Tty(const std::string &territory_name, const std::
 // 重命名玩家领地函数
 [[nodiscard]] std::pair<bool, std::string> Territory_Action::rename_player_tty(const std::string &oldname, const std::string &newname) const{
     if (rename_Tty(oldname, newname)) {
-        std::string msg = LangTty.getLocal("已重命名领地: 从 ") + oldname + LangTty.getLocal(" 到 ") + newname;
+        std::string msg = lang_tty_.getLocal("已重命名领地: 从 ") + oldname + lang_tty_.getLocal(" 到 ") + newname;
         (void)get_all_tty();
         return {true, msg};
     }
-    std::string msg = LangTty.getLocal("尝试重命名领地但未找到: ") + oldname;
+    std::string msg = lang_tty_.getLocal("尝试重命名领地但未找到: ") + oldname;
     return {false, msg};
 }
 
@@ -618,17 +620,17 @@ std::pair<bool, std::string> Territory_Action::change_territory_permissions(cons
     // 检查权限名是否合法
     if (std::vector<std::string> allowed_permissions = {"if_jiaohu", "if_break", "if_tp", "if_build", "if_bomb", "if_damage", "if_edge_piston"}; ranges::find(allowed_permissions, permission) ==
                                                                                                                                allowed_permissions.end()) {
-        std::string msg = LangTty.getLocal("无效的权限名: ") + permission;
+        std::string msg = lang_tty_.getLocal("无效的权限名: ") + permission;
         return {false, msg};
                                                                                                                                }
 
     if (change_tty_permissions(ttyname, permission, value)) {
-        std::string msg = LangTty.getLocal("已更新领地 ") + ttyname + LangTty.getLocal(" 的权限 ") + permission + LangTty.getLocal(" 为 ") + std::to_string(value);
+        std::string msg = lang_tty_.getLocal("已更新领地 ") + ttyname + lang_tty_.getLocal(" 的权限 ") + permission + lang_tty_.getLocal(" 为 ") + std::to_string(value);
         // 更新全局领地信息
         (void)get_all_tty();
         return {true, msg};
     }
-    std::string msg = LangTty.getLocal("尝试更新领地权限但未找到领地: ") + ttyname;
+    std::string msg = lang_tty_.getLocal("尝试更新领地权限但未找到领地: ") + ttyname;
     return {false, msg};
 }
 
@@ -676,7 +678,7 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
     }
     const auto status = change_tty_member(ttyname, action, player_name);
     if (status == -1) {
-        std::string msg = LangTty.getLocal("尝试更改领地成员但未找到领地: ") + ttyname;
+        std::string msg = lang_tty_.getLocal("尝试更改领地成员但未找到领地: ") + ttyname;
         return {false, msg};
     }
 
@@ -685,17 +687,17 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
     if (action == "add") {
         // 添加操作：若不存在则添加
         if (status == 0) {
-            msg = LangTty.getLocal("已添加成员到领地: ") + player_name + " -> " + ttyname;
+            msg = lang_tty_.getLocal("已添加成员到领地: ") + player_name + " -> " + ttyname;
         } else {
-            msg = LangTty.getLocal("无需变更成员: ") + player_name + LangTty.getLocal(" 在领地 ") + ttyname + LangTty.getLocal(" 中的状态未改变");
+            msg = lang_tty_.getLocal("无需变更成员: ") + player_name + lang_tty_.getLocal(" 在领地 ") + ttyname + lang_tty_.getLocal(" 中的状态未改变");
             return {true, msg};  // 状态未改变，视为成功
         }
     } else if (action == "remove") {
         // 删除操作：若存在则去除
         if (status == 0) {
-            msg = LangTty.getLocal("已从领地中移除成员: ") + player_name + " <- " + ttyname;
+            msg = lang_tty_.getLocal("已从领地中移除成员: ") + player_name + " <- " + ttyname;
         } else {
-            msg = LangTty.getLocal("无需变更成员: ") + player_name + LangTty.getLocal(" 在领地 ") + ttyname + LangTty.getLocal(" 中的状态未改变");
+            msg = lang_tty_.getLocal("无需变更成员: ") + player_name + lang_tty_.getLocal(" 在领地 ") + ttyname + lang_tty_.getLocal(" 中的状态未改变");
             return {true, msg};  // 状态未改变，视为成功
         }
     }
@@ -705,7 +707,7 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
         (void)get_all_tty();
         return {true, msg};
     }
-    return {false, LangTty.getLocal("更新领地成员时发生未知错误: ") + ttyname};
+    return {false, lang_tty_.getLocal("更新领地成员时发生未知错误: ") + ttyname};
 }
 
 //更改领地主人函数
@@ -735,19 +737,19 @@ int Territory_Action::change_tty_owner(const std::string &ttyname,const std::str
     //   std::pair<bool, std::string>，first 为是否成功，second 为提示信息
 
     // 1. 检查新领地主人的领地数量是否达到上限
-    if (check_tty_num(new_owner_name) >= config_max_tty_num) {
-        std::string msg = LangTty.getLocal("玩家 ") + new_owner_name + LangTty.getLocal(" 的领地数量已达到上限, 无法增加新的领地, 转让领地失败");
+    if (check_tty_num(new_owner_name) >= territory_->config_max_tty_num) {
+        std::string msg = lang_tty_.getLocal("玩家 ") + new_owner_name + lang_tty_.getLocal(" 的领地数量已达到上限, 无法增加新的领地, 转让领地失败");
         return {false, msg};
     }
     const auto status = change_tty_owner(ttyname,old_owner_name,new_owner_name);
     if (status == -1) {
-        std::string msg = LangTty.getLocal("尝试更改领地主人但未找到领地: ") + ttyname;
+        std::string msg = lang_tty_.getLocal("尝试更改领地主人但未找到领地: ") + ttyname;
         return {false, msg};
     }
     // 判断当前领地主人是否匹配，并且新旧领主不能相同
     if (status == 0) {
         // 准备更新为新主人
-        std::string msg = LangTty.getLocal("领地转让成功, 领地主人已由 ") + old_owner_name + LangTty.getLocal(" 变更为 ") + new_owner_name;
+        std::string msg = lang_tty_.getLocal("领地转让成功, 领地主人已由 ") + old_owner_name + lang_tty_.getLocal(" 变更为 ") + new_owner_name;
 
         // 更新全局领地信息
         (void)get_all_tty();
@@ -756,7 +758,7 @@ int Territory_Action::change_tty_owner(const std::string &ttyname,const std::str
     if (status == 1) {
         return {false,"Update data failed"};
     }
-    std::string msg = LangTty.getLocal("领地转让失败, 请检查是否为领地主人以及转让对象是否合规");
+    std::string msg = lang_tty_.getLocal("领地转让失败, 请检查是否为领地主人以及转让对象是否合规");
     return {false, msg};
 }
 
@@ -804,7 +806,7 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
     }
     const auto status = change_tty_manager(ttyname, action, player_name);
     if (status == -1) {
-        std::string msg = LangTty.getLocal("尝试更改领地管理员但未找到领地: ") + ttyname;
+        std::string msg = lang_tty_.getLocal("尝试更改领地管理员但未找到领地: ") + ttyname;
         return {false, msg};
     }
 
@@ -813,17 +815,17 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
     if (action == "add") {
         // 添加操作：若不存在则添加
         if (status == 0) {
-            msg = LangTty.getLocal("已添加管理员到领地: ") + player_name + " -> " + ttyname;
+            msg = lang_tty_.getLocal("已添加管理员到领地: ") + player_name + " -> " + ttyname;
         } else {
-            msg = LangTty.getLocal("无需变更管理员: ") + player_name + LangTty.getLocal(" 在领地 ") + ttyname + LangTty.getLocal(" 中的状态未改变");
+            msg = lang_tty_.getLocal("无需变更管理员: ") + player_name + lang_tty_.getLocal(" 在领地 ") + ttyname + lang_tty_.getLocal(" 中的状态未改变");
             return {true, msg};  // 状态未改变，视为成功
         }
     } else if (action == "remove") {
         // 删除操作：若存在则去除
         if (status == 0) {
-            msg = LangTty.getLocal("已从领地中移除管理员: ") + player_name + " <- " + ttyname;
+            msg = lang_tty_.getLocal("已从领地中移除管理员: ") + player_name + " <- " + ttyname;
         } else {
-            msg = LangTty.getLocal("无需变更管理员: ") + player_name + LangTty.getLocal(" 在领地 ") + ttyname + LangTty.getLocal(" 中的状态未改变");
+            msg = lang_tty_.getLocal("无需变更管理员: ") + player_name + lang_tty_.getLocal(" 在领地 ") + ttyname + lang_tty_.getLocal(" 中的状态未改变");
             return {true, msg};  // 状态未改变，视为成功
         }
     }
@@ -833,7 +835,7 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
         (void)get_all_tty();
         return {true, msg};
     }
-    return {false, LangTty.getLocal("更新领地管理员时发生未知错误: ") + ttyname};
+    return {false, lang_tty_.getLocal("更新领地管理员时发生未知错误: ") + ttyname};
 }
 
 // 帮助将Point转换为字符串（用于提示信息）
@@ -861,13 +863,13 @@ std::string Territory_Action::pointToString(const Point3D &p) {
         if (const TerritoryData &territory = val; territory.name == ttyname) {
             // 维度检查
             if (territory.dim != dim) {
-                std::string msg = LangTty.getLocal("你当前所在的维度(") + dim + LangTty.getLocal(")与领地维度(") + territory.dim + LangTty.getLocal(")不匹配, 无法设置领地传送点");
+                std::string msg = lang_tty_.getLocal("你当前所在的维度(") + dim + lang_tty_.getLocal(")与领地维度(") + territory.dim + lang_tty_.getLocal(")不匹配, 无法设置领地传送点");
                 return {false, msg};
             }
             // 坐标检查
             if (!isPointInCube(tppos, territory.pos1, territory.pos2)) {
                 std::string pos_str = pointToString(tppos);
-                std::string msg = LangTty.getLocal("无法接受的坐标") + pos_str + LangTty.getLocal(", 领地传送点不能位于领地之外!");
+                std::string msg = lang_tty_.getLocal("无法接受的坐标") + pos_str + lang_tty_.getLocal(", 领地传送点不能位于领地之外!");
                 return {false, msg};
             }
             // 检查通过则退出循环
@@ -877,7 +879,7 @@ std::string Territory_Action::pointToString(const Point3D &p) {
 
     // 执行更新操作：更新数据库中该领地的传送点坐标
     sqlite3* db = nullptr;
-    int rc = sqlite3_open(db_file.c_str(), &db);
+    int rc = sqlite3_open(territory_->db_file.c_str(), &db);
     if (rc != SQLITE_OK) {
         std::string errmsg = sqlite3_errmsg(db);
         std::cerr << "无法打开数据库:" << errmsg << std::endl;
@@ -949,12 +951,12 @@ std::string Territory_Action::pointToString(const Point3D &p) {
 
     if (affectedRows > 0) {
         std::string pos_str = pointToString(tppos);
-        std::string msg = LangTty.getLocal("已更新领地 ") + ttyname + LangTty.getLocal(" 的传送点为 ") + pos_str;
+        std::string msg = lang_tty_.getLocal("已更新领地 ") + ttyname + lang_tty_.getLocal(" 的传送点为 ") + pos_str;
         // 更新全局领地信息缓存
         (void)get_all_tty();
         return {true, msg};
     }
-    std::string msg = LangTty.getLocal("尝试更新领地传送点但未找到领地: ") + ttyname;
+    std::string msg = lang_tty_.getLocal("尝试更新领地传送点但未找到领地: ") + ttyname;
     return {false, msg};
 }
 

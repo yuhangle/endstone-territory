@@ -20,40 +20,41 @@ using json = nlohmann::json;
 using namespace std;
 namespace fs = std::filesystem;
 
-//数据文件路径
-inline std::string data_path = "plugins/territory";
-inline std::string config_path = "plugins/territory/config.json";
-inline const std::string db_file = "plugins/territory/territory_data.db";
-inline const std::string umoney_file = "plugins/umoney/money.json";
-inline const std::string language_path = "plugins/territory/language/";
-
-//一些全局变量
-
-inline int config_max_tty_num;
-inline bool config_actor_fire_attack_protect;
-inline bool config_money_with_umoney;
-inline int config_price;
-inline int config_max_tty_area;
-inline bool config_welcome_all;
-inline string language = "en_US";
-inline vector<int64_t> config_entity_can_die;
-inline bool config_fly_on_tty;
-
-//翻译类
-inline translate LangTty;
-//全局玩家位置信息
-extern std::unordered_map<std::string, std::tuple<Territory_Action::Point3D, string, string>> lastPlayerPositions;
-
-//快速创建领地玩家数据缓存
-extern std::unordered_map<std::string,Territory_Action::QuickTtyData> quick_create_player_data;
-
 class Territory : public endstone::Plugin {
 public:
+    friend class EventListener;
+    //数据文件路径
+    std::string data_path = "plugins/territory";
+    std::string config_path = "plugins/territory/config.json";
+    const std::string db_file = "plugins/territory/territory_data.db";
+    const std::string umoney_file = "plugins/umoney/money.json";
+    const std::string language_path = "plugins/territory/language/";
+
+    //一些全局变量
+
+    int config_max_tty_num;
+    bool config_actor_fire_attack_protect;
+    bool config_money_with_umoney;
+    int config_price;
+    int config_max_tty_area;
+    bool config_welcome_all;
+    string language = "en_US";
+    vector<int64_t> config_entity_can_die;
+    bool config_fly_on_tty;
+
+    //翻译类
+    translate LangTty;
+    //全局玩家位置信息
+    std::unordered_map<std::string, std::tuple<Territory_Action::Point3D, string, string>> lastPlayerPositions;
+
+    //快速创建领地玩家数据缓存
+    std::unordered_map<std::string,Territory_Action::QuickTtyData> quick_create_player_data;
+
     // 读取配置文件
     [[nodiscard]] json read_config() const;
 
     //数据目录和配置文件检查
-    void datafile_check() const;
+    void datafile_check();
 
     // 从数据库读取所有领地数据
     static void readAllTerritories();
@@ -66,7 +67,7 @@ public:
     [[nodiscard]] bool umoney_check_exists() const;
     
     //获取玩家资金
-    static int umoney_get_player_money(const std::string& player_name);
+    [[nodiscard]] int umoney_get_player_money(const std::string& player_name) const;
     
     //更改玩家资金
     [[nodiscard]] bool umoney_change_player_money(const std::string& player_name, int money) const;

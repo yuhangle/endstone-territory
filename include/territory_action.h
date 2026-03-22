@@ -10,13 +10,14 @@
 #include "database.hpp"
 #include "territory_instance.h"
 #include "territory_types.h"
+#include "translate.hpp"
 
 using namespace std;
 class Territory;
 
 class Territory_Action {
 public:
-    explicit Territory_Action(DataBase& database, Territory* territory_);
+    explicit Territory_Action(DataBase& database, Territory* territory_, translate& lang_tty);
 
     // 定义三维坐标类型别名
     using Point3D = std::tuple<double, double, double>;
@@ -47,7 +48,7 @@ public:
     static int get_tty_area(int x1, int z1, int x2, int z2);
     static std::tuple<double, double, double> pos_to_tuple(const std::string& str);
     static bool isSubsetCube(const Cube &cube1, const Cube &cube2);
-    static std::pair<bool, std::string> listTrueFatherTTY(const std::string& playerName,const Cube& childCube,const std::string& childDim);
+    [[nodiscard]] std::pair<bool, std::string> listTrueFatherTTY(const std::string& playerName,const Cube& childCube,const std::string& childDim) const;
     static std::vector<TerritoryData> list_player_tty(const std::string& player_name);
     [[nodiscard]] std::vector<std::string> getSubTty(const std::string& tty_name) const;
     [[nodiscard]] bool del_Tty_by_name(const std::string& territory_name) const;
@@ -82,6 +83,7 @@ private:
     Territory* territory_;
     DataBase& database_;
     inline static std::map<std::string, TerritoryData> all_tty;
+    translate& lang_tty_;
 };
 
 #endif //TERRITORY_TERRITORY_ACTION_H

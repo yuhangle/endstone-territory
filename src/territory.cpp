@@ -82,7 +82,7 @@ json Territory::read_config() const {
 }
 
 //数据目录和配置文件检查
-void Territory::datafile_check() const {
+void Territory::datafile_check() {
     json df_config = {
             {"player_max_tty_num", 20},
             {"actor_fire_attack_protect", true},
@@ -285,7 +285,8 @@ bool Territory::umoney_check_exists() const {
 }
 
 //获取玩家资金
-int Territory::umoney_get_player_money(const std::string& player_name) {
+int Territory::umoney_get_player_money(const std::string& player_name) const
+{
     std::ifstream f(umoney_file);
     if (!f.is_open()) {
         std::cerr << "Error: Could not open file: " << umoney_file << std::endl;
@@ -360,14 +361,13 @@ void Territory::onLoad()
     datafile_check();
     //初始化各个类
     database_ = std::make_unique<DataBase>(db_file);
-    action_ = std::make_unique<Territory_Action>(*database_, this);
+    action_ = std::make_unique<Territory_Action>(*database_, this, LangTty);
     (void)database_->init_database();
     if (!std::filesystem::exists(language_path + "lang.json"))
     {
         LangTty = translate(language_path + getServer().getLanguage().getLocale() + ".json");
         LangTty.loadLanguage();
     }
-    event_listener_ = std::make_unique<EventListener>(*this);
 }
 
 void Territory::onEnable()
@@ -406,25 +406,27 @@ void Territory::onEnable()
         getLogger().error(LangTty.getLocal("配置文件错误,使用默认配置")+","+e.what());
     }
     LangTty = translate(language_path+language+".json");LangTty.loadLanguage();
-    translate::checkLanguageCommon(language_path+language+".json",language_file);
+    translate::checkLanguageCommon(language_path+language+".json",translate::DEFAULT_LANG_FILE);
+    menu_ = std::make_unique<Menu>(*this, LangTty);
+    event_listener_ = std::make_unique<EventListener>(this, LangTty);
     //注册事件监听
-    registerEvent<endstone::BlockBreakEvent>(EventListener::onBlockBreak);
-    registerEvent<endstone::BlockPlaceEvent>(EventListener::onBlockPlace);
-    registerEvent<endstone::ActorExplodeEvent>(EventListener::onActorBomb);
-    registerEvent<endstone::PlayerInteractEvent>(EventListener::onPlayerjiaohu);
-    registerEvent<endstone::PlayerInteractActorEvent>(EventListener::onPlayerjiaohust);
-    registerEvent<endstone::ActorDamageEvent>(EventListener::onActorhit);
-    registerEvent<endstone::BlockPistonRetractEvent>(EventListener::onEdgePiston);
-    registerEvent<endstone::BlockPistonExtendEvent>(EventListener::onEdgePiston);
+    registerEvent<endstone::BlockBreakEvent>([this](auto& e) {event_listener_->onBlockBreak(e);});
+    registerEvent<endstone::BlockPlaceEvent>([this](auto& e) { event_listener_->onBlockPlace(e); });
+    registerEvent<endstone::PlayerInteractEvent>([this](auto& e) { event_listener_->onPlayerjiaohu(e); });
+    registerEvent<endstone::PlayerInteractActorEvent>([this](auto& e) { event_listener_->onPlayerjiaohust(e); });
+    registerEvent<endstone::ActorDamageEvent>([this](auto& e) { event_listener_->onActorhit(e); });
+    registerEvent<endstone::ActorDeathEvent>([this](auto& e) { event_listener_->onActorDeath(e); });
+    registerEvent<endstone::BlockPistonExtendEvent>([this](endstone::BlockPistonExtendEvent& e) {event_listener_->onEdgePiston(e);});
+    registerEvent<endstone::BlockPistonRetractEvent>([this](endstone::BlockPistonRetractEvent& e) {event_listener_->onEdgePiston(e);});
+    registerEvent<endstone::ActorExplodeEvent>([](auto& e) { EventListener::onActorBomb(e); });
     //快速创建领地选择监听
-    registerEvent<endstone::PlayerInteractEvent>(EventListener::quickCreateTtyRightClick);
+    registerEvent<endstone::PlayerInteractEvent>([this](auto& e){ event_listener_->quickCreateTtyRightClick(e); });
     //玩家移动监听
-    registerEvent(&EventListener::onPlayerMove, *event_listener_);
+    registerEvent<endstone::PlayerMoveEvent>([this](auto& e) { event_listener_->onPlayerMove(e); });
     //数据库读取
     readAllTerritories();
     //周期执行
     //getServer().getScheduler().runTaskTimer(*this,[&]() { tips_online_players(); }, 0, 25);
-    menu_ = std::make_unique<Menu>(*this);
 
     //显示启动信息
     const string boot_logo_msg = R"(

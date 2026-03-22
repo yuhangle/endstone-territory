@@ -10,14 +10,14 @@
 #include <utility>
 #include <fmt/format.h>
 using namespace std;
-inline string language_file = "plugins/territory/language/lang.json";
 class translate {
 public:
+    static constexpr auto DEFAULT_LANG_FILE = "plugins/territory/language/lang.json";
     using json = nlohmann::json;
     json languageResource; // 存储从 lang.json 加载的语言资源
 
     // 构造函数中加载语言资源文件
-    explicit translate(string lang_file = language_file) : lang_file_(std::move(lang_file)) { loadLanguage(); };
+    explicit translate(string lang_file = DEFAULT_LANG_FILE) : lang_file_(std::move(lang_file)) { loadLanguage(); };
 
     // 加载语言资源文件
     pair<bool,string> loadLanguage() {

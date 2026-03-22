@@ -10,7 +10,7 @@
 
 class Menu {
 public:
-  explicit Menu(endstone::Plugin &plugin) : plugin_(plugin) {}
+  explicit Menu(endstone::Plugin &plugin, translate& lang_tty) : plugin_(plugin), lang_tty_(lang_tty) {}
 
   [[nodiscard]] vector<std::string> getOnlinePlayerList() const;
   
@@ -37,7 +37,7 @@ public:
   void openTpAllTtyMenu(endstone::Player* player) const;
 
   // 列出自己的全部领地
-  static void openListTtyMenu(endstone::Player* player);
+  void openListTtyMenu(endstone::Player* player) const;
 
   // 管理自己管理的领地权限
   void openSetPermisMenu(endstone::Player* player) const;
@@ -79,7 +79,7 @@ public:
   void openDelTtyMenu(endstone::Player* player) const;
 
   //快速创建领地菜单
-  static void openQuickCreateTtyMenu(endstone::Player* player,Territory_Action::QuickTtyData& quick_tty_data);
+  void openQuickCreateTtyMenu(endstone::Player* player,Territory_Action::QuickTtyData& quick_tty_data) const;
 
   // 更改领地大小菜单
   void openResizeTtyMenu(endstone::Player* player) const;
@@ -92,5 +92,6 @@ public:
 
 private:
   endstone::Plugin &plugin_;
+  translate& lang_tty_;
 };
 #endif //TERRITORY_MENU_H
