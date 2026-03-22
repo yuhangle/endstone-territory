@@ -229,21 +229,28 @@ bool Territory::umoney_change_player_money(const std::string& player_name, const
 
 void Territory::entity_move_listener() const
 {
+
     const auto actors = getServer().getLevel()->getActors();
-    if (actors.empty()) {return;}
+    if (actors.empty()) return;
+
+    const auto& checker = event_listener_->global_checker_;
+
     for (auto& actor : actors) {
-        if (ranges::any_of(no_allow_entitys,
-        [&](const std::string& s) { return s == actor->getType(); })) {
+        if (std::ranges::any_of(no_allow_entitys,
+            [&](const std::string& s) { return s == actor->getType(); })) {
+
             const string actor_dim = actor->getLocation().getDimension().getName();
             const TerritoryInstance::Point3D actor_pos = {
                 static_cast<double>(actor->getLocation().getBlockX()),
                 static_cast<double>(actor->getLocation().getBlockY()),
                 static_cast<double>(actor->getLocation().getBlockZ())
             };
-            if (const auto result = TerritoryInstance::canWitherExist(actor_pos, actor_dim); result.has_value() && !result.value()) {
+
+            if (const auto result = checker->canWitherExist(actor_pos, actor_dim);
+                result.has_value() && !result.value()) {
                 actor->remove();
+                }
             }
-        }
     }
 }
 
@@ -311,9 +318,9 @@ void Territory::onEnable()
     registerEvent<endstone::PlayerInteractActorEvent>([this](auto& e) { event_listener_->onPlayerjiaohust(e); });
     registerEvent<endstone::ActorDamageEvent>([this](auto& e) { event_listener_->onActorhit(e); });
     registerEvent<endstone::ActorDeathEvent>([this](auto& e) { event_listener_->onActorDeath(e); });
-    registerEvent<endstone::BlockPistonExtendEvent>([](endstone::BlockPistonExtendEvent& e) {EventListener::onEdgePiston(e);});
-    registerEvent<endstone::BlockPistonRetractEvent>([](endstone::BlockPistonRetractEvent& e) {EventListener::onEdgePiston(e);});
-    registerEvent<endstone::ActorExplodeEvent>([](auto& e) { EventListener::onActorBomb(e); });
+    registerEvent<endstone::BlockPistonExtendEvent>([this](auto& e) {event_listener_->onEdgePiston(e);});
+    registerEvent<endstone::BlockPistonRetractEvent>([this](auto& e) {event_listener_->onEdgePiston(e);});
+    registerEvent<endstone::ActorExplodeEvent>([this](auto& e) { event_listener_->onActorBomb(e); });
     registerEvent<endstone::ActorSpawnEvent>([this](auto& e) { event_listener_->onEnititySummon(e); });
     //快速创建领地选择监听
     registerEvent<endstone::PlayerInteractEvent>([this](auto& e){ event_listener_->quickCreateTtyRightClick(e); });

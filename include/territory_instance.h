@@ -62,19 +62,19 @@ public:
 
     // --- 静态权限检查方法 ---
     // 检查玩家能否破坏指定位置的方块
-    [[nodiscard]] static std::optional<bool> canBreak(const std::string& player, const Point3D& pos, const std::string& dim);
+    [[nodiscard]] std::optional<bool> canBreak(const std::string& player, const Point3D& pos, const std::string& dim) const;
     // 检查玩家能否放置方块
-    [[nodiscard]] static std::optional<bool> canBuild(const std::string& player, const Point3D& pos, const std::string& dim);
+    [[nodiscard]] std::optional<bool> canBuild(const std::string& player, const Point3D& pos, const std::string& dim) const;
     // 检查玩家能否与方块或实体交互
-    [[nodiscard]] static std::optional<bool> canInteract(const std::string& player, const Point3D& pos, const std::string& dim);
+    [[nodiscard]] std::optional<bool> canInteract(const std::string& player, const Point3D& pos, const std::string& dim) const;
     // 检查指定位置是否允许爆炸（用于爆炸事件及爆炸伤害）
-    [[nodiscard]] static std::optional<bool> canExplode(const Point3D& pos, const std::string& dim);
+    [[nodiscard]] std::optional<bool> canExplode(const Point3D& pos, const std::string& dim) const;
     // 检查玩家能否对实体造成伤害
-    [[nodiscard]] static std::optional<bool> canPlayerDamage(const std::string& damager, const Point3D& pos, const std::string& dim);
+    [[nodiscard]] std::optional<bool> canPlayerDamage(const std::string& damager, const Point3D& pos, const std::string& dim) const;
     // 检查活塞是否允许在领地边缘工作
-    [[nodiscard]] static std::optional<bool> canPiston(const Point3D& pos, const std::string& dim);
+    [[nodiscard]] std::optional<bool> canPiston(const Point3D& pos, const std::string& dim) const;
     // 检查凋零是否允许生成与活动
-    [[nodiscard]] static std::optional<bool> canWitherExist(const Point3D& pos, const std::string& dim);
+    [[nodiscard]] std::optional<bool> canWitherExist(const Point3D& pos, const std::string& dim) const;
 
 
 private:

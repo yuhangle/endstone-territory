@@ -6,6 +6,7 @@
 #define TERRITORY_EVENT_LISTENER_H
 #include <endstone/endstone.hpp>
 #include "translate.hpp"
+#include <territory_instance.h>
 
 class Territory;
 
@@ -13,6 +14,7 @@ class EventListener
 {
 public:
     explicit EventListener(Territory* territory, translate& lang_tty);
+    friend class Territory;
 
     // 事件监听
     //方块破坏监听
@@ -28,7 +30,7 @@ public:
     void onPlayerjiaohust(endstone::PlayerInteractActorEvent& event) const;
 
     //实体爆炸监听
-    static void onActorBomb(endstone::ActorExplodeEvent& event);
+    void onActorBomb(endstone::ActorExplodeEvent& event) const;
 
     //实体受击
     void onActorhit(endstone::ActorDamageEvent& event) const;
@@ -37,7 +39,7 @@ public:
     void onActorDeath(const endstone::ActorDeathEvent& event) const;
 
     //领地边缘活塞监听
-    static void onEdgePiston(endstone::BlockPistonEvent& event);
+    void onEdgePiston(endstone::BlockPistonEvent& event) const;
 
     //快速创建领地-右键事件
     void quickCreateTtyRightClick(const endstone::PlayerInteractEvent& event) const;
@@ -55,6 +57,7 @@ private:
     std::unordered_map<std::string, std::chrono::steady_clock::time_point> lastProcessTime;
     // 检查间隔：1秒
     const std::chrono::milliseconds CHECK_INTERVAL{1000};
+    std::unique_ptr<TerritoryInstance> global_checker_;
 };
 
 

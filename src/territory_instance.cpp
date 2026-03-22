@@ -145,30 +145,31 @@ bool TerritoryInstance::remove() const
 }
 
 // --- 静态权限检查方法 ---
-std::optional<bool> TerritoryInstance::canBreak(const std::string& player, const Point3D& pos, const std::string& dim) {
-    const auto ttyList = Territory_Action::list_in_tty(pos, dim);
+std::optional<bool> TerritoryInstance::canBreak(const std::string& player, const Point3D& pos, const std::string& dim) const
+{
+    const auto ttyList = action_->list_in_tty(pos, dim);
     if (!ttyList.has_value()) {
         return std::nullopt;
     }
-    // 遍历所有匹配的领地，只要有一个禁止且玩家不是成员，则禁止
     for (const auto& info : ttyList.value()) {
         if (!info.if_break) {
-            if (std::ranges::find(info.members, player) == info.members.end()) {
-                return false;  // 权限关闭且玩家不在成员中 → 禁止
+            if (!info.source->cached_all_members.contains(player)) {
+                return false;
             }
         }
     }
-    return true;  // 所有领地都允许或玩家在成员中
+    return true;
 }
 
-std::optional<bool> TerritoryInstance::canBuild(const std::string& player, const Point3D& pos, const std::string& dim) {
-    const auto ttyList = Territory_Action::list_in_tty(pos, dim);
+std::optional<bool> TerritoryInstance::canBuild(const std::string& player, const Point3D& pos, const std::string& dim) const
+{
+    const auto ttyList = action_->list_in_tty(pos, dim);
     if (!ttyList.has_value()) {
         return std::nullopt;
     }
     for (const auto& info : ttyList.value()) {
         if (!info.if_build) {
-            if (std::ranges::find(info.members, player) == info.members.end()) {
+            if (!info.source->cached_all_members.contains(player)) {
                 return false;
             }
         }
@@ -176,14 +177,17 @@ std::optional<bool> TerritoryInstance::canBuild(const std::string& player, const
     return true;
 }
 
-std::optional<bool> TerritoryInstance::canInteract(const std::string& player, const Point3D& pos, const std::string& dim) {
-    const auto ttyList = Territory_Action::list_in_tty(pos, dim);
+std::optional<bool> TerritoryInstance::canInteract(const std::string& player, const Point3D& pos, const std::string& dim) const
+{
+    const auto ttyList = action_->list_in_tty(pos, dim);
     if (!ttyList.has_value()) {
         return std::nullopt;
     }
+
     for (const auto& info : ttyList.value()) {
+        // 如果该领地不允许交互
         if (!info.if_jiaohu) {
-            if (std::ranges::find(info.members, player) == info.members.end()) {
+            if (!info.source->cached_all_members.contains(player)) {
                 return false;
             }
         }
@@ -191,8 +195,9 @@ std::optional<bool> TerritoryInstance::canInteract(const std::string& player, co
     return true;
 }
 
-std::optional<bool> TerritoryInstance::canExplode(const Point3D& pos, const std::string& dim) {
-    const auto ttyList = Territory_Action::list_in_tty(pos, dim);
+std::optional<bool> TerritoryInstance::canExplode(const Point3D& pos, const std::string& dim) const
+{
+    const auto ttyList = action_->list_in_tty(pos, dim);
     if (!ttyList.has_value()) {
         return std::nullopt;
     }
@@ -205,14 +210,15 @@ std::optional<bool> TerritoryInstance::canExplode(const Point3D& pos, const std:
     return true;
 }
 
-std::optional<bool> TerritoryInstance::canPlayerDamage(const std::string& damager, const Point3D& pos, const std::string& dim) {
-    const auto ttyList = Territory_Action::list_in_tty(pos, dim);
+std::optional<bool> TerritoryInstance::canPlayerDamage(const std::string& damager, const Point3D& pos, const std::string& dim) const
+{
+    const auto ttyList = action_->list_in_tty(pos, dim);
     if (!ttyList.has_value()) {
         return std::nullopt;
     }
     for (const auto& info : ttyList.value()) {
         if (!info.if_damage) {
-            if (std::ranges::find(info.members, damager) == info.members.end()) {
+            if (!info.source->cached_all_members.contains(damager)) {
                 return false;
             }
         }
@@ -220,8 +226,9 @@ std::optional<bool> TerritoryInstance::canPlayerDamage(const std::string& damage
     return true;
 }
 
-std::optional<bool> TerritoryInstance::canPiston(const Point3D& pos, const std::string& dim) {
-    const auto ttyList = Territory_Action::list_in_tty(pos, dim);
+std::optional<bool> TerritoryInstance::canPiston(const Point3D& pos, const std::string& dim) const
+{
+    const auto ttyList = action_->list_in_tty(pos, dim);
     if (!ttyList.has_value()) {
         return std::nullopt;
     }
@@ -237,8 +244,9 @@ std::optional<bool> TerritoryInstance::canPiston(const Point3D& pos, const std::
     return true;
 }
 
-std::optional<bool> TerritoryInstance::canWitherExist(const Point3D& pos, const std::string& dim) {
-    const auto ttyList = Territory_Action::list_in_tty(pos, dim);
+std::optional<bool> TerritoryInstance::canWitherExist(const Point3D& pos, const std::string& dim) const
+{
+    const auto ttyList = action_->list_in_tty(pos, dim);
 
     // 如果该位置不在任何领地内，返回 nullopt
     if (!ttyList.has_value() || ttyList.value().empty()) {

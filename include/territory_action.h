@@ -34,7 +34,7 @@ public:
         std::string dim2;
     };
 
-    [[nodiscard]] std::map<std::string, TerritoryData>& get_all_tty() const;
+    [[nodiscard]] std::map<std::string, TerritoryData>& get_all_tty();
     static const std::map<std::string, TerritoryData>& getAllTty();
     std::pair<bool, std::string> create_territory(const std::string& player_name, const Point3D &pos1, const Point3D &pos2, const Point3D &tppos, const std::string& dim);
     std::pair<bool, std::string> create_sub_territory(const std::string& player_name, const Point3D &pos1, const Point3D &pos2, const Point3D &tppos, const std::string& dim);
@@ -51,29 +51,29 @@ public:
     [[nodiscard]] std::pair<bool, std::string> listTrueFatherTTY(const std::string& playerName,const Cube& childCube,const std::string& childDim) const;
     static std::vector<TerritoryData> list_player_tty(const std::string& player_name);
     [[nodiscard]] std::vector<std::string> getSubTty(const std::string& tty_name) const;
-    [[nodiscard]] bool del_Tty_by_name(const std::string& territory_name) const;
-    [[nodiscard]] bool del_player_tty(const std::string &tty_name) const;
+    [[nodiscard]] bool del_Tty_by_name(const std::string& territory_name);
+    [[nodiscard]] bool del_player_tty(const std::string &tty_name);
     [[nodiscard]] bool rename_Tty(const std::string& territory_name,const std::string& new_tty_name) const;
-    [[nodiscard]] std::pair<bool, std::string> rename_player_tty(const std::string &oldname, const std::string &newname) const;
+    [[nodiscard]] std::pair<bool, std::string> rename_player_tty(const std::string &oldname, const std::string &newname);
     static std::optional<bool> is_tty_owner(const std::string &ttyname, const std::string &player_name);
     static std::optional<bool> is_tty_op(const std::string &ttyname, const std::string &player_name);
-    static std::optional<std::vector<InTtyInfo>> list_in_tty(const Point3D &pos, const std::string &dim);
+    std::optional<std::vector<InTtyInfo>> list_in_tty(const Point3D &pos, const std::string &dim);
     [[nodiscard]] bool change_tty_permissions(const std::string &ttyname,const std::string &permission,int value) const;
-    [[nodiscard]] std::pair<bool, std::string> change_territory_permissions(const std::string &ttyname,const std::string &permission,int value) const;
+    [[nodiscard]] std::pair<bool, std::string> change_territory_permissions(const std::string &ttyname,const std::string &permission,int value);
     [[nodiscard]] int change_tty_member(const std::string &ttyname,const std::string &action,const std::string &player_name) const;
-    [[nodiscard]] std::pair<bool, std::string> change_territory_member(const std::string &ttyname,const std::string &action,const std::string &player_name) const;
+    [[nodiscard]] std::pair<bool, std::string> change_territory_member(const std::string &ttyname,const std::string &action,const std::string &player_name);
     [[nodiscard]] int change_tty_owner(const std::string &ttyname,const std::string &old_owner_name,const std::string &new_owner_name) const;
-    [[nodiscard]] std::pair<bool, std::string> change_territory_owner(const std::string &ttyname,const std::string &old_owner_name,const std::string &new_owner_name) const;
+    [[nodiscard]] std::pair<bool, std::string> change_territory_owner(const std::string &ttyname,const std::string &old_owner_name,const std::string &new_owner_name);
     [[nodiscard]] int change_tty_manager(const std::string &ttyname,const std::string &action, const std::string &player_name) const;
-    [[nodiscard]] std::pair<bool, std::string> change_territory_manager(const std::string &ttyname,const std::string &action,const std::string &player_name) const;
+    [[nodiscard]] std::pair<bool, std::string> change_territory_manager(const std::string &ttyname,const std::string &action,const std::string &player_name);
     static std::string pointToString(const Point3D &p);
-    [[nodiscard]] std::pair<bool, std::string> change_tty_tppos(const std::string &ttyname,const Point3D &tppos,const std::string &dim) const;
+    [[nodiscard]] std::pair<bool, std::string> change_tty_tppos(const std::string &ttyname,const Point3D &tppos,const std::string &dim);
     static std::vector<std::string> getPlayerTtyNames(const std::string& player_name);
     static std::vector<std::string> getMemberTtyNames(const std::string& player_name);
     static std::vector<std::string> getAllTtyNames();
     static std::vector<TerritoryData> getOpTtyList(const std::string& player_name);
     static std::vector<TerritoryData>getPlayerTtyList(const std::string& player_name);
-    [[nodiscard]] std::pair<bool,std::string> resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data, const Point3D& tppos) const;
+    [[nodiscard]] std::pair<bool,std::string> resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data, const Point3D& tppos);
     static void clearCache();
     std::shared_ptr<TerritoryInstance> getInstance(const std::string& name);
     static std::map<std::string, TerritoryData>& getAllTtyMutable();
@@ -84,6 +84,9 @@ private:
     DataBase& database_;
     inline static std::map<std::string, TerritoryData> all_tty;
     translate& lang_tty_;
+    // 键是网格坐标，值是该网格内所有领地的指针
+    std::unordered_map<GridKey, std::vector<TerritoryData*>, GridKeyHash> spatial_grid;
+    const int GRID_SIZE = 128; // 每个网格的大小
 };
 
 #endif //TERRITORY_TERRITORY_ACTION_H

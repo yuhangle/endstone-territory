@@ -19,26 +19,37 @@ Territory_Action::getAllTty() {
 }
 
 //从数据库读取全部领地数据并载入全局变量all_tty
-std::map<std::string, TerritoryData>& Territory_Action::get_all_tty() const{
-    vector<map<string,string>> result;
+std::map<std::string, TerritoryData>& Territory_Action::get_all_tty() {
+    std::vector<std::map<std::string, std::string>> result;
     database_.getAllTty(result);
+
+    std::map<std::string, TerritoryData> new_all_tty;
+    std::unordered_map<GridKey, std::vector<TerritoryData*>, GridKeyHash> new_spatial_grid;
+
     if (result.empty()) {
-        TerritoryData emptyData = {""};
-        std::map<std::string, TerritoryData> emptyDatas;
-        emptyDatas.insert(make_pair("", emptyData));
-        all_tty = emptyDatas;
+        all_tty.clear();
+        spatial_grid.clear();
         return all_tty;
     }
-    std::map<std::string, TerritoryData> new_all_tty;
+
+    // --- 填充新数据 ---
     for (const auto& data : result) {
         TerritoryData tty_data;
         tty_data.name = data.at("name");
-        tty_data.pos1 = {DataBase::stringToInt(data.at("pos1_x")),DataBase::stringToInt(data.at("pos1_y")),DataBase::stringToInt(data.at("pos1_z"))};
-        tty_data.pos2 = {DataBase::stringToInt(data.at("pos2_x")),DataBase::stringToInt(data.at("pos2_y")),DataBase::stringToInt(data.at("pos2_z"))};
-        tty_data.tppos = {DataBase::stringToInt(data.at("tppos_x")),DataBase::stringToInt(data.at("tppos_y")),DataBase::stringToInt(data.at("tppos_z"))};
+        tty_data.pos1 = {static_cast<double>(DataBase::stringToInt(data.at("pos1_x"))),
+        static_cast<double>(DataBase::stringToInt(data.at("pos1_y"))),
+        static_cast<double>(DataBase::stringToInt(data.at("pos1_z")))};
+        tty_data.pos2 = {static_cast<double>(DataBase::stringToInt(data.at("pos2_x"))),
+        static_cast<double>(DataBase::stringToInt(data.at("pos2_y"))),
+        static_cast<double>(DataBase::stringToInt(data.at("pos2_z")))};
+        tty_data.tppos = {static_cast<double>(DataBase::stringToInt(data.at("tppos_x"))),
+        static_cast<double>(DataBase::stringToInt(data.at("tppos_y"))),
+        static_cast<double>(DataBase::stringToInt(data.at("tppos_z")))};
         tty_data.owner = data.at("owner");
         tty_data.manager = data.at("manager");
         tty_data.member = data.at("member");
+        tty_data.dim = data.at("dim");
+        tty_data.father_tty = data.at("father_tty");
         tty_data.if_jiaohu = DataBase::stringToInt(data.at("if_jiaohu"));
         tty_data.if_break = DataBase::stringToInt(data.at("if_break"));
         tty_data.if_tp = DataBase::stringToInt(data.at("if_tp"));
@@ -47,14 +58,32 @@ std::map<std::string, TerritoryData>& Territory_Action::get_all_tty() const{
         tty_data.if_damage = DataBase::stringToInt(data.at("if_damage"));
         tty_data.if_edge_piston = DataBase::stringToInt(data.at("if_edge_piston"));
         tty_data.if_wither = DataBase::stringToInt(data.at("if_wither"));
-        tty_data.dim = data.at("dim");
-        tty_data.father_tty = data.at("father_tty");
-        new_all_tty[tty_data.name] = tty_data;
+        tty_data.updateCache();
+        new_all_tty[tty_data.name] = std::move(tty_data);
     }
-    all_tty.clear();
-    all_tty = std::move(new_all_tty);
+
+    // --- 重建空间索引 ---
+
+    for (auto& territory : new_all_tty | std::views::values) {
+        int minX = std::floor(std::get<0>(territory.pos1) / GRID_SIZE);
+        int maxX = std::floor(std::get<0>(territory.pos2) / GRID_SIZE);
+        int minZ = std::floor(std::get<2>(territory.pos1) / GRID_SIZE);
+        int maxZ = std::floor(std::get<2>(territory.pos2) / GRID_SIZE);
+
+        if (minX > maxX) std::swap(minX, maxX);
+        if (minZ > maxZ) std::swap(minZ, maxZ);
+
+        for (int x = minX; x <= maxX; ++x) {
+            for (int z = minZ; z <= maxZ; ++z) {
+                new_spatial_grid[GridKey{x, z}].push_back(&territory);
+            }
+        }
+    }
+    all_tty.swap(new_all_tty);
+    spatial_grid.swap(new_spatial_grid);
+
     return all_tty;
-};
+}
 
 // 根据名字读取领地信息的函数
 TerritoryData* Territory_Action::read_territory_by_name(const std::string& territory_name) {
@@ -446,7 +475,7 @@ for (const auto &data: result) {
 
 
 // 删除领地函数
-bool Territory_Action::del_Tty_by_name(const std::string& territory_name) const {
+bool Territory_Action::del_Tty_by_name(const std::string& territory_name){
     const auto tty_data = read_territory_by_name(territory_name);
     if (!tty_data) {
         return false;
@@ -465,7 +494,7 @@ bool Territory_Action::del_Tty_by_name(const std::string& territory_name) const 
 }
 
 // 删除玩家领地函数，删除名称为 tty_name 的领地，并更新相关数据
-bool Territory_Action::del_player_tty(const std::string &tty_name) const
+bool Territory_Action::del_player_tty(const std::string &tty_name)
 {
     const auto tty_data = read_territory_by_name(tty_name);
     const int area = get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
@@ -505,7 +534,7 @@ bool Territory_Action::rename_Tty(const std::string &territory_name, const std::
 }
 
 // 重命名玩家领地函数
-[[nodiscard]] std::pair<bool, std::string> Territory_Action::rename_player_tty(const std::string &oldname, const std::string &newname) const{
+[[nodiscard]] std::pair<bool, std::string> Territory_Action::rename_player_tty(const std::string &oldname, const std::string &newname){
     if (rename_Tty(oldname, newname)) {
         std::string msg = lang_tty_.getLocal("已重命名领地: 从 ") + oldname + lang_tty_.getLocal(" 到 ") + newname;
         (void)get_all_tty();
@@ -552,56 +581,57 @@ std::optional<bool> Territory_Action::is_tty_op(const std::string &ttyname, cons
 
 // 函数功能：列出与给定坐标点及维度匹配的全部领地信息
 std::optional<std::vector<InTtyInfo>> Territory_Action::list_in_tty(const Point3D &pos, const std::string &dim) {
-    /* 参数：
-    //   pos: 点坐标
-    //   dim: 点所在的维度
-    // 返回：
-    //   若找到至少一个匹配的领地，则返回包含各领地信息的 vector；
-    //  若无匹配，则返回 std::nullopt。
-    */
+    // 1. 计算当前坐标对应的网格 Key
+    const GridKey key {
+        static_cast<int>(std::floor(std::get<0>(pos) / GRID_SIZE)),
+        static_cast<int>(std::floor(std::get<2>(pos) / GRID_SIZE))
+    };
+
+    // 2. 在空间索引中查找该网格是否有领地注册
+    const auto it = spatial_grid.find(key);
+    if (it == spatial_grid.end()) {
+        return std::nullopt;
+    }
+
+    // 获取该网格内的领地指针列表
+    const std::vector<TerritoryData*>& candidates = it->second;
+
     std::vector<InTtyInfo> in_tty;
+    in_tty.reserve(4); // 绝大多数情况下，一个点只会属于 1-2 个领地
 
-    // 遍历所有领地数据
-    for (const auto &val: all_tty | views::values) {
-        // 维度匹配
-        if (const TerritoryData &territory = val; territory.dim == dim) {
-            // 坐标匹配（调用 is_point_in_cube）
-            if (isPointInCube(pos, territory.pos1, territory.pos2)) {
-                // 合并领地的所有成员：分别按逗号分割后拼接
-                std::vector<std::string> combinedMembers;
-                auto owners   = DataBase::splitString(territory.owner);
-                auto managers = DataBase::splitString(territory.manager);
-                auto members  = DataBase::splitString(territory.member);
-                combinedMembers.insert(combinedMembers.end(), owners.begin(), owners.end());
-                combinedMembers.insert(combinedMembers.end(), managers.begin(), managers.end());
-                combinedMembers.insert(combinedMembers.end(), members.begin(), members.end());
+    // 3. 仅遍历候选领地
+    for (const auto* territory_ptr : candidates) {
+        // 解引用指针以访问数据
+        const TerritoryData& territory = *territory_ptr;
 
-                InTtyInfo info{
-                    territory.name,
-                    combinedMembers,
-                    territory.owner,
-                    territory.if_jiaohu,
-                    territory.if_break,
-                    territory.if_build,
-                    territory.if_bomb,
-                    territory.if_damage,
-                    territory.if_edge_piston,
-                    territory.if_wither
-                };
+        // 维度过滤
+        if (territory.dim != dim) continue;
 
-                // 如果是子领地（father_tty 非空），则清空之前收集的非子领地信息，仅保留该记录，然后直接返回结果
-                if (!territory.father_tty.empty()) {
-                    in_tty.clear();
-                    in_tty.push_back(info);
-                    return in_tty;
-                }
-                // 非子领地直接加入列表
-                in_tty.push_back(info);
+        // 精确坐标判定
+        if (isPointInCube(pos, territory.pos1, territory.pos2)) {
+
+            InTtyInfo info{
+                territory.name,
+                &territory,
+                territory.owner,
+                territory.if_jiaohu,
+                territory.if_break,
+                territory.if_build,
+                territory.if_bomb,
+                territory.if_damage,
+                territory.if_edge_piston,
+                territory.if_wither
+            };
+
+            // 子领地优先逻辑：子领地会覆盖父领地的权限判定
+            if (!territory.father_tty.empty()) {
+                return std::vector{std::move(info)};
             }
+
+            in_tty.push_back(std::move(info));
         }
     }
 
-    // 如果没有匹配的领地，则返回空（None风格的返回）
     if (in_tty.empty()) {
         return std::nullopt;
     }
@@ -617,7 +647,7 @@ bool Territory_Action::change_tty_permissions(const std::string &ttyname, const 
 }
 
 // 领地权限变更函数
-std::pair<bool, std::string> Territory_Action::change_territory_permissions(const std::string &ttyname,const std::string &permission, const int value) const{
+std::pair<bool, std::string> Territory_Action::change_territory_permissions(const std::string &ttyname,const std::string &permission, const int value){
 
     // 检查权限名是否合法
     if (std::vector<std::string> allowed_permissions = {"if_jiaohu", "if_break", "if_tp", "if_build", "if_bomb", "if_damage", "if_edge_piston", "if_wither"}; ranges::find(allowed_permissions, permission) ==
@@ -666,7 +696,7 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
 // 添加或删除领地成员的函数
 [[nodiscard]] std::pair<bool, std::string> Territory_Action::change_territory_member(const std::string &ttyname,
                                                const std::string &action,
-                                               const std::string &player_name) const{
+                                               const std::string &player_name){
     // 参数：
     //   ttyname: 领地名称
     //   action: 操作类型 ("add" 或 "remove")
@@ -730,7 +760,7 @@ int Territory_Action::change_tty_owner(const std::string &ttyname,const std::str
 // 领地转让函数
 [[nodiscard]] std::pair<bool, std::string> Territory_Action::change_territory_owner(const std::string &ttyname,
                                               const std::string &old_owner_name,
-                                              const std::string &new_owner_name) const{
+                                              const std::string &new_owner_name) {
     // 参数：
     //   ttyname:        领地名称
     //   old_owner_name: 原主人玩家名
@@ -794,7 +824,7 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
 // 添加或删除领地管理员的函数
 [[nodiscard]] std::pair<bool, std::string> Territory_Action::change_territory_manager(const std::string &ttyname,
                                                const std::string &action,
-                                               const std::string &player_name) const {
+                                               const std::string &player_name) {
     // 参数：
     //   ttyname: 领地名称
     //   action: 操作类型 ("add" 或 "remove")
@@ -850,7 +880,7 @@ std::string Territory_Action::pointToString(const Point3D &p) {
 // 领地传送点变更函数
 [[nodiscard]] std::pair<bool, std::string> Territory_Action::change_tty_tppos(const std::string &ttyname,
                                               const Point3D &tppos,
-                                              const std::string &dim) const{
+                                              const std::string &dim){
     // 参数：
     //   ttyname: 领地名
     //   tppos:   新的传送点坐标（Point类型）
@@ -1033,7 +1063,7 @@ std::vector<TerritoryData> Territory_Action::getPlayerTtyList(const std::string 
 }
 
 //更改领地大小
-std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data, const Point3D& tppos) const
+std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data, const Point3D& tppos)
 {
     //检查领地是否为一个点
     if (pos1 == pos2) {
