@@ -48,7 +48,8 @@ public:
             {"if_build",  "INTEGER DEFAULT 0"},
             {"if_bomb",   "INTEGER DEFAULT 0"},
             {"if_damage", "INTEGER DEFAULT 0"},
-            {"if_edge_piston", "INTEGER DEFAULT 0"}
+            {"if_edge_piston", "INTEGER DEFAULT 0"},
+            {"if_wither", "INTEGER DEFAULT 0"}
         };
 
         // 检查当前表结构状态
@@ -289,13 +290,15 @@ public:
         }
         
         // 绑定参数
-        if (targetColumn == "if_jiaohu" || targetColumn == "if_break" || targetColumn == "if_tp" || targetColumn == "if_build" || targetColumn == "if_bomb" || targetColumn == "if_damage") {
+        if (targetColumn == "if_jiaohu" || targetColumn == "if_break" || targetColumn == "if_tp" || targetColumn == "if_build" ||
+            targetColumn == "if_bomb" || targetColumn == "if_damage" || targetColumn == "if_edge_piston" || targetColumn == "if_wither"
+            ) {
             const int value = std::stoi(newValue);
             sqlite3_bind_int(stmt, 1, value);
         }
         else if (targetColumn == "pos1_x" || targetColumn == "pos1_y" || targetColumn == "pos1_z" ||
          targetColumn == "pos2_x" || targetColumn == "pos2_y" || targetColumn == "pos2_z" ||
-         targetColumn == "radius") { // 根据你的表结构调整
+         targetColumn == "radius") {
             // 浮点型 (REAL)
             const double value = std::stod(newValue);
             sqlite3_bind_double(stmt, 1, value);
@@ -336,7 +339,7 @@ public:
                    const std::string& father_tty,
                    const int if_jiaohu, const int if_break, const int if_tp,
                    const int if_build, const int if_bomb, const int if_damage,
-                   const int if_edge_piston) const {
+                   const int if_edge_piston, const int if_wither) const {
         sqlite3* db;
         int rc = sqlite3_open(db_filename.c_str(), &db);
         if (rc) {
@@ -347,8 +350,8 @@ public:
         const std::string sql = "INSERT INTO territories (name, pos1_x, pos1_y, pos1_z, "
                           "pos2_x, pos2_y, pos2_z, tppos_x, tppos_y, tppos_z, "
                           "owner, manager, member, dim, father_tty, "
-                          "if_jiaohu, if_break, if_tp, if_build, if_bomb, if_damage, if_edge_piston) "
-                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+                          "if_jiaohu, if_break, if_tp, if_build, if_bomb, if_damage, if_edge_piston, if_wither) "
+                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
         sqlite3_stmt* stmt;
         rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
@@ -383,7 +386,8 @@ public:
         sqlite3_bind_int(stmt, 19, if_build);
         sqlite3_bind_int(stmt, 20, if_bomb);
         sqlite3_bind_int(stmt, 21, if_damage);
-        sqlite3_bind_int(stmt, 22, if_edge_piston); // 新字段绑定
+        sqlite3_bind_int(stmt, 22, if_edge_piston);
+        sqlite3_bind_int(stmt, 23, if_wither);
 
         // 执行 SQL 语句
         rc = sqlite3_step(stmt);

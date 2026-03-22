@@ -30,8 +30,7 @@ public:
     const std::string umoney_file = "plugins/umoney/money.json";
     const std::string language_path = "plugins/territory/language/";
 
-    //一些全局变量
-
+    //一些变量
     int config_max_tty_num;
     bool config_actor_fire_attack_protect;
     bool config_money_with_umoney;
@@ -41,6 +40,9 @@ public:
     string language = "en_US";
     vector<int64_t> config_entity_can_die;
     bool config_fly_on_tty;
+
+    //禁止进入领地的实体
+    const vector<string> no_allow_entitys = {"minecraft:wither"};
 
     //翻译类
     translate LangTty;
@@ -59,9 +61,6 @@ public:
     // 从数据库读取所有领地数据
     static void readAllTerritories();
 
-    // 提示领地信息函数
-    //void tips_online_players() const;
-
     //接入umoney
     //检查插件存在
     [[nodiscard]] bool umoney_check_exists() const;
@@ -71,6 +70,9 @@ public:
     
     //更改玩家资金
     [[nodiscard]] bool umoney_change_player_money(const std::string& player_name, int money) const;
+
+    //实体位置监听
+    void entity_move_listener() const;
 
     //插件初始化
     static Territory& getInstance();

@@ -73,6 +73,8 @@ public:
     [[nodiscard]] static std::optional<bool> canPlayerDamage(const std::string& damager, const Point3D& pos, const std::string& dim);
     // 检查活塞是否允许在领地边缘工作
     [[nodiscard]] static std::optional<bool> canPiston(const Point3D& pos, const std::string& dim);
+    // 检查凋零是否允许生成与活动
+    [[nodiscard]] static std::optional<bool> canWitherExist(const Point3D& pos, const std::string& dim);
 
 
 private:

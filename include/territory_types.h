@@ -21,6 +21,7 @@ struct TerritoryData {
     bool if_bomb = false;
     bool if_damage = false;
     bool if_edge_piston = false;
+    bool if_wither = false;
 };
 
 struct InTtyInfo {
@@ -33,5 +34,6 @@ struct InTtyInfo {
     bool if_bomb;
     bool if_damage;
     bool if_edge_piston;
+    bool if_wither;
 };
 #endif

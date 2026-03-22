@@ -22,7 +22,7 @@ ENDSTONE_PLUGIN("territory", TERRITORY_PLUGIN_VERSION, Territory)
                     "/tty (list)[opt: opt_list]",
                     "/tty (del)[opt: opt_del] [territory: str]",
                     "/tty (rename)[opt: opt_rename] [old_name: str] [new_name: str]",
-                    "/tty (set)<opt: opt_setper> (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston)<opt: opt_permission> <bool: bool> <territory: str>",
+                    "/tty (set)<opt: opt_setper> (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither)<opt: opt_permission> <bool: bool> <territory: str>",
                     "/tty (member)<opt: opt_member> (add|remove)<opt: opt_mem> <player: target> <territory: str>",
                     "/tty (manager)<opt: opt_manager> (add|remove)<opt: opt_man> <player: target> <territory: str>",
                     "/tty (settp)<opt: opt_settp> [pos: pos] <territory: str>",
@@ -37,7 +37,7 @@ ENDSTONE_PLUGIN("territory", TERRITORY_PLUGIN_VERSION, Territory)
             .description("Territory op command")
             .usages("/optty (del)[opt: opt_op_del] [msg: message]",
                     "/optty (del_all)[opt: opt_op_del_all] <player: target>",
-                    "/optty (set)<opt: opt_op_setper> (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage)<opt: opt_op_permission> <bool: bool> <msg: message>",
+                    "/optty (set)<opt: opt_op_setper> (if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither)<opt: opt_op_permission> <bool: bool> <msg: message>",
                     "/optty (reload)[opt: opt_reloadtty]"
             )
             .permissions("territory.command.op");
@@ -150,131 +150,6 @@ void Territory::readAllTerritories() {
         (void)instance_->action_->get_all_tty();
     }
 }
-/*
-// 提示领地信息函数
-void Territory::tips_online_players() const {
-    for (auto online_player_list = getServer().getOnlinePlayers(); const auto &player : online_player_list) {
-        string player_name = player->getName();
-        string player_dim = player->getLocation().getDimension().getName();
-        Territory_Action::Point3D player_pos = {player->getLocation().getBlockX(), player->getLocation().getBlockY(),
-                              player->getLocation().getBlockZ()};
-
-        // 检查玩家位置是否有变化
-        if (!config_welcome_all && get<0>(lastPlayerPositions[player_name]) == player_pos) {
-            // 玩家位置未改变
-            continue;
-        }
-        if (get<0>(lastPlayerPositions[player_name]) == tuple{0.000000, 0.000000, 0.000000}) {
-            // 玩家未被录入全局位置信息，先录入当前位置，再等待下一次检测
-            get<0>(lastPlayerPositions[player_name]) = player_pos;
-            continue;
-        }
-
-        // 保存上一次的领地信息
-        std::string previous_territory = get<1>(lastPlayerPositions[player_name]);
-        std::string previous_father_territory = get<2>(lastPlayerPositions[player_name]); // 上次父领地
-
-        // 先更新玩家位置
-        get<0>(lastPlayerPositions[player_name]) = player_pos;
-        const auto& all_tty = Territory_Action::getAllTty();
-        // 遍历所有领地数据，确定玩家所在的最精细的领地（若存在子领地，则取子领地）
-        const TerritoryData* selectedTerritory = nullptr;
-        for (const auto &val: all_tty | views::values) {
-            const TerritoryData &data = val;
-            if (data.dim == player_dim && Territory_Action::isPointInCube(player_pos, data.pos1, data.pos2)) {
-                // 第一次匹配到的领地先赋值
-                if (selectedTerritory == nullptr) {
-                    selectedTerritory = &data;
-                } else {
-                    // 如果当前遍历到的领地是子领地而已经选中的是父领地，则覆盖
-                    // 前提：子领地的father_tty不为空，而父领地为空
-                    if (!data.father_tty.empty() && selectedTerritory->father_tty.empty()) {
-                        selectedTerritory = &data;
-                    }
-                    // 如果已有子领地，再判断是否需要更新
-                }
-            }
-        }
-
-        // 根据检测结果发送消息（进入或切换领地，则发送欢迎词；退出所有领地则发送离开提示）
-        if (selectedTerritory != nullptr) {
-            // 当前在某个领地内
-            std::string current_territory = selectedTerritory->name;
-            std::string current_father_territory = selectedTerritory->father_tty; // 若为空则为父领地，否则为子领地
-
-            // 如果领地名称改变，说明玩家进入新领地（包括从父领地到子领地的切换）
-            if (previous_territory != current_territory || config_welcome_all) {
-                std::string msg;
-                if (!current_father_territory.empty()) {
-                    // 进入子领地
-                    if (config_welcome_all) {
-                        msg = LangTty.getLocal("§2[领地] §r您当前位于 ") + selectedTerritory->owner + LangTty.getLocal(" 的子领地 ") + current_territory;
-                    } else {
-                        msg = LangTty.getLocal("§2[领地] §r欢迎来到 ") + selectedTerritory->owner + LangTty.getLocal(" 的子领地 ") + current_territory;
-                    }
-                } else {
-                    // 进入普通领地
-                    if (config_welcome_all) {
-                        msg = LangTty.getLocal("§2[领地] §r您当前位于 ") + selectedTerritory->owner + LangTty.getLocal(" 的领地 ") + current_territory;
-                    } else {
-                        msg = LangTty.getLocal("§2[领地] §r欢迎来到 ") + selectedTerritory->owner + LangTty.getLocal(" 的领地 ") + current_territory;
-                    }
-                }
-                if (auto pEntity = getServer().getPlayer(player_name); pEntity != nullptr) {
-                    //pEntity->sendToast("  ", msg);
-                    //pEntity->sendMessage(msg);//聊天栏提示
-                    pEntity->sendTip(msg);//tip提示
-                    //领地飞行校验权限
-                    if (config_fly_on_tty)
-                    {
-                        if (Territory_Action::is_tty_op(selectedTerritory->name, player_name).value())
-                        {
-                            pEntity->setAllowFlight(true);
-                        }
-                        else
-                        {
-                            if (static_cast<int>(pEntity->getGameMode()) == 0 || static_cast<int>(pEntity->getGameMode()) == 3)
-                            {
-                                if (pEntity->getAllowFlight())
-                                {
-                                    pEntity->setAllowFlight(false);
-                                }
-                            }
-                        }
-                    }
-                }
-                // 更新全局记录的领地信息
-                get<1>(lastPlayerPositions[player_name]) = current_territory;
-                get<2>(lastPlayerPositions[player_name]) = current_father_territory;
-            }
-        } else {
-            // 玩家不在任何领地内，若之前记录了领地，则说明是离开领地行为，发送离开提示
-            if (!previous_territory.empty()) {
-                std::string msg = LangTty.getLocal("§2[领地] §r您已离开领地 ") + previous_territory + LangTty.getLocal(", 欢迎下次再来");
-                if (auto pEntity = getServer().getPlayer(player_name); pEntity != nullptr) {
-                    //pEntity->sendToast("  ", msg);
-                    //pEntity->sendMessage(msg);//聊天栏提示
-                    pEntity->sendTip(msg);//tip提示
-                    //飞行校验权限
-                    if (config_fly_on_tty)
-                    {
-                        if (static_cast<int>(pEntity->getGameMode()) == 0 || static_cast<int>(pEntity->getGameMode()) == 3)
-                        {
-                            if (pEntity->getAllowFlight())
-                            {
-                                pEntity->setAllowFlight(false);
-                            }
-                        }
-                    }
-                }
-                // 清空记录
-                get<1>(lastPlayerPositions[player_name]) = "";
-                get<2>(lastPlayerPositions[player_name]) = "";
-            }
-        }
-    }
-}
-*/
 
 //检查插件存在
 bool Territory::umoney_check_exists() const {
@@ -352,6 +227,26 @@ bool Territory::umoney_change_player_money(const std::string& player_name, const
     return false;
 }
 
+void Territory::entity_move_listener() const
+{
+    const auto actors = getServer().getLevel()->getActors();
+    if (actors.empty()) {return;}
+    for (auto& actor : actors) {
+        if (ranges::any_of(no_allow_entitys,
+        [&](const std::string& s) { return s == actor->getType(); })) {
+            const string actor_dim = actor->getLocation().getDimension().getName();
+            const TerritoryInstance::Point3D actor_pos = {
+                static_cast<double>(actor->getLocation().getBlockX()),
+                static_cast<double>(actor->getLocation().getBlockY()),
+                static_cast<double>(actor->getLocation().getBlockZ())
+            };
+            if (const auto result = TerritoryInstance::canWitherExist(actor_pos, actor_dim); result.has_value() && !result.value()) {
+                actor->remove();
+            }
+        }
+    }
+}
+
 //插件初始化
 void Territory::onLoad()
 {
@@ -416,9 +311,10 @@ void Territory::onEnable()
     registerEvent<endstone::PlayerInteractActorEvent>([this](auto& e) { event_listener_->onPlayerjiaohust(e); });
     registerEvent<endstone::ActorDamageEvent>([this](auto& e) { event_listener_->onActorhit(e); });
     registerEvent<endstone::ActorDeathEvent>([this](auto& e) { event_listener_->onActorDeath(e); });
-    registerEvent<endstone::BlockPistonExtendEvent>([this](endstone::BlockPistonExtendEvent& e) {event_listener_->onEdgePiston(e);});
-    registerEvent<endstone::BlockPistonRetractEvent>([this](endstone::BlockPistonRetractEvent& e) {event_listener_->onEdgePiston(e);});
+    registerEvent<endstone::BlockPistonExtendEvent>([](endstone::BlockPistonExtendEvent& e) {EventListener::onEdgePiston(e);});
+    registerEvent<endstone::BlockPistonRetractEvent>([](endstone::BlockPistonRetractEvent& e) {EventListener::onEdgePiston(e);});
     registerEvent<endstone::ActorExplodeEvent>([](auto& e) { EventListener::onActorBomb(e); });
+    registerEvent<endstone::ActorSpawnEvent>([this](auto& e) { event_listener_->onEnititySummon(e); });
     //快速创建领地选择监听
     registerEvent<endstone::PlayerInteractEvent>([this](auto& e){ event_listener_->quickCreateTtyRightClick(e); });
     //玩家移动监听
@@ -427,6 +323,8 @@ void Territory::onEnable()
     readAllTerritories();
     //周期执行
     //getServer().getScheduler().runTaskTimer(*this,[&]() { tips_online_players(); }, 0, 25);
+    //实体移动监听
+    getServer().getScheduler().runTaskTimer(*this,[&]() { entity_move_listener(); }, 0, 20);
 
     //显示启动信息
     const string boot_logo_msg = R"(
@@ -449,7 +347,7 @@ ___________                 .__  __
 void Territory::onDisable()
 {
     getLogger().info("onDisable is called");
-    //getServer().getScheduler().cancelTasks(*this);
+    getServer().getScheduler().cancelTasks(*this);
     Territory_Action::clearCache();
 }
 
@@ -958,7 +856,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                 else if (args[0] == "help") {
                     try {
                         string player_name = sender.getName();
-                        string help_info = LangTty.getLocal("新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n快速创建领地--/tty quick add\n快速创建子领地--/tty quick add_sub\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n");
+                        string help_info = LangTty.getLocal("新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n快速创建领地--/tty quick add\n快速创建子领地--/tty quick add_sub\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n");
                         sender.sendMessage(help_info);
                     } catch (const std::exception &e) {
                         sender.sendErrorMessage(e.what());

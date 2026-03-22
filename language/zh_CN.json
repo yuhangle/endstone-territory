@@ -71,6 +71,7 @@
     "\n是否允许实体爆炸: ": "\n是否允许实体爆炸: ",
     "\n是否允许实体伤害: ": "\n是否允许实体伤害: ",
     "\n是否允许领地边缘活塞活动: ": "\n是否允许领地边缘活塞活动: ",
+    "\n是否允许凋零活动: ": "\n是否允许凋零活动: ",
     "\n领地管理员: ": "\n领地管理员: ",
     "\n领地成员: ": "\n领地成员: ",
     "已成功删除领地": "已成功删除领地",
@@ -81,7 +82,7 @@
     "你没有权限重命名此领地": "你没有权限重命名此领地",
     "你没有权限变更此领地": "你没有权限变更此领地",
     "你没有传送到此领地的权限": "你没有传送到此领地的权限",
-    "新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n快速创建领地--/tty quick add\n快速创建子领地--/tty quick add_sub\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n": "新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n快速创建领地--/tty quick add\n快速创建子领地--/tty quick add_sub\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n",
+    "新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n快速创建领地--/tty quick add\n快速创建子领地--/tty quick add_sub\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n": "新建领地--/tty add 领地边角坐标1 领地边角坐标2\n新建子领地--/tty add_sub 子领地边角坐标1 子领地边角坐标2\n快速创建领地--/tty quick add\n快速创建子领地--/tty quick add_sub\n列出领地--/tty list\n删除领地--/tty del 领地名\n重命名领地--/tty rename 旧领地名 新领地名\n设置领地权限--/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither) 权限值 领地名\n设置领地管理员--/tty manager add|remove(添加|删除) 玩家名 领地名\n设置领地成员--/tty member add|remove(添加|删除) 玩家名 领地名\n设置领地传送点--/tty settp 领地传送坐标 领地名\n传送领地--/tty tp 领地名\n",
     "已删除领地": "已删除领地",
     "领地删除失败": "领地删除失败",
     "该玩家没有领地": "该玩家没有领地",
@@ -126,6 +127,7 @@
     "§l是否允许领地内实体爆炸": "§l是否允许领地内实体爆炸",
     "§l是否允许外人对实体攻击": "§l是否允许外人对实体攻击",
     "§l是否允许领地边缘活塞活动": "§l是否允许领地边缘活塞活动",
+    "§l是否允许领地内凋零活动": "§l是否允许领地内凋零活动",
     "§l领地权限管理界面": "§l领地权限管理界面",
     "§l选择要管理的领地": "§l选择要管理的领地",
     "在领地": "在领地",
@@ -212,5 +214,10 @@
     "确认删除": "确认删除",
     "§l§4警告：删除领地不可恢复！\n§r您确定要执行此操作吗？": "§l§4警告：删除领地不可恢复！\n§r您确定要执行此操作吗？",
     "确认": "确认",
-    "取消": "取消"
+    "取消": "取消",
+    "§l选择你要管理的领地": "§l选择你要管理的领地",
+    "§l选择你要添加成员的领地": "§l选择你要添加成员的领地",
+    "§l选择你要删除成员的领地": "§l选择你要删除成员的领地",
+    "§l选择你要删除管理员的领地": "§l选择你要删除管理员的领地",
+    "§l选择你要添加管理员的领地": "§l选择你要添加管理员的领地"
 }

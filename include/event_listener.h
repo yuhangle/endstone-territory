@@ -44,6 +44,9 @@ public:
 
     //玩家移动事件
     void onPlayerMove(endstone::PlayerMoveEvent& event);
+
+    //实体生成事件
+    void onEnititySummon(endstone::ActorSpawnEvent& event) const;
 private:
     endstone::Plugin &plugin_;
     translate& lang_tty_;

@@ -236,3 +236,22 @@ std::optional<bool> TerritoryInstance::canPiston(const Point3D& pos, const std::
     }
     return true;
 }
+
+std::optional<bool> TerritoryInstance::canWitherExist(const Point3D& pos, const std::string& dim) {
+    const auto ttyList = Territory_Action::list_in_tty(pos, dim);
+
+    // 如果该位置不在任何领地内，返回 nullopt
+    if (!ttyList.has_value() || ttyList.value().empty()) {
+        return std::nullopt;
+    }
+
+    // 遍历该坐标点的所有领地
+    for (const auto& info : ttyList.value()) {
+        if (!info.if_wither) {
+            return false;
+        }
+    }
+
+    // 所有领地都允许，才返回 true
+    return true;
+}

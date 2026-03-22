@@ -46,6 +46,7 @@ std::map<std::string, TerritoryData>& Territory_Action::get_all_tty() const{
         tty_data.if_bomb = DataBase::stringToInt(data.at("if_bomb"));
         tty_data.if_damage = DataBase::stringToInt(data.at("if_damage"));
         tty_data.if_edge_piston = DataBase::stringToInt(data.at("if_edge_piston"));
+        tty_data.if_wither = DataBase::stringToInt(data.at("if_wither"));
         tty_data.dim = data.at("dim");
         tty_data.father_tty = data.at("father_tty");
         new_all_tty[tty_data.name] = tty_data;
@@ -312,7 +313,7 @@ std::pair<bool, std::string> Territory_Action::create_territory(const std::strin
                                                                  std::get<0>(tppos), std::get<1>(tppos), std::get<2>(tppos),
                                                                  player_name, "", "",  // owner, manager, member
                                                                  dim, "",
-                                                                 0, 0, 0, 0, 0, 0, 0
+                                                                 0, 0, 0, 0, 0, 0, 0, 0
     ) != SQLITE_OK) {
         return {false, "数据库操作失败"};
         }
@@ -369,7 +370,7 @@ std::pair<bool, std::string> Territory_Action::create_sub_territory(const std::s
                               std::get<0>(tppos), std::get<1>(tppos), std::get<2>(tppos),
                               player_name, "", "",
                               dim, parent_name,
-                              0, 0, 0, 0, 0, 0, 0
+                              0, 0, 0, 0, 0, 0, 0, 0
         ) != SQLITE_OK) {
         return {false, "数据库操作失败"};
         }
@@ -584,7 +585,8 @@ std::optional<std::vector<InTtyInfo>> Territory_Action::list_in_tty(const Point3
                     territory.if_build,
                     territory.if_bomb,
                     territory.if_damage,
-                    territory.if_edge_piston
+                    territory.if_edge_piston,
+                    territory.if_wither
                 };
 
                 // 如果是子领地（father_tty 非空），则清空之前收集的非子领地信息，仅保留该记录，然后直接返回结果
@@ -618,7 +620,7 @@ bool Territory_Action::change_tty_permissions(const std::string &ttyname, const 
 std::pair<bool, std::string> Territory_Action::change_territory_permissions(const std::string &ttyname,const std::string &permission, const int value) const{
 
     // 检查权限名是否合法
-    if (std::vector<std::string> allowed_permissions = {"if_jiaohu", "if_break", "if_tp", "if_build", "if_bomb", "if_damage", "if_edge_piston"}; ranges::find(allowed_permissions, permission) ==
+    if (std::vector<std::string> allowed_permissions = {"if_jiaohu", "if_break", "if_tp", "if_build", "if_bomb", "if_damage", "if_edge_piston", "if_wither"}; ranges::find(allowed_permissions, permission) ==
                                                                                                                                allowed_permissions.end()) {
         std::string msg = lang_tty_.getLocal("无效的权限名: ") + permission;
         return {false, msg};

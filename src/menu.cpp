@@ -371,6 +371,7 @@ void Menu::openListTtyMenu(endstone::Player* player) const
             << lang_tty_.getLocal("\n是否允许实体爆炸: ") << (tty.if_bomb ? "true" : "false")
             << lang_tty_.getLocal("\n是否允许实体伤害: ") << (tty.if_damage ? "true" : "false")
             << lang_tty_.getLocal("\n是否允许领地边缘活塞活动: ") << (tty.if_edge_piston ? "true" : "false")
+            << lang_tty_.getLocal("\n是否允许凋零活动: ") << (tty.if_edge_piston ? "true" : "false")
             << lang_tty_.getLocal("\n领地管理员: ") << tty.manager
             << lang_tty_.getLocal("\n领地成员: ") << tty.member << "\n"
             << "--------------------\n";
@@ -417,7 +418,7 @@ void Menu::openSetPermisDetailMenu(endstone::Player* player, const TerritoryData
   endstone::ModalForm form;
   form.setTitle(lang_tty_.getLocal("§l管理领地") + " " + tty.name + lang_tty_.getLocal("的权限"));
 
-  endstone::Toggle t_jiaohu, t_break, t_tp, t_build, t_bomb, t_damage, t_piston;
+  endstone::Toggle t_jiaohu, t_break, t_tp, t_build, t_bomb, t_damage, t_piston, t_wither;
   t_jiaohu.setLabel(lang_tty_.getLocal("§l是否允许外人领地内交互"));
   t_jiaohu.setDefaultValue(tty.if_jiaohu);
   t_break.setLabel(lang_tty_.getLocal("§l是否允许外人领地内破坏"));
@@ -432,13 +433,15 @@ void Menu::openSetPermisDetailMenu(endstone::Player* player, const TerritoryData
   t_damage.setDefaultValue(tty.if_damage);
   t_piston.setLabel(lang_tty_.getLocal("§l是否允许领地边缘活塞活动"));
   t_piston.setDefaultValue(tty.if_edge_piston);
+  t_wither.setLabel(lang_tty_.getLocal("§l是否允许领地内凋零活动"));
+  t_wither.setDefaultValue(tty.if_wither);
 
-  form.setControls({t_jiaohu, t_break, t_tp, t_build, t_bomb, t_damage, t_piston});
+  form.setControls({t_jiaohu, t_break, t_tp, t_build, t_bomb, t_damage, t_piston, t_wither});
 
   form.setOnSubmit([this, tty](const endstone::Player* p, const std::string& response) {
     try {
       auto permis = nlohmann::json::parse(response);
-      if (!permis.is_array() || permis.size() != 7) {
+      if (!permis.is_array() || permis.size() != 8) {
         p->sendErrorMessage(lang_tty_.getLocal("未知的错误"));
         return;
       }
@@ -449,7 +452,8 @@ void Menu::openSetPermisDetailMenu(endstone::Player* player, const TerritoryData
         {"if_build", permis[3].get<bool>()},
         {"if_bomb", permis[4].get<bool>()},
         {"if_damage", permis[5].get<bool>()},
-        {"if_edge_piston", permis[6].get<bool>()}
+        {"if_edge_piston", permis[6].get<bool>()},
+        {"if_wither", permis[7].get<bool>()}
       };
       bool changed = false;
       for (size_t i = 0; i < fields.size(); ++i) {
@@ -462,6 +466,7 @@ void Menu::openSetPermisDetailMenu(endstone::Player* player, const TerritoryData
           case 4: oldval = tty.if_bomb; break;
           case 5: oldval = tty.if_damage; break;
           case 6: oldval = tty.if_edge_piston; break;
+          case 7: oldval = tty.if_wither; break;
           default: ;
         }
         if (fields[i].second != oldval) {

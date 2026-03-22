@@ -339,3 +339,20 @@ void EventListener::onPlayerMove(endstone::PlayerMoveEvent& event)
         }
     }
 }
+
+void EventListener::onEnititySummon(endstone::ActorSpawnEvent& event) const
+{
+    if (const auto& actor = event.getActor(); ranges::any_of(territory_->no_allow_entitys,
+                                                       [&](const std::string& s) { return s == actor.getType(); }))
+    {
+        const string actor_dim = actor.getLocation().getDimension().getName();
+        const TerritoryInstance::Point3D actor_pos = {
+            static_cast<double>(actor.getLocation().getBlockX()),
+            static_cast<double>(actor.getLocation().getBlockY()),
+            static_cast<double>(actor.getLocation().getBlockZ())
+        };
+        if (const auto result = TerritoryInstance::canWitherExist(actor_pos, actor_dim); result.has_value() && !result.value()) {
+            event.setCancelled(true);
+        }
+    }
+}
