@@ -39,17 +39,36 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fmt)
 
+# 定义并获取 BinaryStream
+FetchContent_Declare(
+        BinaryStream
+        GIT_REPOSITORY https://github.com/GlacieTeam/BinaryStream.git
+        GIT_TAG        main # 或者指定具体的 commit hash 以保证稳定性
+)
+
+# 确保项目已下载并可用
+FetchContent_MakeAvailable(BinaryStream)
+
+add_library(bstream_obj OBJECT
+        "${binarystream_SOURCE_DIR}/src/binarystream/BinaryStream.cpp"
+        "${binarystream_SOURCE_DIR}/src/binarystream/ReadOnlyBinaryStream.cpp"
+        "${binarystream_SOURCE_DIR}/src/binarystream-c/bstream.cpp"
+)
+
+target_compile_options(bstream_obj PRIVATE -fPIC)
+target_include_directories(bstream_obj PUBLIC "${binarystream_SOURCE_DIR}/include")
+
 # 插件源码
 file(GLOB PLUGIN_SOURCES
         CONFIGURE_DEPENDS
         "src/*.cpp"
 )
 endstone_add_plugin(${PROJECT_NAME} ${PLUGIN_SOURCES})
-target_include_directories(${PROJECT_NAME} PRIVATE include)
 
 # 链接库
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
+        bstream_obj
         nlohmann_json::nlohmann_json
         SQLite::SQLite3
         fmt::fmt-header-only
@@ -110,4 +129,4 @@ configure_file(
 )
 
 # 将生成目录加入包含路径
-target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_include_directories(${PROJECT_NAME} PRIVATE include "${CMAKE_CURRENT_BINARY_DIR}/generated" "${binarystream_SOURCE_DIR}/include")

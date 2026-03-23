@@ -5,7 +5,9 @@
 #include "event_listener.h"
 #include "territory_action.h"
 #include "territory.h"
+#include <binarystream/BinaryStream.hpp>
 
+using namespace bstream;
 using namespace std;
 
 EventListener::EventListener(Territory* territory, translate& lang_tty)
@@ -16,6 +18,104 @@ EventListener::EventListener(Territory* territory, translate& lang_tty)
     global_checker_ = std::make_unique<TerritoryInstance>("GLOBAL_CHECKER", territory->action_.get());
 }
 
+/**
+ * 基础粒子发包函数
+ */
+void spawnParticlePacket(const endstone::Player& player, const float x, const float y, const float z, const int event_id, const int data = 0) {
+    BinaryStream stream;
+
+    // 1. Event ID (VarInt)
+    stream.writeVarInt(event_id);
+    // 2. Position (3个 Float)
+    stream.writeFloat(x);
+    stream.writeFloat(y);
+    stream.writeFloat(z);
+    // 3. Data (VarInt)
+    stream.writeVarInt(data);
+
+    player.sendPacket(25, stream.getAndReleaseData());
+}
+
+//渲染领地边界墙
+void renderTerritoryGroundLine(const endstone::Player& player,
+                               const TerritoryData& territory,
+                               const endstone::Location& loc) {
+    const auto [p1x, p1y, p1z] = territory.pos1;
+    const auto [p2x, p2y, p2z] = territory.pos2;
+    const double min_x = std::min(p1x, p2x);
+    const double max_x = std::max(p1x, p2x);
+    const double min_z = std::min(p1z, p2z);
+    const double max_z = std::max(p1z, p2z);
+
+    const double px = loc.getX();
+    const double py = loc.getY();
+    const double pz = loc.getZ();
+
+    constexpr int effect_id = 16403; // 亮橙火焰
+    constexpr double perimeter_limit = 100.0;
+    const double width = max_x - min_x;
+    const double length = max_z - min_z;
+    const bool render_full = (2.0 * (width + length)) < perimeter_limit;
+
+    auto spawn_quad_layered = [&](const double x, const double z) {
+        const auto fx = static_cast<float>(x + 0.5);
+        const auto fz = static_cast<float>(z + 0.5);
+        const auto base_y = static_cast<float>(py);
+
+        // 统一 4 层高度分布
+        spawnParticlePacket(player, fx, base_y - 1.2f, fz, effect_id, 0); // 足部
+        spawnParticlePacket(player, fx, base_y + 0.8f, fz, effect_id, 0); // 胸部
+        spawnParticlePacket(player, fx, base_y + 4.8f, fz, effect_id, 0); // 高空
+        spawnParticlePacket(player, fx, base_y + 9.8f, fz, effect_id, 0); // 顶端
+    };
+
+    if (render_full) {
+        const int count_x = static_cast<int>(std::floor(width));
+        const int count_z = static_cast<int>(std::floor(length));
+
+        for (int i = 0; i <= count_x; ++i) {
+            const double cur_x = min_x + static_cast<double>(i);
+            spawn_quad_layered(cur_x, min_z);
+            spawn_quad_layered(cur_x, max_z);
+        }
+        for (int i = 0; i <= count_z; ++i) {
+            const double cur_z = min_z + static_cast<double>(i);
+            spawn_quad_layered(min_x, cur_z);
+            spawn_quad_layered(max_x, cur_z);
+        }
+    } else {
+        constexpr int partial_range = 50;
+        constexpr int step = 4;
+
+        const double d_west = std::abs(px - min_x);
+        const double d_east = std::abs(px - max_x);
+        const double d_north = std::abs(pz - min_z);
+        const double d_south = std::abs(pz - max_z);
+
+        const double min_d = std::min({d_west, d_east, d_north, d_south});
+        if (min_d > 6.0) return;
+
+        if (min_d == d_west || min_d == d_east) {
+            const double target_x = (min_d == d_west) ? min_x : max_x;
+            const double center_z = std::floor(pz);
+            for (int dz = -partial_range; dz <= partial_range; dz += step) {
+                if (const double cur_z = center_z + static_cast<double>(dz);
+                    cur_z >= min_z && cur_z <= max_z) {
+                    spawn_quad_layered(target_x, cur_z);
+                }
+            }
+        } else {
+            const double target_z = (min_d == d_north) ? min_z : max_z;
+            const double center_x = std::floor(px);
+            for (int dx = -partial_range; dx <= partial_range; dx += step) {
+                if (const double cur_x = center_x + static_cast<double>(dx);
+                    cur_x >= min_x && cur_x <= max_x) {
+                    spawn_quad_layered(cur_x, target_z);
+                }
+            }
+        }
+    }
+}
 // 事件监听
 //方块破坏监听
 void EventListener::onBlockBreak(endstone::BlockBreakEvent& event) const
@@ -291,7 +391,13 @@ void EventListener::onPlayerMove(endstone::PlayerMoveEvent& event)
         std::string current_territory = selectedTerritory->name;
         std::string current_father_territory = selectedTerritory->father_tty;
 
-        if (last_tty != current_territory || territory_->config_welcome_all) {
+        // 领地变更
+        if (bool territory_changed = (last_tty != current_territory); territory_changed || territory_->config_welcome_all) {
+            // 渲染粒子墙
+            if (territory_changed) {
+                renderTerritoryGroundLine(player, *selectedTerritory, to_loc);
+            }
+
             bool is_sub = !current_father_territory.empty();
 
             std::string action_str = territory_->config_welcome_all ?
@@ -306,7 +412,6 @@ void EventListener::onPlayerMove(endstone::PlayerMoveEvent& event)
 
             // 飞行校验
             if (territory_->config_fly_on_tty) {
-                // 利用我们之前做的 cached_operators 优化性能
                 if (selectedTerritory->cached_operators.contains(player_name)) {
                     player.setAllowFlight(true);
                 } else {
@@ -321,8 +426,13 @@ void EventListener::onPlayerMove(endstone::PlayerMoveEvent& event)
         }
     }
     else {
-        // 离开领地逻辑
+        // 离开领地
         if (!last_tty.empty()) {
+            // 获取离开的领地数据
+            if (TerritoryData* leaving_territory = Territory_Action::read_territory_by_name(last_tty)) {
+                renderTerritoryGroundLine(player, *leaving_territory, to_loc);
+            }
+
             player.sendTip(lang_tty_.getLocal("§2[领地] §r您已离开领地 ") + last_tty + lang_tty_.getLocal(", 欢迎下次再来"));
 
             if (territory_->config_fly_on_tty) {
