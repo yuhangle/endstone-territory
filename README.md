@@ -1,8 +1,8 @@
 ![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=Territory%20Plugin&textBg=false&desc=About%20A%20three-dimensional%20territory%20plugin%20developed%20for%20Endstone%20&descAlignY=70&fontColor=802e82&reversal=false)
 
-> The plugin is still under development, feedback is welcome.
-
-[简体中文](README_zh-CN.md)
+[![简体中文](https://img.shields.io/badge/Chinese-README_chsinese.md-blue)](README_zh-CN.md)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+![Build Status](https://github.com/yuhangle/endstone-territory/actions/workflows/workflow.yml/badge.svg)
 
 ## Introduction
 
