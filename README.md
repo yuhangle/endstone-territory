@@ -2,7 +2,7 @@
 
 [![简体中文](https://img.shields.io/badge/Chinese-README_chsinese.md-blue)](README_zh-CN.md)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-![Build Status](https://github.com/yuhangle/endstone-territory/actions/workflows/workflow.yml/badge.svg)
+![Build Status](https://github.com/yuhangle/endstone-territory/actions/workflows/build.yml/badge.svg)
 
 ## Introduction
 
