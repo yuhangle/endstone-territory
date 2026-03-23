@@ -14,7 +14,39 @@ The Territory plugin supports the integration of the umoney plugin as an economi
 
 ## Features
 
-The Territory plugin is developed using C++ and utilizes SQLite for storing territory data, theoretically offering better performance.
+The Territory plugin is developed in C++ and uses SQLite for land data storage, delivering excellent theoretical performance.
+
+### ⚡ Extreme Performance Optimization
+
+#### 🔧 Architecture-Level Optimization
+- **Pure C++ Implementation**: Zero interpreter overhead for great execution efficiency
+- **Dual-Mode Storage Engine**: SQLite persistence + in-memory cache, balancing startup speed, query stability, and crash safety
+
+#### 🧠 Algorithm & Data Structure Optimization
+- **Spatial Grid Index**: Reduces O(n) full table scans to O(1) approximate constant-time lookups
+- **Permission Cache**: Builds a hash set once when loading or modifying land data, reducing permission checks from O(k) string splitting to O(1) hash lookups
+
+#### 📊 Real-World Test Data Under Million-Scale Load
+- Average interaction event latency: **36.8 μs**
+- Average location query (full processing) latency: **125 μs**
+- Under a million land claims, single interaction latency is consistently below **40 μs** (approximately 0.04 milliseconds)
+
+### 📊 Performance Test Under 500 Random Land Claims
+
+> Test Environment: **500 random land claims**. The recorded values represent the total execution time of a single event or periodically executed function.
+
+| Rank | Plugin Name | Interaction Inside Land | Interaction Outside Land | Location Info Send (Full Processing) | Overall Assessment |
+|:----:|:-----------:|------------------------:|-------------------------:|-------------------------------------:|:------------------|
+| 🥇 | Territory | 12.47 | 11.38 | 39.83 | 🚀 **Excellent**, highly efficient and lightweight |
+| 🥈 | Land of U | 89.37 | 106.18 | 372.58 | ✅ **Good**, suitable for small to medium servers |
+| 🥉 | Land of E | 6,949.44 | 1,093.68 | 1,138.25 | ❌ **High latency**, not recommended for heavy loads |
+
+> **Data Interpretation**
+> - **Interaction Inside Land**: Average latency of the corresponding function when a player interacts inside a land claim.
+> - **Interaction Outside Land**: Average latency of the corresponding function when a player interacts outside any land claim.
+> - **Location Info Send**: Average latency of the corresponding function when fully processing player movement and sending land information.
+> - **All time units are in microseconds (μs).**
+
 
 ## How to use
 
