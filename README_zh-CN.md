@@ -75,6 +75,8 @@ Linux:
     - territory/ # 数据目录
         - language # 语言文件夹
 
+---
+
 **配置**
 
 首次运行插件后将自动在plugins目录创建territoty文件夹,里面包含配置文件config.json和领地数据库文件territory_data.db
@@ -105,6 +107,8 @@ Linux:
 
 `allow_fly_on_territory` 为是否允许玩家在领地内飞行，默认关闭
 
+---
+
 > 命令用法和领地使用管理
 
 **命令列表**
@@ -115,11 +119,15 @@ Linux:
 /tty
 ```
 
+---
+
 新建领地
 
 ```shell
 /tty add 领地边角坐标1 领地边角坐标2
 ```
+
+---
 
 新建子领地
 
@@ -127,11 +135,15 @@ Linux:
 /tty add_sub 子领地边角坐标1 子领地边角坐标2
 ```
 
+---
+
 打开快速创建领地菜单
 
 ```shell
 /tty quick add
 ```
+
+---
 
 打开快速创建子领地菜单
 
@@ -139,11 +151,15 @@ Linux:
 /tty quick add_sub
 ```
 
+---
+
 列出领地
 
 ```shell
 /tty list
 ```
+
+---
 
 删除领地
 
@@ -151,11 +167,15 @@ Linux:
 /tty del 领地名
 ```
 
+---
+
 重命名领地
 
 ```shell
 /tty rename 旧领地名 新领地名
 ```
+
+---
 
 设置领地权限
 
@@ -165,11 +185,15 @@ Linux:
 
 其中权限名分别代表:是否允许外人领地内交互、是否允许外人领地内破坏、是否允许外人传送至领地、是否允许外人领地内放置、是否允许领地内实体爆炸、是否允许外人对实体攻击、是否允许领地边缘活塞工作、是否允许领地内凋零活动
 
+---
+
 设置领地管理员
 
 ```shell
 /tty manager add|remove(添加|删除) 玩家名 领地名
 ```
+
+---
 
 设置领地成员
 
@@ -177,11 +201,15 @@ Linux:
 /tty member add|remove(添加|删除) 玩家名 领地名
 ```
 
+---
+
 设置领地传送点
 
 ```bash
 /tty settp 领地传送坐标 领地名
 ```
+
+---
 
 传送领地
 
@@ -189,11 +217,15 @@ Linux:
 /tty tp 领地名
 ```
 
+---
+
 修改领地大小
 
 ```bash
 /tty resize 领地名 新坐标1 新坐标2
 ```
+
+---
 
 **管理员命令**
 
@@ -203,11 +235,15 @@ Linux:
 /optty del 领地名
 ```
 
+---
+
 删除玩家的全部领地
 
 ```bash
 /optty del_all 玩家名
 ```
+
+---
 
 设置玩家的领地权限
 
@@ -215,8 +251,26 @@ Linux:
 /optty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither) 权限值 领地名
 ```
 
+---
+
 重载领地数据和配置
 
 ```bash
 /optty reload
 ```
+
+---
+
+## 📦 使用的项目 & 鸣谢
+
+本插件基于以下开源项目构建，衷心感谢各项目的作者与维护者：
+
+- **[nlohmann/json](https://github.com/nlohmann/json)**  
+  高性能、易用的 JSON 解析与序列化库
+
+- **[fmtlib/fmt](https://github.com/fmtlib/fmt)**  
+  现代化的字符串格式化库，提供安全高效的输出能力
+
+- **[GlacieTeam/BinaryStream](https://github.com/GlacieTeam/BinaryStream)**  
+  二进制流解析库，用于处理数据包
+  

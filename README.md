@@ -107,7 +107,10 @@ The default configuration of the configuration file is as follows:
 
 `allow_fly_on_territory` indicates whether players are allowed to fly within the territory. This is disabled by default.
 
+---
+
 > Command Usage and Territory Management
+
 
 **Command list**
 
@@ -117,11 +120,15 @@ Open territory menu
 /tty
 ```
 
+---
+
 Create New Territory
 
 ```shell
 /tty add Territory-corner-coordinate-1 Territory-corner-coordinate-2
 ```
+
+---
 
 Create New Sub-Territory
 
@@ -129,11 +136,15 @@ Create New Sub-Territory
 /tty add_sub Sub-Territory-corner-coordinate-1 Sub-Territory-corner-coordinate-2
 ```
 
+---
+
 Open quick territory creation menu
 
 ```shell
 /tty quick add
 ```
+
+---
 
 Open quick sub-territory creation menu
 
@@ -141,11 +152,15 @@ Open quick sub-territory creation menu
 /tty quick add_sub
 ```
 
+---
+
 List Territory
 
 ```shell
 /tty list
 ```
+
+---
 
 Delete Territory
 
@@ -153,11 +168,15 @@ Delete Territory
 /tty del territory-name
 ```
 
+---
+
 Rename Territory
 
 ```shell
 /tty rename old-name new-name
 ```
+
+---
 
 Set Territory Permissions
 
@@ -175,11 +194,15 @@ Where the permission names respectively represent:
 - Whether to allow pistons to work at the territory edge.
 - Whether to allow wither activities within the territory.
 
+---
+
 Set Territory Administrators
 
 ```shell
 /tty manager add|remove player-name territory-name
 ```
+
+---
 
 Set Territory Members
 
@@ -187,11 +210,15 @@ Set Territory Members
 /tty member add|remove player-name territory-name
 ```
 
+---
+
 Set Territory Teleport Point
 
 ```bash
 /tty settp Territory-teleport-coordinates Territory-name
 ```
+
+---
 
 Teleport to Territory
 
@@ -199,11 +226,15 @@ Teleport to Territory
 /tty tp territory-name
 ```
 
+---
+
 Resize Territory
 
 ```bash
 /tty resize territory-name new-coordinate-1 new-coordinate-2
 ```
+
+---
 
 **Administrator Commands**
 
@@ -213,11 +244,15 @@ Delete Territory
 /optty del territory-name
 ```
 
+---
+
 Delete All Territories of a Player
 
 ```bash
 /optty del_all player-name
 ```
+
+---
 
 Set Territory Permissions for a Player
 
@@ -225,8 +260,23 @@ Set Territory Permissions for a Player
 /optty set permission(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither) permission-value territory-name
 ```
 
+---
+
 Reload Territory Data and Configuration
 
 ```bash
 /optty reload
 ```
+
+## 📦 Acknowledgments & Third-Party Libraries
+
+This plugin is built upon the following open-source projects. Special thanks to their authors and maintainers:
+
+- **[nlohmann/json](https://github.com/nlohmann/json)**  
+  A high-performance, easy-to-use JSON parser and serialization library
+
+- **[fmtlib/fmt](https://github.com/fmtlib/fmt)**  
+  A modern string formatting library offering safe and efficient output
+
+- **[GlacieTeam/BinaryStream](https://github.com/GlacieTeam/BinaryStream)**  
+  A binary stream parsing library for efficient packet handling
