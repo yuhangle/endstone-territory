@@ -87,7 +87,7 @@ public:
         // 开启事务保证安全
         sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
 
-        // A. 创建新表 (权限字段全部在最后)
+        // 创建新表
         std::string create_new = "CREATE TABLE territories_new ("
             "name TEXT PRIMARY KEY, pos1_x REAL, pos1_y REAL, pos1_z REAL, "
             "pos2_x REAL, pos2_y REAL, pos2_z REAL, tppos_x REAL, tppos_y REAL, tppos_z REAL, "
@@ -295,7 +295,7 @@ public:
             return rc;
         }
 
-        // 绑定参数 (严格按照 SQL 中的顺序)
+        // 绑定参数
         sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
         sqlite3_bind_double(stmt, 2, pos1_x);
         sqlite3_bind_double(stmt, 3, pos1_y);
@@ -419,7 +419,7 @@ public:
         std::string current;             // 当前正在构建的子字符串
         bool inBraces = false;           // 标记是否在 {} 内部
 
-        for (char ch : input) {
+        for (const char ch : input) {
             if (ch == '{') {
                 // 遇到左大括号，标记进入 {} 内部
                 inBraces = true;

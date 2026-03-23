@@ -34,8 +34,10 @@ public:
         std::string dim2;
     };
 
-    [[nodiscard]] std::map<std::string, TerritoryData>& get_all_tty();
+    [[nodiscard]] std::map<std::string, TerritoryData>& get_all_tty(std::string target_name = "");
     static const std::map<std::string, TerritoryData>& getAllTty();
+    void remove_tty_from_grid(const std::string& name);
+    void add_tty_to_grid(TerritoryData* tty);
     std::pair<bool, std::string> create_territory(const std::string& player_name, const Point3D &pos1, const Point3D &pos2, const Point3D &tppos, const std::string& dim);
     std::pair<bool, std::string> create_sub_territory(const std::string& player_name, const Point3D &pos1, const Point3D &pos2, const Point3D &tppos, const std::string& dim);
     static TerritoryData* read_territory_by_name(const std::string& territory_name);

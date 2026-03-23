@@ -144,13 +144,6 @@ void Territory::datafile_check() {
     }
 }
 
-// 从数据库读取所有领地数据
-void Territory::readAllTerritories() {
-    if (instance_) {
-        (void)instance_->action_->get_all_tty();
-    }
-}
-
 //检查插件存在
 bool Territory::umoney_check_exists() const {
     if (getServer().getPluginManager().getPlugin("umoney")) {
@@ -229,27 +222,27 @@ bool Territory::umoney_change_player_money(const std::string& player_name, const
 
 void Territory::entity_move_listener() const
 {
-
     const auto actors = getServer().getLevel()->getActors();
     if (actors.empty()) return;
 
     const auto& checker = event_listener_->global_checker_;
 
     for (auto& actor : actors) {
-        if (std::ranges::any_of(no_allow_entitys,
-            [&](const std::string& s) { return s == actor->getType(); })) {
+        if (!no_allow_entitys.contains(actor->getType())) {
+            continue;
+        }
 
-            const string actor_dim = actor->getLocation().getDimension().getName();
-            const TerritoryInstance::Point3D actor_pos = {
-                static_cast<double>(actor->getLocation().getBlockX()),
-                static_cast<double>(actor->getLocation().getBlockY()),
-                static_cast<double>(actor->getLocation().getBlockZ())
-            };
+        const auto& loc = actor->getLocation();
+        const string actor_dim = loc.getDimension().getName();
+        const TerritoryInstance::Point3D actor_pos = {
+            static_cast<double>(loc.getBlockX()),
+            static_cast<double>(loc.getBlockY()),
+            static_cast<double>(loc.getBlockZ())
+        };
 
-            if (const auto result = checker->canWitherExist(actor_pos, actor_dim);
-                result.has_value() && !result.value()) {
-                actor->remove();
-                }
+        if (const auto result = checker->canWitherExist(actor_pos, actor_dim);
+            result.has_value() && !result.value()) {
+            actor->remove();
             }
     }
 }
@@ -327,7 +320,7 @@ void Territory::onEnable()
     //玩家移动监听
     registerEvent<endstone::PlayerMoveEvent>([this](auto& e) { event_listener_->onPlayerMove(e); });
     //数据库读取
-    readAllTerritories();
+    (void)action_->get_all_tty();
     //周期执行
     //getServer().getScheduler().runTaskTimer(*this,[&]() { tips_online_players(); }, 0, 25);
     //实体移动监听
@@ -413,7 +406,6 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                 // 调用领地创建函数
                                 if (auto [success, message] = action_->create_territory(player_name, pos1, pos2, tppos, dim); success) {
                                     sender.sendMessage(LangTty.getLocal("成功添加领地"));
-                                    readAllTerritories();
                                 } else {
                                     sender.sendErrorMessage(LangTty.getLocal(message));
                                     (void)umoney_change_player_money(player_name,value); // 创建失败返还资金
@@ -429,7 +421,6 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             // 调用领地创建函数
                             if (auto [success, message] = action_->create_territory(player_name, pos1, pos2, tppos, dim); success) {
                                 sender.sendMessage(LangTty.getLocal("成功添加领地"));
-                                readAllTerritories();
                             } else {
                                 sender.sendErrorMessage(LangTty.getLocal(message));
                             }
@@ -479,7 +470,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                 // 调用子领地创建函数
                                 if (auto [success, child_territory_name] = action_->create_sub_territory(player_name, pos1, pos2, tppos, dim); success) {
                                     sender.sendMessage(LangTty.tr("成功添加子领地,归属于父领地: ", child_territory_name));
-                                    readAllTerritories();
+
                                 } else {
                                     sender.sendErrorMessage(LangTty.getLocal(child_territory_name)); // child_territory_name here contains error message
                                     (void)umoney_change_player_money(player_name,value); // 创建失败返还资金
@@ -494,7 +485,6 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             // 调用子领地创建函数
                             if (auto [success, child_territory_name] = action_->create_sub_territory(player_name, pos1, pos2, tppos, dim); success) {
                                 sender.sendMessage(LangTty.tr("成功添加子领地,归属于父领地: ", child_territory_name));
-                                readAllTerritories();
                             } else {
                                 sender.sendErrorMessage(LangTty.getLocal(child_territory_name)); // child_territory_name here contains error message
                             }
@@ -841,7 +831,6 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             if (auto [fst, snd] = action_->resize_territory(pos1,pos2,*tty_data,tppos); fst)
                             {
                                 sender.sendMessage(LangTty.getLocal(snd));
-                                readAllTerritories();
                             }  else
                             {
                                 sender.sendErrorMessage(LangTty.getLocal(snd));
@@ -910,7 +899,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                     getLogger().error(LangTty.getLocal("缺少参数"));
                 }
             } else if (args[0] == "reload") {
-                readAllTerritories();
+                (void)action_->get_all_tty();
                 json json_msg = read_config();
                 try {
                     if (!json_msg.contains("error")) {
@@ -1017,7 +1006,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                     sender.sendErrorMessage(LangTty.getLocal("缺少参数"));
                 }
             } else if (args[0] == "reload") {
-                readAllTerritories();
+                (void)action_->get_all_tty();
                 json json_msg = read_config();
                 try {
                     if (!json_msg.contains("error")) {

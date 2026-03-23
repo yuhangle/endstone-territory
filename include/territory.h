@@ -42,7 +42,7 @@ public:
     bool config_fly_on_tty;
 
     //禁止进入领地的实体
-    const vector<string> no_allow_entitys = {"minecraft:wither"};
+    const std::unordered_set<std::string> no_allow_entitys = {"minecraft:wither"};
 
     //翻译类
     translate LangTty;
@@ -57,9 +57,6 @@ public:
 
     //数据目录和配置文件检查
     void datafile_check();
-
-    // 从数据库读取所有领地数据
-    static void readAllTerritories();
 
     //接入umoney
     //检查插件存在

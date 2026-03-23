@@ -19,57 +19,83 @@ Territory_Action::getAllTty() {
 }
 
 //从数据库读取全部领地数据并载入全局变量all_tty
-std::map<std::string, TerritoryData>& Territory_Action::get_all_tty() {
+std::map<std::string, TerritoryData>& Territory_Action::get_all_tty(std::string target_name) {
+    bool is_incremental = !target_name.empty();
+    std::string sql = is_incremental
+        ? std::format("SELECT * FROM territories WHERE name = '{}';", target_name)
+        : "SELECT * FROM territories;";
+
     std::vector<std::map<std::string, std::string>> result;
-    database_.getAllTty(result);
+    database_.querySQL_many(sql, result);
 
-    std::map<std::string, TerritoryData> new_all_tty;
-    std::unordered_map<GridKey, std::vector<TerritoryData*>, GridKeyHash> new_spatial_grid;
+    // 定义内部解析逻辑
+    auto parse_to_tty = [&](const std::map<std::string, std::string>& data) {
+        TerritoryData tty;
+        tty.name = data.at("name");
+        tty.pos1 = {static_cast<double>(DataBase::stringToInt(data.at("pos1_x"))),
+                    static_cast<double>(DataBase::stringToInt(data.at("pos1_y"))),
+                    static_cast<double>(DataBase::stringToInt(data.at("pos1_z")))};
+        tty.pos2 = {static_cast<double>(DataBase::stringToInt(data.at("pos2_x"))),
+                    static_cast<double>(DataBase::stringToInt(data.at("pos2_y"))),
+                    static_cast<double>(DataBase::stringToInt(data.at("pos2_z")))};
+        tty.tppos = {static_cast<double>(DataBase::stringToInt(data.at("tppos_x"))),
+                     static_cast<double>(DataBase::stringToInt(data.at("tppos_y"))),
+                     static_cast<double>(DataBase::stringToInt(data.at("tppos_z")))};
+        tty.owner = data.at("owner");
+        tty.manager = data.at("manager");
+        tty.member = data.at("member");
+        tty.dim = data.at("dim");
+        tty.father_tty = data.at("father_tty");
+        tty.if_jiaohu = DataBase::stringToInt(data.at("if_jiaohu"));
+        tty.if_break = DataBase::stringToInt(data.at("if_break"));
+        tty.if_tp = DataBase::stringToInt(data.at("if_tp"));
+        tty.if_build = DataBase::stringToInt(data.at("if_build"));
+        tty.if_bomb = DataBase::stringToInt(data.at("if_bomb"));
+        tty.if_damage = DataBase::stringToInt(data.at("if_damage"));
+        tty.if_edge_piston = DataBase::stringToInt(data.at("if_edge_piston"));
+        tty.if_wither = DataBase::stringToInt(data.at("if_wither"));
+        tty.updateCache();
+        return tty;
+    };
 
+    // --- 增量更新 ---
+    if (is_incremental) {
+        if (all_tty.contains(target_name)) {
+            remove_tty_from_grid(target_name);
+        }
+
+        if (result.empty()) {
+            // 领地被删除
+            all_tty.erase(target_name);
+        } else {
+            // 新增或修改
+            all_tty[target_name] = parse_to_tty(result[0]);
+            add_tty_to_grid(&all_tty[target_name]);
+        }
+        return all_tty;
+    }
+
+    // --- 全量更新 ---
     if (result.empty()) {
         all_tty.clear();
         spatial_grid.clear();
         return all_tty;
     }
 
-    // --- 填充新数据 ---
-    for (const auto& data : result) {
-        TerritoryData tty_data;
-        tty_data.name = data.at("name");
-        tty_data.pos1 = {static_cast<double>(DataBase::stringToInt(data.at("pos1_x"))),
-        static_cast<double>(DataBase::stringToInt(data.at("pos1_y"))),
-        static_cast<double>(DataBase::stringToInt(data.at("pos1_z")))};
-        tty_data.pos2 = {static_cast<double>(DataBase::stringToInt(data.at("pos2_x"))),
-        static_cast<double>(DataBase::stringToInt(data.at("pos2_y"))),
-        static_cast<double>(DataBase::stringToInt(data.at("pos2_z")))};
-        tty_data.tppos = {static_cast<double>(DataBase::stringToInt(data.at("tppos_x"))),
-        static_cast<double>(DataBase::stringToInt(data.at("tppos_y"))),
-        static_cast<double>(DataBase::stringToInt(data.at("tppos_z")))};
-        tty_data.owner = data.at("owner");
-        tty_data.manager = data.at("manager");
-        tty_data.member = data.at("member");
-        tty_data.dim = data.at("dim");
-        tty_data.father_tty = data.at("father_tty");
-        tty_data.if_jiaohu = DataBase::stringToInt(data.at("if_jiaohu"));
-        tty_data.if_break = DataBase::stringToInt(data.at("if_break"));
-        tty_data.if_tp = DataBase::stringToInt(data.at("if_tp"));
-        tty_data.if_build = DataBase::stringToInt(data.at("if_build"));
-        tty_data.if_bomb = DataBase::stringToInt(data.at("if_bomb"));
-        tty_data.if_damage = DataBase::stringToInt(data.at("if_damage"));
-        tty_data.if_edge_piston = DataBase::stringToInt(data.at("if_edge_piston"));
-        tty_data.if_wither = DataBase::stringToInt(data.at("if_wither"));
-        tty_data.updateCache();
-        new_all_tty[tty_data.name] = std::move(tty_data);
+    std::map<std::string, TerritoryData> new_all_tty;
+    std::unordered_map<GridKey, std::vector<TerritoryData*>, GridKeyHash> new_spatial_grid;
+
+    for (const auto& row : result) {
+        TerritoryData tty = parse_to_tty(row);
+        new_all_tty[tty.name] = std::move(tty);
     }
 
-    // --- 重建空间索引 ---
-
+    // 重建全量索引
     for (auto& territory : new_all_tty | std::views::values) {
         int minX = std::floor(std::get<0>(territory.pos1) / GRID_SIZE);
         int maxX = std::floor(std::get<0>(territory.pos2) / GRID_SIZE);
         int minZ = std::floor(std::get<2>(territory.pos1) / GRID_SIZE);
         int maxZ = std::floor(std::get<2>(territory.pos2) / GRID_SIZE);
-
         if (minX > maxX) std::swap(minX, maxX);
         if (minZ > maxZ) std::swap(minZ, maxZ);
 
@@ -79,10 +105,48 @@ std::map<std::string, TerritoryData>& Territory_Action::get_all_tty() {
             }
         }
     }
+
     all_tty.swap(new_all_tty);
     spatial_grid.swap(new_spatial_grid);
-
     return all_tty;
+}
+
+// 精准删除：只扫描该领地坐标覆盖的格子
+void Territory_Action::remove_tty_from_grid(const std::string& name) {
+    if (!all_tty.contains(name)) return;
+    const auto& tty = all_tty[name];
+
+    int minX = std::floor(std::get<0>(tty.pos1) / GRID_SIZE);
+    int maxX = std::floor(std::get<0>(tty.pos2) / GRID_SIZE);
+    int minZ = std::floor(std::get<2>(tty.pos1) / GRID_SIZE);
+    int maxZ = std::floor(std::get<2>(tty.pos2) / GRID_SIZE);
+    if (minX > maxX) std::swap(minX, maxX);
+    if (minZ > maxZ) std::swap(minZ, maxZ);
+
+    for (int x = minX; x <= maxX; ++x) {
+        for (int z = minZ; z <= maxZ; ++z) {
+            if (GridKey key{x, z}; spatial_grid.contains(key)) {
+                auto& vec = spatial_grid[key];
+                std::erase_if(vec, [&](const TerritoryData* ptr) { return ptr->name == name; });
+            }
+        }
+    }
+}
+
+// 精准添加：只挂载到坐标覆盖的格子
+void Territory_Action::add_tty_to_grid(TerritoryData* tty) {
+    int minX = std::floor(std::get<0>(tty->pos1) / GRID_SIZE);
+    int maxX = std::floor(std::get<0>(tty->pos2) / GRID_SIZE);
+    int minZ = std::floor(std::get<2>(tty->pos1) / GRID_SIZE);
+    int maxZ = std::floor(std::get<2>(tty->pos2) / GRID_SIZE);
+    if (minX > maxX) std::swap(minX, maxX);
+    if (minZ > maxZ) std::swap(minZ, maxZ);
+
+    for (int x = minX; x <= maxX; ++x) {
+        for (int z = minZ; z <= maxZ; ++z) {
+            spatial_grid[GridKey{x, z}].push_back(tty);
+        }
+    }
 }
 
 // 根据名字读取领地信息的函数
@@ -347,6 +411,7 @@ std::pair<bool, std::string> Territory_Action::create_territory(const std::strin
         return {false, "数据库操作失败"};
         }
 
+    (void)get_all_tty(ss.str());
     return {true, "成功创建领地"};
 }
 
@@ -403,7 +468,7 @@ std::pair<bool, std::string> Territory_Action::create_sub_territory(const std::s
         ) != SQLITE_OK) {
         return {false, "数据库操作失败"};
         }
-
+    (void)get_all_tty(child_territory_name);
     return {true, child_territory_name};
 }
 
@@ -488,7 +553,7 @@ bool Territory_Action::del_Tty_by_name(const std::string& territory_name){
     (void)database_.deleteTty(tty_data->name);
 
     // 在所有数据库操作完成后，统一刷新全局领地缓存
-    all_tty = get_all_tty();
+    all_tty = get_all_tty(territory_name);
 
     return true;
 }
@@ -537,7 +602,15 @@ bool Territory_Action::rename_Tty(const std::string &territory_name, const std::
 [[nodiscard]] std::pair<bool, std::string> Territory_Action::rename_player_tty(const std::string &oldname, const std::string &newname){
     if (rename_Tty(oldname, newname)) {
         std::string msg = lang_tty_.getLocal("已重命名领地: 从 ") + oldname + lang_tty_.getLocal(" 到 ") + newname;
-        (void)get_all_tty();
+
+        // --- 增量同步开始 ---
+        // 第一步：清理旧名字。内部会发现数据库没这个名了，从而在内存中删除 oldname 并从网格移除指针
+        (void)get_all_tty(oldname);
+
+        // 第二步：加载新名字。内部会从数据库读出 newname 的数据并重新挂载到空间网格
+        (void)get_all_tty(newname);
+        // --- 增量同步结束 ---
+
         return {true, msg};
     }
     std::string msg = lang_tty_.getLocal("尝试重命名领地但未找到: ") + oldname;
@@ -659,7 +732,7 @@ std::pair<bool, std::string> Territory_Action::change_territory_permissions(cons
     if (change_tty_permissions(ttyname, permission, value)) {
         std::string msg = lang_tty_.getLocal("已更新领地 ") + ttyname + lang_tty_.getLocal(" 的权限 ") + permission + lang_tty_.getLocal(" 为 ") + std::to_string(value);
         // 更新全局领地信息
-        (void)get_all_tty();
+        (void)get_all_tty(ttyname);
         return {true, msg};
     }
     std::string msg = lang_tty_.getLocal("尝试更新领地权限但未找到领地: ") + ttyname;
@@ -736,7 +809,7 @@ int Territory_Action::change_tty_member(const std::string &ttyname, const std::s
 
     if (status == 0) {
         // 更新全局领地信息
-        (void)get_all_tty();
+        (void)get_all_tty(ttyname);
         return {true, msg};
     }
     return {false, lang_tty_.getLocal("更新领地成员时发生未知错误: ") + ttyname};
@@ -784,7 +857,7 @@ int Territory_Action::change_tty_owner(const std::string &ttyname,const std::str
         std::string msg = lang_tty_.getLocal("领地转让成功, 领地主人已由 ") + old_owner_name + lang_tty_.getLocal(" 变更为 ") + new_owner_name;
 
         // 更新全局领地信息
-        (void)get_all_tty();
+        (void)get_all_tty(ttyname);
         return {true, msg};
     }
     if (status == 1) {
@@ -864,7 +937,7 @@ int Territory_Action::change_tty_manager(const std::string &ttyname, const std::
 
     if (status == 0) {
         // 更新全局领地信息
-        (void)get_all_tty();
+        (void)get_all_tty(ttyname);
         return {true, msg};
     }
     return {false, lang_tty_.getLocal("更新领地管理员时发生未知错误: ") + ttyname};
@@ -985,7 +1058,7 @@ std::string Territory_Action::pointToString(const Point3D &p) {
         std::string pos_str = pointToString(tppos);
         std::string msg = lang_tty_.getLocal("已更新领地 ") + ttyname + lang_tty_.getLocal(" 的传送点为 ") + pos_str;
         // 更新全局领地信息缓存
-        (void)get_all_tty();
+        (void)get_all_tty(ttyname);
         return {true, msg};
     }
     std::string msg = lang_tty_.getLocal("尝试更新领地传送点但未找到领地: ") + ttyname;
@@ -1096,7 +1169,7 @@ std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& p
         }
         (void)change_tty_tppos(old_tty_data.name, new_tppos, old_tty_data.dim);
     }
-
+    (void)get_all_tty(old_tty_data.name);
     return {true,"领地大小更改成功"};
 }
 
