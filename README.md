@@ -6,7 +6,7 @@
 
 ## Introduction
 
-The Territory plugin is a 3D territory management plugin developed in C++ for the endstone plugin loader.  It uses an SQLite database to store territory data and supports features such as anti-interaction, anti-block breaking, anti-block placement, anti-entity explosion, preventing general damage to entities within the territory from outsiders, territory teleportation, member management, and adding territory administrators.You can use it to protect buildings of players on endstone server.
+The Territory plugin is a 3D territory management plugin developed in C++ for the endstone plugin loader. It uses an SQLite database to store territory data and supports features such as anti-interaction, anti-block breaking, anti-block placement, anti-entity explosion, preventing general damage to entities within the territory from outsiders, territory teleportation, member management, and adding territory administrators. You can use it to protect players' buildings and property on endstone server.
 
 The Territory plugin supports sub-territories, which can be created within a parent territory by the parent territory owner and administrators. Sub-territory permissions and members are independent from the parent territory. Sub-territories are fully controlled by their owners and are not controlled by the parent territory. If a parent territory is deleted, its sub-territories will lose their parent territory tag and become independent territories, and will not be deleted along with the parent territory.
 
@@ -14,11 +14,11 @@ The Territory plugin supports the integration of the umoney plugin as an economi
 
 ## Features
 
-Territory plugin is developed using C++ and utilizes SQLite for storing territory data, theoretically offering better performance.
+The Territory plugin is developed using C++ and utilizes SQLite for storing territory data, theoretically offering better performance.
 
 ## How to use
 
-> Install&Config
+> Install & Config
 
 **Install Endstone**
 
@@ -42,7 +42,7 @@ Linux:
 
 **Language**
 
-The plugin defaults to Chinese. You can change the language by replacing the `lang.json` file inside the plugin’s data directory (`territory/`). The GitHub Releases page provides pre-packaged archives with different language versions — currently, Chinese and English are supported. You may also manually edit `lang.json` to adapt it to your preferred language.
+The plugin defaults to Chinese. You can change the language by replacing the `lang.json` file inside the plugin's data directory (`territory/`). The GitHub Releases page provides pre-packaged archives with different language versions — currently, Chinese and English are supported. You may also manually edit `lang.json` to adapt it to your preferred language.
 
 **Config**
 
@@ -57,7 +57,8 @@ The default configuration of the configuration file is as follows:
     "max_tty_area": 4000000,
     "money_with_umoney": false,
     "player_max_tty_num": 20,
-    "price": 1
+    "price": 1,
+    "allow_fly_on_territory": false
 }
 ```
 `language` is the language used by the plugin, which is Chinese by default. You can change the configuration according to the language file in the language folder.
@@ -71,6 +72,8 @@ The default configuration of the configuration file is as follows:
 `player_max_tty_num` is the maximum number of territories a player can own, with a default value of 20.
 
 `price` is the price per unit area of territory, with a default value of 1. When the economy is enabled, this value serves as the price per unit area of territory for calculating the total territory cost.
+
+`allow_fly_on_territory` indicates whether players are allowed to fly within the territory. This is disabled by default.
 
 > Command Usage and Territory Management
 
@@ -88,10 +91,22 @@ Create New Territory
 /tty add Territory-corner-coordinate-1 Territory-corner-coordinate-2
 ```
 
-Create New Sub_Territory
+Create New Sub-Territory
 
 ```shell
-/tty add_sub Sub-Territory-corner-coordinate-1 Sub-Territory-corner-coordinate-2>
+/tty add_sub Sub-Territory-corner-coordinate-1 Sub-Territory-corner-coordinate-2
+```
+
+Open quick territory creation menu
+
+```shell
+/tty quick add
+```
+
+Open quick sub-territory creation menu
+
+```shell
+/tty quick add_sub
 ```
 
 List Territory
@@ -106,7 +121,7 @@ Delete Territory
 /tty del territory-name
 ```
 
-Rename Terriory
+Rename Territory
 
 ```shell
 /tty rename old-name new-name
@@ -115,17 +130,18 @@ Rename Terriory
 Set Territory Permissions
 
 ```shell
-/tty set permission(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) true|false territory-name
+/tty set permission(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither) permission-value territory-name
 ```
 
-**Where the permission names respectively represent:**
-
+Where the permission names respectively represent:
 - Whether to allow outsiders to interact within the territory.
 - Whether to allow outsiders to destroy within the territory.
 - Whether to allow outsiders to teleport to the territory.
 - Whether to allow outsiders to place within the territory.
 - Whether to allow entity explosions within the territory.
 - Whether to allow outsiders to attack entities.
+- Whether to allow pistons to work at the territory edge.
+- Whether to allow wither activities within the territory.
 
 Set Territory Administrators
 
@@ -133,7 +149,7 @@ Set Territory Administrators
 /tty manager add|remove player-name territory-name
 ```
 
-Set Terrtory Members
+Set Territory Members
 
 ```shell
 /tty member add|remove player-name territory-name
@@ -155,7 +171,6 @@ Resize Territory
 
 ```bash
 /tty resize territory-name new-coordinate-1 new-coordinate-2
-
 ```
 
 **Administrator Commands**
@@ -175,7 +190,7 @@ Delete All Territories of a Player
 Set Territory Permissions for a Player
 
 ```bash
-/optty set permission(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) true|false territory-name
+/optty set permission(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither) permission-value territory-name
 ```
 
 Reload Territory Data and Configuration

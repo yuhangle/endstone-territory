@@ -1,7 +1,5 @@
 ![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=Territory%20Plugin&textBg=false&desc=About%20A%20three-dimensional%20territory%20plugin%20developed%20for%20Endstone%20&descAlignY=70&fontColor=802e82&reversal=false)
 
-> 插件尚在开发中，欢迎反馈bug
-
  [English](README.md)
 
 ## 介绍
@@ -52,7 +50,8 @@ Linux:
     "max_tty_area": 4000000,
     "money_with_umoney": false,
     "player_max_tty_num": 20,
-    "price": 1
+    "price": 1,
+    "allow_fly_on_territory": false
 }
 ```
 `language` 为插件使用的语言，默认为中文，可根据语言文件夹内的语言文件更改配置。
@@ -66,6 +65,8 @@ Linux:
 `player_max_tty_num` 为玩家可拥有的领地的最大值,默认为20个
 
 `price` 为领地单位面积价格，默认为1。开启经济后，其值作为领地单位面积价格用于计算领地总价
+
+`allow_fly_on_territory` 为是否允许玩家在领地内飞行，默认关闭
 
 > 命令用法和领地使用管理
 
@@ -89,6 +90,18 @@ Linux:
 /tty add_sub 子领地边角坐标1 子领地边角坐标2
 ```
 
+打开快速创建领地菜单
+
+```shell
+/tty quick add
+```
+
+打开快速创建子领地菜单
+
+```shell
+/tty quick add_sub
+```
+
 列出领地
 
 ```shell
@@ -110,10 +123,10 @@ Linux:
 设置领地权限
 
 ```shell
-/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名
+/tty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither) 权限值 领地名
 ```
 
-其中权限名分别代表:是否允许外人领地内交互、是否允许外人领地内破坏、是否允许外人传送至领地、是否允许外人领地内放置、是否允许领地内实体爆炸、是否允许外人对实体攻击
+其中权限名分别代表:是否允许外人领地内交互、是否允许外人领地内破坏、是否允许外人传送至领地、是否允许外人领地内放置、是否允许领地内实体爆炸、是否允许外人对实体攻击、是否允许领地边缘活塞工作、是否允许领地内凋零活动
 
 设置领地管理员
 
@@ -162,7 +175,7 @@ Linux:
 设置玩家的领地权限
 
 ```bash
-/optty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage) 权限值 领地名
+/optty set 权限名(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither) 权限值 领地名
 ```
 
 重载领地数据和配置

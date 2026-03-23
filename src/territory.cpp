@@ -91,7 +91,7 @@ void Territory::datafile_check() {
             {"max_tty_area",4000000},
             {"welcome_all",true},
             {"language","zh_CN"},
-            {"allow_fly_on_territory", true}
+            {"allow_fly_on_territory", false}
     };
 
     if (!(std::filesystem::exists(data_path))) {
@@ -277,7 +277,7 @@ void Territory::onEnable()
     config_price = 1;
     config_max_tty_area = 4000000;
     config_welcome_all = true;
-    config_fly_on_tty = true;
+    config_fly_on_tty = false;
     try {
         if (!json_msg.contains("error")) {
             config_max_tty_num = json_msg["player_max_tty_num"];
