@@ -4,6 +4,52 @@
 #include "menu.h"
 #include "territory.h"
 
+std::unordered_map<std::string, std::vector<std::string>> Menu::recent_tp_cache;
+
+void Menu::addRecentTp(const std::string& player_name, const std::string& tty_name) {
+    auto& player_list = recent_tp_cache[player_name];
+
+    // 如果已存在，先移除
+    if (const auto it = ranges::find(player_list, tty_name); it != player_list.end()) {
+        player_list.erase(it);
+    }
+
+    // 超过10个，移除最旧的
+    if (player_list.size() >= 10) {
+        player_list.pop_back();
+    }
+
+    // 插入到最前
+    player_list.insert(player_list.begin(), tty_name);
+}
+
+void Menu::openRecentTpMenu(endstone::Player* player) const {
+    const auto it = recent_tp_cache.find(player->getName());
+    if (it == recent_tp_cache.end() || it->second.empty()) {
+        player->sendErrorMessage(lang_tty_.getLocal("暂无最近传送记录"));
+        return;
+    }
+
+    endstone::ActionForm form;
+    form.setTitle(lang_tty_.getLocal("§l最近传送"));
+    form.addLabel(lang_tty_.getLocal("§l选择最近传送的领地"));
+    form.addDivider();
+
+    for (const auto& tty_name : it->second) {
+        form.addButton(tty_name, std::nullopt, [tty_name](const endstone::Player* p) {
+            std::ostringstream cmd;
+            cmd << "tty tp \"" << tty_name << "\"";
+            (void)p->performCommand(cmd.str());
+        });
+    }
+
+    form.setOnClose([this](endstone::Player* p) {
+        openMainMenu(p);
+    });
+
+    player->sendForm(form);
+}
+
 vector<std::string> Menu::getOnlinePlayerList() const {
   const auto players = plugin_.getServer().getOnlinePlayers();
   vector<string> onlinePlayerNames;
@@ -109,6 +155,9 @@ void Menu::openMainMenu(endstone::Player* player) const{
   });
   menu.addButton(lang_tty_.getLocal("§l§5传送全部领地"), "textures/ui/default_world", [this] (endstone::Player* p) {
     openTpAllTtyMenu(p);
+  });
+  menu.addButton(lang_tty_.getLocal("§l§5最近传送"), "textures/ui/icon_timer", [this] (endstone::Player* p) {
+    openRecentTpMenu(p);
   });
   menu.addButton(lang_tty_.getLocal("§l§5管理领地"), "textures/ui/icon_setting", [this] (endstone::Player* p) {
     openManTtyMenu(p);

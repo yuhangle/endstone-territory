@@ -221,5 +221,9 @@
     "§l选择你要添加成员的领地": "§lSelect the territory you want to add members to",
     "§l选择你要删除成员的领地": "§lSelect the territory you want to delete members from",
     "§l选择你要删除管理员的领地": "§lSelect the territory you want to delete administrators from",
-    "§l选择你要添加管理员的领地": "§lSelect the territory you want to add administrators to"
+    "§l选择你要添加管理员的领地": "§lSelect the territory you want to add administrators to",
+    "§l§5最近传送": "§5Recent Teleports",
+    "§l最近传送": "§lRecent Teleports",
+    "§l选择最近传送的领地": "§lSelect a recently teleported territory",
+    "暂无最近传送记录": "No recent teleport records"
 }

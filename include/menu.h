@@ -6,6 +6,7 @@
 #define TERRITORY_MENU_H
 #pragma once
 #include <endstone/endstone.hpp>
+#include <unordered_map>
 #include "territory_action.h"
 
 class Menu {
@@ -89,6 +90,15 @@ public:
 
   // 删除领地二次确认菜单
   void openDelTtyConfirmMenu(endstone::Player* player, const std::string& cmd) const;
+
+  // 最近传送菜单
+  void openRecentTpMenu(endstone::Player* player) const;
+
+  // 最近传送缓存（玩家名 → 最近传送的领地名称列表，至多10个）
+  static std::unordered_map<std::string, std::vector<std::string>> recent_tp_cache;
+
+  // 更新最近传送缓存
+  static void addRecentTp(const std::string& player_name, const std::string& tty_name);
 
 private:
   endstone::Plugin &plugin_;

@@ -730,6 +730,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                                            0.0, 0.0);
 
                                     player->teleport(loc);
+                                    Menu::addRecentTp(player_name, tty_name);
                                 } else if (tty_info->member.find(player_name) != std::string::npos ||
                                            tty_info->manager.find(player_name) != std::string::npos ||
                                            player_name == tty_info->owner) {
@@ -740,6 +741,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                                            static_cast<float>(get<2>(tty_info->tppos)),
                                                            0.0, 0.0);
                                     player->teleport(loc);
+                                    Menu::addRecentTp(player_name, tty_name);
                                 } else {
                                     sender.sendErrorMessage(LangTty.getLocal("你没有传送到此领地的权限"));
                                 }
