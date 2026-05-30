@@ -1,6 +1,6 @@
 ![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=Territory%20Plugin&textBg=false&desc=About%20A%20three-dimensional%20territory%20plugin%20developed%20for%20Endstone%20&descAlignY=70&fontColor=802e82&reversal=false)
 
-[![简体中文](https://img.shields.io/badge/Chinese-README_chsinese.md-blue)](README_zh-CN.md)
+[![简体中文](https://img.shields.io/badge/Chinese-README_zh--CN.md-blue)](README_zh-CN.md)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 ![Build Status](https://github.com/yuhangle/endstone-territory/actions/workflows/build.yml/badge.svg)
 
@@ -61,16 +61,20 @@ Please refer to the endstone documentation for this step.
 Go to the Releases page to download the latest version of the plugin archive, then extract it into the plugins folder in your server directory. The directory structure is as follows:
 
 Windows:
-- plugins/
-    - endstone_territory.dll # Plugin file for Windows
-    - territory/ # Data directory
-        - language # Language directory
+```
+plugins/
+├── endstone_territory.dll    # Plugin file for Windows
+└── territory/                # Data directory
+    └── language/             # Language directory
+```
 
 Linux:
-- plugins/
-    - endstone_territory.so # Plugin file for Linux
-    - territory/ # Data directory
-        - language # Language directory
+```
+plugins/
+├── endstone_territory.so     # Plugin file for Linux
+└── territory/                # Data directory
+    └── language/             # Language directory
+```
 
 **Language**
 
@@ -214,7 +218,7 @@ Set Territory Members
 
 Set Territory Teleport Point
 
-```bash
+```shell
 /tty settp Territory-teleport-coordinates Territory-name
 ```
 
@@ -222,7 +226,7 @@ Set Territory Teleport Point
 
 Teleport to Territory
 
-```bash
+```shell
 /tty tp territory-name
 ```
 
@@ -230,7 +234,7 @@ Teleport to Territory
 
 Resize Territory
 
-```bash
+```shell
 /tty resize territory-name new-coordinate-1 new-coordinate-2
 ```
 
@@ -240,7 +244,7 @@ Resize Territory
 
 Delete Territory
 
-```bash
+```shell
 /optty del territory-name
 ```
 
@@ -248,7 +252,7 @@ Delete Territory
 
 Delete All Territories of a Player
 
-```bash
+```shell
 /optty del_all player-name
 ```
 
@@ -256,15 +260,31 @@ Delete All Territories of a Player
 
 Set Territory Permissions for a Player
 
-```bash
+```shell
 /optty set permission(if_jiaohu|if_break|if_tp|if_build|if_bomb|if_damage|if_edge_piston|if_wither) permission-value territory-name
+```
+
+---
+
+Transfer a Territory to Another Player
+
+```shell
+/optty transfer territory-name player-name
+```
+
+---
+
+Transfer All Territories of a Player to Another Player
+
+```shell
+/optty transfer_all old-player-name new-player-name
 ```
 
 ---
 
 Reload Territory Data and Configuration
 
-```bash
+```shell
 /optty reload
 ```
 
