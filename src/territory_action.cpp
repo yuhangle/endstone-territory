@@ -564,12 +564,13 @@ bool Territory_Action::del_player_tty(const std::string &tty_name)
     const auto tty_data = read_territory_by_name(tty_name);
     const int area = get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
     string owner;
-    if (territory_->config_money_with_umoney) {
-        (void)territory_->umoney_change_player_money(tty_data->owner,area*territory_->config_price);
+    if (territory_->config_money_connect) {
+        const auto refund = area * territory_->config_price;
+        (void)territory_->change_player_money(tty_data->owner, refund);
         const auto& server_ = territory_->getServer();
         if (const auto the_player = server_.getPlayer(tty_data->owner)) {
             owner = the_player->getName();
-            the_player->sendMessage(lang_tty_.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(area*territory_->config_price));
+            the_player->sendMessage(lang_tty_.getLocal("您的领地已被删除,以当前价格返还资金:") + to_string(refund));
         }
     }
     if (del_Tty_by_name(tty_name)) {
@@ -577,7 +578,7 @@ bool Territory_Action::del_player_tty(const std::string &tty_name)
     }
     if (!owner.empty())
     {
-        (void)territory_->umoney_change_player_money(owner,area*territory_->config_price);
+        (void)territory_->change_player_money(owner, area * territory_->config_price);
     }
     return false;
 }

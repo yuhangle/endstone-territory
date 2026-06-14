@@ -15,6 +15,7 @@
 #include "menu.h"
 #include "translate.hpp"
 #include "event_listener.h"
+#include <money_connect/money_connect.h>
 
 using json = nlohmann::json;
 using namespace std;
@@ -27,14 +28,13 @@ public:
     std::string data_path = "plugins/territory";
     std::string config_path = "plugins/territory/config.json";
     const std::string db_file = "plugins/territory/territory_data.db";
-    const std::string umoney_file = "plugins/umoney/money.json";
     const std::string language_path = "plugins/territory/language/";
 
     //一些变量
     int config_max_tty_num;
     bool config_actor_fire_attack_protect;
-    bool config_money_with_umoney;
-    int config_price;
+    bool config_money_connect;
+    double config_price;
     int config_max_tty_area;
     bool config_welcome_all;
     string language = "en_US";
@@ -58,15 +58,17 @@ public:
     //数据目录和配置文件检查
     void datafile_check();
 
-    //接入umoney
+    //接入money_connect经济桥接
+    //尝试查找经济服务（懒加载）
+    void try_find_economy();
     //检查插件存在
     [[nodiscard]] bool umoney_check_exists() const;
-    
+
     //获取玩家资金
-    [[nodiscard]] int umoney_get_player_money(const std::string& player_name) const;
-    
+    [[nodiscard]] double get_player_money(const std::string& player_name) const;
+
     //更改玩家资金
-    [[nodiscard]] bool umoney_change_player_money(const std::string& player_name, int money) const;
+    [[nodiscard]] bool change_player_money(const std::string& player_name, double money) const;
 
     //实体位置监听
     void entity_move_listener() const;
@@ -85,6 +87,8 @@ private:
     std::unique_ptr<DataBase> database_;
     std::unique_ptr<Territory_Action> action_;
     std::unique_ptr<EventListener> event_listener_;
+    std::shared_ptr<money_connect::EconomyService> economy_service_;
+    std::shared_ptr<endstone::Task> lazy_find_economy_;
 };
 
 

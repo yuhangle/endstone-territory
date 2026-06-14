@@ -39,6 +39,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fmt)
 
+FetchContent_Declare(
+        endstone_money_connect
+        GIT_REPOSITORY https://github.com/yuhangle/endstone-money-connect.git
+        GIT_TAG main
+)
+FetchContent_MakeAvailable(endstone_money_connect)
+
 # 定义并获取 BinaryStream
 FetchContent_Declare(
         BinaryStream
@@ -72,6 +79,7 @@ target_link_libraries(${PROJECT_NAME}
         nlohmann_json::nlohmann_json
         SQLite::SQLite3
         fmt::fmt-header-only
+        endstone_money_connect
 )
 
 find_package(Git QUIET)

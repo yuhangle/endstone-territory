@@ -185,7 +185,7 @@
     "§l新名字": "New name",
     "领地菜单命令": "Territory menu command",
     "成功连接到数据库": "Successfully connect to database",
-    "经济配置错误,检查umoney插件是否安装,或者价格是否大于0;领地价格依然保持默认": "Wrong economic configuration, check if the umoney plugin is installed, or if the price is greater than 0; The territory price remains the same",
+    "经济配置错误,检查价格是否大于0;领地价格依然保持默认": "Wrong economic configuration, check if the price is greater than 0; The territory price remains the same",
     "你的资产不足以设置此大小的领地,设置此领地所需要的资金为:": "You don't have enough money to set up a territory of this size, and the money required to set up this territory are:",
     "设置领地已扣费:": "Set up a territory charged:",
     "无法设置领地为一个点": "It is not possible to set a territory to a point",

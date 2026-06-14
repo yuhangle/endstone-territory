@@ -88,7 +88,7 @@ void Territory::datafile_check() {
     json df_config = {
             {"player_max_tty_num", 20},
             {"actor_fire_attack_protect", true},
-            {"money_with_umoney", false},
+            {"money_connect", false},
             {"price", 1},
             {"max_tty_area",4000000},
             {"welcome_all",true},
@@ -146,80 +146,41 @@ void Territory::datafile_check() {
     }
 }
 
-//检查插件存在
+//尝试查找经济服务（懒加载）
+void Territory::try_find_economy() {
+    if (economy_service_) return; // 已找到
+    auto plugin = getServer().getPluginManager().getPlugin("money_connect");
+    if (!plugin) return; // 插件还未加载
+    economy_service_ = getServer().getServiceManager().load<money_connect::EconomyService>("MoneyConnect");
+}
+
+//检查插件存在（经济服务是否可用）
 bool Territory::umoney_check_exists() const {
-    if (getServer().getPluginManager().getPlugin("umoney")) {
-        return true;
-    }
-    return false;
+    return economy_service_ != nullptr;
 }
 
 //获取玩家资金
-int Territory::umoney_get_player_money(const std::string& player_name) const
+double Territory::get_player_money(const std::string& player_name) const
 {
-    std::ifstream f(umoney_file);
-    if (!f.is_open()) {
-        std::cerr << "Error: Could not open file: " << umoney_file << std::endl;
-        return -1; // 返回一个错误值表示文件无法打开
+    if (!economy_service_) {
+        getLogger().error("MoneyConnect economy service not available");
+        return -1;
     }
-
-    try {
-        if (json data = json::parse(f); data.contains(player_name)) {
-            return data[player_name].get<int>();
-        }
-        std::cerr << "Warning: Player '" << player_name << "' not found in the data." << std::endl;
-        return 0; // 返回 0 表示玩家不存在或没有资金记录
-    } catch (const json::parse_error& e) {
-        std::cerr << "Error: JSON parse error in file '" << umoney_file << "': " << e.what() << std::endl;
-        return -1; // 返回一个错误值表示 JSON 解析失败
-    }
-
-    return -1;
+    return economy_service_->get_balance(player_name);
 }
 
 //更改玩家资金
-bool Territory::umoney_change_player_money(const std::string& player_name, const int money) const {
-    std::ifstream ifs(umoney_file);
-    if (!ifs.is_open()) {
-        std::cerr << "Error: Could not open file for reading: " << umoney_file << std::endl;
+bool Territory::change_player_money(const std::string& player_name, const double money) const {
+    if (!economy_service_) {
+        getLogger().error("MoneyConnect economy service not available");
         return false;
     }
-    //优先使用money_connect插件的命令操作umoney
-    if (getServer().getPluginManager().getPlugin("money_connect")) {
-        string command = "myct umoney change \"" + player_name + "\" " + to_string(money);
-        return getServer().dispatchCommand(getServer().getCommandSender(),command);
+    if (money > 0) {
+        economy_service_->add_balance(player_name, money);
+    } else if (money < 0) {
+        economy_service_->remove_balance(player_name, -money);
     }
-    //未能使用money_connect,直接数据操作
-    try {
-        json data = json::parse(ifs);
-        ifs.close(); // 关闭读取流
-
-        if (data.contains(player_name)) {
-            data[player_name] = data[player_name].get<int>() + money;
-        } else {
-            // 如果玩家不存在，则创建一个新记录
-            data[player_name] = money;
-        }
-
-        std::ofstream ofs(umoney_file);
-        if (!ofs.is_open()) {
-            std::cerr << "Error: Could not open file for writing: " << umoney_file << std::endl;
-            return false;
-        }
-        ofs << data.dump(4); // 将修改后的 JSON 写回文件
-        ofs.close();
-
-        return true;
-
-    } catch (const json::parse_error& e) {
-        std::cerr << "Error: JSON parse error in file '" << umoney_file << "': " << e.what() << std::endl;
-        return false;
-    } catch (const std::exception& e) {
-        std::cerr << "Error: An unexpected error occurred: " << e.what() << std::endl;
-        return false;
-    }
-
-    return false;
+    return true;
 }
 
 void Territory::entity_move_listener() const
@@ -275,8 +236,8 @@ void Territory::onEnable()
     //默认配置
     config_max_tty_num = 20;
     config_actor_fire_attack_protect = true;
-    config_money_with_umoney = false;
-    config_price = 1;
+    config_money_connect = false;
+    config_price = 1.0;
     config_max_tty_area = 4000000;
     config_welcome_all = true;
     config_fly_on_tty = false;
@@ -288,12 +249,12 @@ void Territory::onEnable()
             config_welcome_all = json_msg["welcome_all"];
             config_fly_on_tty = json_msg["allow_fly_on_territory"];
             language = json_msg["language"];
-            if (json_msg["money_with_umoney"]) {
-                if (json_msg["money_with_umoney"] && umoney_check_exists() && json_msg["price"] >0) {
-                    config_money_with_umoney = true;
+            if (json_msg["money_connect"]) {
+                if (json_msg["price"] > 0) {
+                    config_money_connect = true;
                     config_price = json_msg["price"];
                 } else {
-                    getLogger().error(LangTty.getLocal("经济配置错误,检查umoney插件是否安装,或者价格是否大于0;领地价格依然保持默认"));
+                    getLogger().error(LangTty.getLocal("经济配置错误,检查价格是否大于0;领地价格依然保持默认"));
                 }
             }
         } else {
@@ -327,6 +288,18 @@ void Territory::onEnable()
     //getServer().getScheduler().runTaskTimer(*this,[&]() { tips_online_players(); }, 0, 25);
     //实体移动监听
     getServer().getScheduler().runTaskTimer(*this,[&]() { entity_move_listener(); }, 0, 20);
+
+    // 懒加载经济服务：每隔20tick尝试查找money_connect，找到后取消任务
+    if (config_money_connect) {
+        lazy_find_economy_ = getServer().getScheduler().runTaskTimer(*this, [this]() {
+            try_find_economy();
+            if (economy_service_) {
+                getLogger().info("MoneyConnect economy service loaded successfully");
+                lazy_find_economy_->cancel();
+                lazy_find_economy_ = nullptr;
+            }
+        }, 0, 20);
+    }
 
     //显示启动信息
     const string boot_logo_msg = R"(
@@ -400,17 +373,17 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                             return false;
                         }
                         // 检查资金
-                        if (config_money_with_umoney) {
-                            const int money = umoney_get_player_money(player_name);
-                            if (const int value = area * config_price; money >= value) {
-                                (void)umoney_change_player_money(player_name,-value);
+                        if (config_money_connect) {
+                            const double money = get_player_money(player_name);
+                            if (const auto value = area * config_price; money >= value) {
+                                (void)change_player_money(player_name,-value);
                                 sender.sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
                                 // 调用领地创建函数
                                 if (auto [success, message] = action_->create_territory(player_name, pos1, pos2, tppos, dim); success) {
                                     sender.sendMessage(LangTty.getLocal("成功添加领地"));
                                 } else {
                                     sender.sendErrorMessage(LangTty.getLocal(message));
-                                    (void)umoney_change_player_money(player_name,value); // 创建失败返还资金
+                                    (void)change_player_money(player_name,value); // 创建失败返还资金
                                 }
                             } else {
                                 sender.sendErrorMessage(LangTty.getLocal("你的资产不足以设置此大小的领地,设置此领地所需要的资金为:") +
@@ -464,10 +437,11 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                         }
 
                         // 检查资金
-                        if (config_money_with_umoney) {
-                            const int money = umoney_get_player_money(player_name);
-                            if (const int value = area * config_price; money >= value) {
-                                (void)umoney_change_player_money(player_name,-value);
+                        if (config_money_connect) {
+                            const double money = get_player_money(player_name);
+                            const auto value = area * config_price;
+                            if (money >= value) {
+                                (void)change_player_money(player_name,-value);
                                 sender.sendMessage(LangTty.getLocal("设置领地已扣费:") + to_string(value));
                                 // 调用子领地创建函数
                                 if (auto [success, child_territory_name] = action_->create_sub_territory(player_name, pos1, pos2, tppos, dim); success) {
@@ -475,7 +449,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
 
                                 } else {
                                     sender.sendErrorMessage(LangTty.getLocal(child_territory_name)); // child_territory_name here contains error message
-                                    (void)umoney_change_player_money(player_name,value); // 创建失败返还资金
+                                    (void)change_player_money(player_name,value); // 创建失败返还资金
                                 }
                             } else {
                                 sender.sendErrorMessage(LangTty.getLocal("你的资产不足以设置此大小的领地,设置此领地所需要的资金为:") +
@@ -787,21 +761,21 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                 return false;
                             }
                             // 资金检查
-                            int changed_money = 0;
-                            if (config_money_with_umoney)
+                            double changed_money = 0;
+                            if (config_money_connect)
                             {
                                 const int old_area = Territory_Action::get_tty_area(static_cast<int>(get<0>(tty_data->pos1)),static_cast<int>(get<2>(tty_data->pos1)),static_cast<int>(get<0>(tty_data->pos2)),static_cast<int>(get<2>(tty_data->pos2)));
-                                const int old_value = old_area * config_price;
-                                const int new_value = area * config_price;
+                                const auto old_value = old_area * config_price;
+                                const auto new_value = area * config_price;
                                 changed_money = new_value - old_value;
-                                if (umoney_get_player_money(sender.getName()) < changed_money)
+                                if (get_player_money(sender.getName()) < changed_money)
                                 {
                                     sender.sendErrorMessage(LangTty.getLocal("你没有足够的资金"));
                                     return false;
                                 }
                                 if (changed_money != 0)
                                 {
-                                    (void)umoney_change_player_money(sender.getName(), -changed_money);
+                                    (void)change_player_money(sender.getName(), -changed_money);
                                 }
                             }
 
@@ -813,7 +787,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                 sender.sendErrorMessage(LangTty.getLocal(snd));
                                 if (changed_money!=0)
                                 {
-                                    (void)umoney_change_player_money(sender.getName(), changed_money);
+                                    (void)change_player_money(sender.getName(), changed_money);
                                 }
                             }
 
@@ -898,12 +872,12 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                     {
                         config_fly_on_tty = json_msg["allow_fly_on_territory"];
                     }
-                    if (json_msg["money_with_umoney"]) {
-                        if (json_msg["money_with_umoney"] && umoney_check_exists() && json_msg["price"] >0) {
-                            config_money_with_umoney = true;
+                    if (json_msg["money_connect"]) {
+                        if (json_msg["price"] > 0) {
+                            config_money_connect = true;
                             config_price = json_msg["price"];
                         } else {
-                            sender.sendErrorMessage(LangTty.getLocal("经济配置错误,检查umoney插件是否安装,或者价格是否大于0;领地价格依然保持默认"));
+                            sender.sendErrorMessage(LangTty.getLocal("经济配置错误,检查价格是否大于0;领地价格依然保持默认"));
                         }
                     }
                 } else {

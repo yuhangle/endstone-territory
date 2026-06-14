@@ -90,9 +90,9 @@ plugins/
     "actor_fire_attack_protect": true,
     "language": "zh_CN",
     "max_tty_area": 4000000,
-    "money_with_umoney": false,
+    "money_connect": false,
     "player_max_tty_num": 20,
-    "price": 1,
+    "price": 1.0,
     "allow_fly_on_territory": false
 }
 ```
@@ -102,11 +102,11 @@ plugins/
 
 `max_tty_area` 为玩家创建领地的最大面积，默认为4000000单位（2000x2000）,领地超过此面积将无法创建。
 
-`money_with_umoney` 为是否启用umoney插件作为经济系统，默认关闭。开启后创建领地将通过umoney插件的经济系统向玩家收取费用。
+`money_connect` 为是否启用经济系统，默认关闭。开启后创建领地将通过money_connect插件调用支持的经济系统向玩家收取费用。
 
 `player_max_tty_num` 为玩家可拥有的领地的最大值,默认为20个。
 
-`price` 为领地单位面积价格，默认为1。开启经济后，其值作为领地单位面积价格用于计算领地总价。
+`price` 为领地单位面积价格，默认为`1.0`。开启经济后，其值作为领地单位面积价格用于计算领地总价。
 
 `allow_fly_on_territory` 为是否允许玩家在领地内飞行，默认关闭。
 

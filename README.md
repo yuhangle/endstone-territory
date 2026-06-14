@@ -10,7 +10,7 @@ The Territory plugin is a 3D territory management plugin developed in C++ for th
 
 The Territory plugin supports sub-territories, which can be created within a parent territory by the parent territory owner and administrators. Sub-territory permissions and members are independent from the parent territory. Sub-territories are fully controlled by their owners and are not controlled by the parent territory. If a parent territory is deleted, its sub-territories will lose their parent territory tag and become independent territories, and will not be deleted along with the parent territory.
 
-The Territory plugin supports the integration of the umoney plugin as an economic system, with the economy being disabled by default. After enabling the economy in the configuration file, creating a territory will charge players based on the territory's area multiplied by the unit price. Deleting a territory will refund the player at the current price.
+The Territory plugin supports the integration of the money_connect plugin as an economic bridge, with the economy being disabled by default. After enabling the economy in the configuration file, creating a territory will charge players based on the territory's area multiplied by the unit price. Deleting a territory will refund the player at the current price.
 
 ## Features
 
@@ -91,9 +91,9 @@ The default configuration of the configuration file is as follows:
     "actor_fire_attack_protect": true,
     "language": "zh_CN",
     "max_tty_area": 4000000,
-    "money_with_umoney": false,
+    "money_connect": false,
     "player_max_tty_num": 20,
-    "price": 1,
+    "price": 1.0,
     "allow_fly_on_territory": false
 }
 ```
@@ -103,11 +103,11 @@ The default configuration of the configuration file is as follows:
 
 `max_tty_area` represents the maximum area for a player-created territory, with a default of 4,000,000 units (2000x2000). Territories exceeding this size cannot be created.
 
-`money_with_umoney` indicates whether to use the umoney plugin as the economy system, which is disabled by default. When enabled, creating territories will incur charges to the player through the economic system provided by the umoney plugin.
+`money_connect` indicates whether to enable the economy system, which is disabled by default. When enabled, creating territories will incur charges to the player through the economy system via the money_connect plugin.
 
 `player_max_tty_num` is the maximum number of territories a player can own, with a default value of 20.
 
-`price` is the price per unit area of territory, with a default value of 1. When the economy is enabled, this value serves as the price per unit area of territory for calculating the total territory cost.
+`price` is the price per unit area of territory, with a default value of `1.0`. When the economy is enabled, this value serves as the price per unit area of territory for calculating the total territory cost.
 
 `allow_fly_on_territory` indicates whether players are allowed to fly within the territory. This is disabled by default.
 
