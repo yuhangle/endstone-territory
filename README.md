@@ -10,7 +10,7 @@ The Territory plugin is a 3D territory management plugin developed in C++ for th
 
 The Territory plugin supports sub-territories, which can be created within a parent territory by the parent territory owner and administrators. Sub-territory permissions and members are independent from the parent territory. Sub-territories are fully controlled by their owners and are not controlled by the parent territory. If a parent territory is deleted, its sub-territories will lose their parent territory tag and become independent territories, and will not be deleted along with the parent territory.
 
-The Territory plugin supports the integration of the money_connect plugin as an economic bridge, with the economy being disabled by default. After enabling the economy in the configuration file, creating a territory will charge players based on the territory's area multiplied by the unit price. Deleting a territory will refund the player at the current price.
+The Territory plugin supports the integration of the **[money_connect](https://github.com/yuhangle/endstone-money-connect)** plugin as an economic bridge, with the economy being disabled by default. After enabling the economy in the configuration file, creating a territory will charge players based on the territory's area multiplied by the unit price. Deleting a territory will refund the player at the current price.
 
 ## Features
 
