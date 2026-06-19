@@ -58,6 +58,8 @@ private:
     // 检查间隔：1秒
     const std::chrono::milliseconds CHECK_INTERVAL{1000};
     std::unique_ptr<TerritoryInstance> global_checker_;
+    //检查op是否有权限
+    bool check_op_p(const endstone::Player& player) const;
 };
 
 

@@ -78,7 +78,11 @@ plugins/
 
 **Language**
 
-The plugin defaults to Chinese. You can change the language by replacing the `lang.json` file inside the plugin's data directory (`territory/`). The GitHub Releases page provides pre-packaged archives with different language versions — currently, Chinese and English are supported. You may also manually edit `lang.json` to adapt it to your preferred language.
+The plugin loads all `.json` language files from the `language/` directory on startup and serves each player in their own client language automatically — Chinese (`zh_CN`) players see Chinese messages, English (`en_US`) players see English messages, and so on. The server-side default language is set by the `language` config field.
+
+If a player's language is not available (e.g. `zh_TW`), the plugin falls back to the closest match (e.g. `zh_CN` → "language-family fallback"). If no match is found, it falls back to English, and then to the raw translation key.
+
+The GitHub Releases page provides pre-packaged archives with Chinese and English language files. You may add or edit `.json` files in the `language/` directory to add support for additional languages.
 
 **Config**
 
@@ -89,12 +93,13 @@ The default configuration of the configuration file is as follows:
 ```json
 {
     "actor_fire_attack_protect": true,
+    "allow_fly_on_territory": false,
+    "allow_op_as_member": false,
     "language": "zh_CN",
     "max_tty_area": 4000000,
     "money_connect": false,
     "player_max_tty_num": 20,
-    "price": 1.0,
-    "allow_fly_on_territory": false
+    "price": 1.0
 }
 ```
 `language` is the language used by the plugin, which is Chinese by default. You can change the configuration according to the language file in the language folder.
@@ -110,6 +115,8 @@ The default configuration of the configuration file is as follows:
 `price` is the price per unit area of territory, with a default value of `1.0`. When the economy is enabled, this value serves as the price per unit area of territory for calculating the total territory cost.
 
 `allow_fly_on_territory` indicates whether players are allowed to fly within the territory. This is disabled by default.
+
+`allow_op_as_member` indicates whether server operators are treated as territory members for bypassing protection (breaking, placing, interacting, damaging entities) and teleportation. This is disabled by default.
 
 ---
 

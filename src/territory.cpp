@@ -86,14 +86,15 @@ json Territory::read_config() const {
 //数据目录和配置文件检查
 void Territory::datafile_check() {
     json df_config = {
-            {"player_max_tty_num", 20},
-            {"actor_fire_attack_protect", true},
-            {"money_connect", false},
-            {"price", 1},
-            {"max_tty_area",4000000},
-            {"welcome_all",true},
-            {"language","zh_CN"},
-            {"allow_fly_on_territory", false}
+        {"player_max_tty_num", 20},
+        {"actor_fire_attack_protect", true},
+        {"money_connect", false},
+        {"price", 1},
+        {"max_tty_area",4000000},
+        {"welcome_all",true},
+        {"language","zh_CN"},
+        {"allow_fly_on_territory", false},
+        {"allow_op_as_member", false}
     };
 
     if (!(std::filesystem::exists(data_path))) {
@@ -149,8 +150,7 @@ void Territory::datafile_check() {
 //尝试查找经济服务（懒加载）
 void Territory::try_find_economy() {
     if (economy_service_) return; // 已找到
-    auto plugin = getServer().getPluginManager().getPlugin("money_connect");
-    if (!plugin) return; // 插件还未加载
+    if (const auto plugin = getServer().getPluginManager().getPlugin("money_connect"); !plugin) return; // 插件还未加载
     economy_service_ = getServer().getServiceManager().load<money_connect::EconomyService>("MoneyConnect");
 }
 
@@ -237,6 +237,7 @@ void Territory::onEnable()
     config_max_tty_area = 4000000;
     config_welcome_all = true;
     config_fly_on_tty = false;
+    config_allow_op_as_member = false;
     try {
         if (!json_msg.contains("error")) {
             config_max_tty_num = json_msg["player_max_tty_num"];
@@ -244,6 +245,7 @@ void Territory::onEnable()
             config_max_tty_area = json_msg["max_tty_area"];
             config_welcome_all = json_msg["welcome_all"];
             config_fly_on_tty = json_msg["allow_fly_on_territory"];
+            config_allow_op_as_member = json_msg["allow_op_as_member"];
             language = json_msg["language"];
             if (json_msg["money_connect"]) {
                 if (json_msg["price"] > 0) {
@@ -689,7 +691,19 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                                                            0.0, 0.0);
                                     player->teleport(loc);
                                     Menu::addRecentTp(player_name, tty_name);
-                                } else {
+                                } else if (config_allow_op_as_member && sender.asPlayer()->isOp())
+                                {
+                                    auto player = getServer().getPlayer(player_name);
+                                    auto tty_Dim = getServer().getLevel()->getDimension(tty_info->dim);
+                                    endstone::Location loc(*tty_Dim, static_cast<float>(get<0>(tty_info->tppos)),
+                                                           static_cast<float>(get<1>(tty_info->tppos)),
+                                                           static_cast<float>(get<2>(tty_info->tppos)),
+                                                           0.0, 0.0);
+
+                                    player->teleport(loc);
+                                    Menu::addRecentTp(player_name, tty_name);
+                                }
+                                else {
                                     sender.sendErrorMessage(LangTty.getLocal("你没有传送到此领地的权限", localeP));
                                 }
                             } else {
@@ -853,6 +867,7 @@ bool Territory::onCommand(endstone::CommandSender &sender, const endstone::Comma
                     config_actor_fire_attack_protect = json_msg["actor_fire_attack_protect"];
                     config_max_tty_area = json_msg["max_tty_area"];
                     config_welcome_all = json_msg["welcome_all"];
+                    config_allow_op_as_member = json_msg["allow_op_as_member"];
                     if (json_msg["allow_fly_on_territory"] == false || config_fly_on_tty == true)
                     {
                         for (const auto pEntity : getServer().getOnlinePlayers())

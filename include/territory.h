@@ -40,6 +40,7 @@ public:
     string language = "en_US";
     vector<int64_t> config_entity_can_die;
     bool config_fly_on_tty;
+    bool config_allow_op_as_member;
 
     //禁止进入领地的实体
     const std::unordered_set<std::string> no_allow_entitys = {"minecraft:wither"};

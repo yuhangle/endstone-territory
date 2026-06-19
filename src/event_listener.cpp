@@ -116,6 +116,16 @@ void renderTerritoryGroundLine(const endstone::Player& player,
         }
     }
 }
+
+//检查op是否有权限
+bool EventListener::check_op_p(const endstone::Player& player) const
+{
+    if (!territory_->config_allow_op_as_member)
+    {
+        return false;
+    }
+    return player.isOp();
+}
 // 事件监听
 //方块破坏监听
 void EventListener::onBlockBreak(endstone::BlockBreakEvent& event) const
@@ -133,6 +143,7 @@ void EventListener::onBlockBreak(endstone::BlockBreakEvent& event) const
     if (const auto result = global_checker_->canBreak(player_name, block_pos, player_dim);
         result.has_value() && !result.value())
     {
+        if (check_op_p(event.getPlayer())) {return;}
         event.setCancelled(true);
         event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上破坏的权限", localeP));
     }
@@ -154,6 +165,7 @@ void EventListener::onBlockPlace(endstone::BlockPlaceEvent& event) const
     if (const auto result = global_checker_->canBuild(player_name, block_pos, player_dim);
         result.has_value() && !result.value())
     {
+        if (check_op_p(event.getPlayer())) {return;}
         event.setCancelled(true);
         event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上放置的权限", localeP));
     }
@@ -174,6 +186,7 @@ void EventListener::onPlayerjiaohu(endstone::PlayerInteractEvent& event) const
     };
 
     if (const auto result = global_checker_->canInteract(player_name, block_pos, player_dim); result.has_value() && !result.value()) {
+        if (check_op_p(event.getPlayer())) {return;}
         event.setCancelled(true);
         event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上交互的权限", localeP));
     }
@@ -196,6 +209,7 @@ void EventListener::onPlayerjiaohust(endstone::PlayerInteractActorEvent& event) 
     if (const auto result = global_checker_->canInteract(player_name, actor_pos, player_dim);
         result.has_value() && !result.value())
     {
+        if (check_op_p(event.getPlayer())) {return;}
         event.setCancelled(true);
         event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上交互的权限", localeP));
     }
@@ -265,12 +279,12 @@ void EventListener::onActorhit(endstone::ActorDamageEvent& event) const
         for (const auto& info : actor_in_tty.value()) {
             if (!info.if_damage) {
                 if (const auto damager_actor = event.getDamageSource().getActor()) {
-                    if (damager_actor->getType() == "minecraft:player") {
-                        if (!info.source->cached_all_members.contains(damager_actor->getName())) {
-                            if (const auto* player = damager_actor->asPlayer()) {
-                                const string localeP = player->getLocale();
-                                player->sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上伤害的权限", localeP));
-                            }
+                    if (const auto* player = damager_actor->asPlayer()) {
+                        if (!(info.source->cached_all_members.contains(damager_actor->getName()) || check_op_p(*player))) {
+
+                            const string localeP = player->getLocale();
+                            player->sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上伤害的权限", localeP));
+
                             event.setCancelled(true);
                         } else {
                             // 允许伤害，记录 ID

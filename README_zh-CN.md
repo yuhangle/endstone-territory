@@ -92,16 +92,17 @@ plugins/
 ```json
 {
     "actor_fire_attack_protect": true,
+    "allow_fly_on_territory": false,
+    "allow_op_as_member": false,
     "language": "zh_CN",
     "max_tty_area": 4000000,
     "money_connect": false,
     "player_max_tty_num": 20,
-    "price": 1.0,
-    "allow_fly_on_territory": false
+    "price": 1.0
 }
 ```
 
-`language` 为插件使用的语言，默认为中文，可根据语言文件夹内的语言文件更改配置。
+`language` 为插件默认语言，默认为 `zh_CN`。插件启动时会自动加载 `language/` 目录下所有 `.json` 语言文件，并自动根据玩家客户端语言（`getLocale()`）返回对应翻译。当请求的语言文件不存在时会进行语言族回退（如 `zh_TW` → `zh_CN`），未匹配时回退英文，最后返回原始键名。
 
 `actor_fire_attack_protect` 为是否开启生物火焰保护,默认开启;由于玩家对生物的直接攻击插件可以拦截，但是当玩家武器存在火焰附加附魔时,附魔效果依然会作用在生物身上造成杀伤导致保护不全;配置文件中开启生物火焰保护后,无权限玩家将无法对领地内生物造成包括火焰附加在内的任何伤害,但同时生物也将免疫部分火焰伤害。
 
@@ -114,6 +115,8 @@ plugins/
 `price` 为领地单位面积价格，默认为`1.0`。开启经济后，其值作为领地单位面积价格用于计算领地总价。
 
 `allow_fly_on_territory` 为是否允许玩家在领地内飞行，默认关闭。
+
+`allow_op_as_member` 为是否将服务器 OP 视为领地成员，开启后 OP 可绕过领地保护（破坏、放置、交互、伤害实体）以及传送限制。默认关闭。
 
 ---
 
