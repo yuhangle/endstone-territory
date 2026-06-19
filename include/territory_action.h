@@ -69,13 +69,13 @@ public:
     [[nodiscard]] int change_tty_manager(const std::string &ttyname,const std::string &action, const std::string &player_name) const;
     [[nodiscard]] std::pair<bool, std::string> change_territory_manager(const std::string &ttyname,const std::string &action,const std::string &player_name);
     static std::string pointToString(const Point3D &p);
-    [[nodiscard]] std::pair<bool, std::string> change_tty_tppos(const std::string &ttyname,const Point3D &tppos,const std::string &dim);
+    [[nodiscard]] std::pair<bool, std::string> change_tty_tppos(const std::string &ttyname,const Point3D &tppos,const std::string &dim, const std::string& locale = "");
     static std::vector<std::string> getPlayerTtyNames(const std::string& player_name);
     static std::vector<std::string> getMemberTtyNames(const std::string& player_name);
     static std::vector<std::string> getAllTtyNames();
     static std::vector<TerritoryData> getOpTtyList(const std::string& player_name);
     static std::vector<TerritoryData>getPlayerTtyList(const std::string& player_name);
-    [[nodiscard]] std::pair<bool,std::string> resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data, const Point3D& tppos);
+    [[nodiscard]] std::pair<bool,std::string> resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data, const Point3D& tppos, const std::string& locale = "");
     static void clearCache();
     std::shared_ptr<TerritoryInstance> getInstance(const std::string& name);
     static std::map<std::string, TerritoryData>& getAllTtyMutable();

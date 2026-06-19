@@ -6,102 +6,135 @@
 #define TERRITORY_TRANSLATE_H
 
 #include <fstream>
+#include <filesystem>
 #include <nlohmann/json.hpp>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 #include <fmt/format.h>
+
 using namespace std;
+
 class translate {
 public:
-    static constexpr auto DEFAULT_LANG_FILE = "plugins/territory/language/lang.json";
+    static constexpr auto DEFAULT_LANG_DIR = "plugins/territory/language/";
     using json = nlohmann::json;
-    json languageResource; // 存储从 lang.json 加载的语言资源
 
-    // 构造函数中加载语言资源文件
-    explicit translate(string lang_file = DEFAULT_LANG_FILE) : lang_file_(std::move(lang_file)) { loadLanguage(); };
+    // 构造函数：加载语言目录下所有 .json 文件，并设置默认语言
+    explicit translate(std::string  lang_dir = DEFAULT_LANG_DIR,
+                       std::string  default_locale = "en_US")
+        : lang_dir_(std::move(lang_dir)), default_locale_(std::move(default_locale)) {
+        loadAllLanguages();
+    };
 
-    // 加载语言资源文件
-    pair<bool,string> loadLanguage() {
-        const string lang_file = lang_file_;
-        if (std::ifstream f(lang_file); f.is_open()) {
-            languageResource = json::parse(f);
-            f.close();
-            return {true,"language file is normal"};
+    // 加载语言目录下所有语言文件
+    pair<bool, string> loadAllLanguages() {
+        namespace fs = std::filesystem;
+
+        languages_.clear();
+
+        if (!fs::exists(lang_dir_) || !fs::is_directory(lang_dir_)) {
+            return {false, "language directory not found: " + lang_dir_};
         }
-        return {false,"you can download language file from github to change tianyan plugin language"};
+
+        for (const auto& entry : fs::directory_iterator(lang_dir_)) {
+            if (!entry.is_regular_file()) continue;
+            const auto& path = entry.path();
+            if (path.extension() != ".json") continue;
+
+            string locale_name = path.stem().string(); // e.g., "zh_CN", "en_US"
+
+            try {
+                if (std::ifstream f(path); f.is_open()) {
+                    const json lang_data = json::parse(f);
+                    languages_[locale_name] = lang_data;
+                }
+            } catch (const json::parse_error&) {
+                // 跳过格式错误的语言文件
+                continue;
+            }
+        }
+
+        if (languages_.empty()) {
+            return {false, "no valid language files found in " + lang_dir_};
+        }
+
+        // 如果默认语言未加载，回退到第一个可用语言
+        if (!languages_.contains(default_locale_)) {
+            default_locale_ = languages_.begin()->first;
+        }
+
+        return {true, "loaded " + std::to_string(languages_.size()) + " languages, default: " + default_locale_};
     }
 
-    // 获取本地化字符串
-    std::string getLocal(const std::string &key) {
-        if (languageResource.find(key) != languageResource.end()) {
-            return languageResource[key].get<std::string>();
-        }
-        return key; // 如果找不到，返回原始 key
+    // 向后兼容：重新加载所有语言文件
+    pair<bool, string> loadLanguage() {
+        return loadAllLanguages();
     }
 
+    // 获取指定语言的翻译，找不到则回退到英文，英文也没有则返回 key
+    [[nodiscard]] std::string getLocal(const std::string& key, const std::string& locale) const {
+        // 尝试指定语言
+        if (const auto it = languages_.find(locale); it != languages_.end() && it->second.contains(key)) {
+            return it->second[key].get<std::string>();
+        }
+
+        // 语言族回退：zh_TW/zh_HK → zh_CN, en_GB → en_US 等
+        if (const auto underscore_pos = locale.find('_'); underscore_pos != std::string::npos) {
+            const std::string lang_code = locale.substr(0, underscore_pos);
+            for (const auto& [loaded_locale, lang_data] : languages_) {
+                if (loaded_locale.size() > underscore_pos &&
+                    loaded_locale[underscore_pos] == '_' &&
+                    loaded_locale.substr(0, underscore_pos) == lang_code &&
+                    loaded_locale != locale) {
+                    if (lang_data.contains(key)) {
+                        return lang_data[key].get<std::string>();
+                    }
+                }
+            }
+        }
+
+        // 回退到英文
+        if (locale != "en_US") {
+            if (const auto en_it = languages_.find("en_US"); en_it != languages_.end() && en_it->second.contains(key)) {
+                return en_it->second[key].get<std::string>();
+            }
+        }
+
+        return key;
+    }
+
+    // 获取默认语言的翻译（向后兼容）
+    [[nodiscard]] std::string getLocal(const std::string& key) const
+    {
+        return getLocal(key, default_locale_);
+    }
+
+    // 默认语言格式化翻译（向后兼容）
     template<typename... Args>
     std::string tr(const std::string& key, Args&&... args) {
         const std::string pattern = getLocal(key);
         return fmt::vformat(pattern, fmt::make_format_args(args...));
     }
 
-    static int checkLanguageCommon(const std::string& lang_path, const std::string& default_lang_path) {
-        namespace fs = std::filesystem;
-        // 检查确定的语言文件是否存在
-        if (!fs::exists(lang_path)) {
-            return 0; // 源语言文件不存在，无法操作
-        }
-
-        // 情况1：默认语言文件不存在 → 直接复制
-        if (!fs::exists(default_lang_path)) {
-            try {
-                fs::copy_file(lang_path, default_lang_path);
-                return 1;
-            } catch (...) {
-                return 0; // 复制失败
-            }
-        }
-
-        // 情况2：默认语言文件存在 → 比较内容是否相同
-        try {
-            std::ifstream src_file(lang_path, std::ios::binary);
-            std::ifstream dst_file(default_lang_path, std::ios::binary);
-
-            if (!src_file || !dst_file) {
-                return 0;
-            }
-
-            // 逐字节比较文件内容
-            bool identical = true;
-            char src_byte, dst_byte;
-            while (src_file.get(src_byte) && dst_file.get(dst_byte)) {
-                if (src_byte != dst_byte) {
-                    identical = false;
-                    break;
-                }
-            }
-
-            // 检查是否同时到达文件末尾
-            if (identical && (src_file.eof() != dst_file.eof())) {
-                identical = false;
-            }
-
-            if (!identical) {
-                // 内容不同，覆盖默认语言文件
-                dst_file.close();
-                src_file.close();
-                fs::copy_file(lang_path, default_lang_path, fs::copy_options::overwrite_existing);
-                return 1;
-            }
-
-            // 内容相同，无需操作
-            return 0;
-
-        } catch (...) {
-            return 0; // 比较或覆盖过程中出错
-        }
+    // 向后兼容：旧版 checkLanguageCommon 在新系统中不再需要
+    static int checkLanguageCommon(const std::string&, const std::string&) {
+        return 0;
     }
+
+    // 获取已加载的语言列表
+    [[nodiscard]] std::vector<std::string> getAvailableLocales() const {
+        std::vector<std::string> locales;
+        for (const auto& locale : languages_ | views::keys) {
+            locales.push_back(locale);
+        }
+        return locales;
+    }
+
 private:
-    string lang_file_;
+    std::string lang_dir_;
+    std::string default_locale_;
+    std::unordered_map<std::string, json> languages_;
 };
 
 #endif //TERRITORY_TRANSLATE_H

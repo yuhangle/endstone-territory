@@ -122,6 +122,7 @@ void EventListener::onBlockBreak(endstone::BlockBreakEvent& event) const
 {
     const string player_name = event.getPlayer().getName();
     const string player_dim = event.getPlayer().getLocation().getDimension().getName();
+    const string localeP = event.getPlayer().getLocale();
 
     // 构造坐标
     const TerritoryInstance::Point3D block_pos = {
@@ -133,7 +134,7 @@ void EventListener::onBlockBreak(endstone::BlockBreakEvent& event) const
         result.has_value() && !result.value())
     {
         event.setCancelled(true);
-        event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上破坏的权限"));
+        event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上破坏的权限", localeP));
     }
 }
 
@@ -142,6 +143,7 @@ void EventListener::onBlockPlace(endstone::BlockPlaceEvent& event) const
 {
     const string player_name = event.getPlayer().getName();
     const string player_dim = event.getPlayer().getLocation().getDimension().getName();
+    const string localeP = event.getPlayer().getLocale();
 
     const TerritoryInstance::Point3D block_pos = {
         static_cast<double>(event.getBlock().getLocation().getBlockX()),
@@ -153,7 +155,7 @@ void EventListener::onBlockPlace(endstone::BlockPlaceEvent& event) const
         result.has_value() && !result.value())
     {
         event.setCancelled(true);
-        event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上放置的权限"));
+        event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上放置的权限", localeP));
     }
 }
 
@@ -164,6 +166,7 @@ void EventListener::onPlayerjiaohu(endstone::PlayerInteractEvent& event) const
 
     const string player_name = event.getPlayer().getName();
     const string player_dim = event.getPlayer().getLocation().getDimension().getName();
+    const string localeP = event.getPlayer().getLocale();
     const TerritoryInstance::Point3D block_pos = {
         static_cast<double>(event.getBlock()->getLocation().getBlockX()),
         static_cast<double>(event.getBlock()->getLocation().getBlockY()),
@@ -172,7 +175,7 @@ void EventListener::onPlayerjiaohu(endstone::PlayerInteractEvent& event) const
 
     if (const auto result = global_checker_->canInteract(player_name, block_pos, player_dim); result.has_value() && !result.value()) {
         event.setCancelled(true);
-        event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上交互的权限"));
+        event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上交互的权限", localeP));
     }
 }
 
@@ -181,6 +184,7 @@ void EventListener::onPlayerjiaohust(endstone::PlayerInteractActorEvent& event) 
 {
     const string player_name = event.getPlayer().getName();
     const string player_dim = event.getPlayer().getLocation().getDimension().getName();
+    const string localeP = event.getPlayer().getLocale();
 
     // 获取实体当前所在位置
     const TerritoryInstance::Point3D actor_pos = {
@@ -193,7 +197,7 @@ void EventListener::onPlayerjiaohust(endstone::PlayerInteractActorEvent& event) 
         result.has_value() && !result.value())
     {
         event.setCancelled(true);
-        event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上交互的权限"));
+        event.getPlayer().sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上交互的权限", localeP));
     }
 }
 
@@ -264,7 +268,8 @@ void EventListener::onActorhit(endstone::ActorDamageEvent& event) const
                     if (damager_actor->getType() == "minecraft:player") {
                         if (!info.source->cached_all_members.contains(damager_actor->getName())) {
                             if (const auto* player = damager_actor->asPlayer()) {
-                                player->sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上伤害的权限"));
+                                const string localeP = player->getLocale();
+                                player->sendPopup(endstone::ColorFormat::Red + lang_tty_.getLocal("你没有在此领地上伤害的权限", localeP));
                             }
                             event.setCancelled(true);
                         } else {
@@ -322,11 +327,12 @@ void EventListener::quickCreateTtyRightClick(const endstone::PlayerInteractEvent
         }
         //在玩家处于快速创建模式且手持木棍点击非空气时开始提示
         auto& player = event.getPlayer();
+        const string localeP = player.getLocale();
         auto tmp = territory_->quick_create_player_data[player.getName()];
         if (tmp.dim1.empty()) {
             tmp.dim1 = player.getDimension().getName();
             tmp.pos1 = Territory_Action::Point3D{event.getBlock()->getLocation().getBlockX(),event.getBlock()->getLocation().getBlockY(),event.getBlock()->getLocation().getBlockZ()};
-            player.sendMessage(lang_tty_.getLocal("已记录此坐标为第一个坐标，请选择第二个坐标"));
+            player.sendMessage(lang_tty_.getLocal("已记录此坐标为第一个坐标，请选择第二个坐标", localeP));
         } else if (!tmp.dim2.empty()){
             //点二已存在数据，去重
             return;
@@ -334,7 +340,7 @@ void EventListener::quickCreateTtyRightClick(const endstone::PlayerInteractEvent
             tmp.dim2 = player.getDimension().getName();
             //进行维度检查
             if (tmp.dim1 != tmp.dim2) {
-                player.sendErrorMessage(lang_tty_.getLocal("坐标在不同维度，无法创建领地"));
+                player.sendErrorMessage(lang_tty_.getLocal("坐标在不同维度，无法创建领地", localeP));
                 return;
             }
             tmp.pos2 = Territory_Action::Point3D{event.getBlock()->getLocation().getBlockX(),event.getBlock()->getLocation().getBlockY(),event.getBlock()->getLocation().getBlockZ()};
@@ -342,7 +348,7 @@ void EventListener::quickCreateTtyRightClick(const endstone::PlayerInteractEvent
             if (tmp.pos1 == tmp.pos2) {
                 return;
             }
-            player.sendMessage(lang_tty_.getLocal("已记录此坐标为第二个坐标，请通过提示完成领地创建"));
+            player.sendMessage(lang_tty_.getLocal("已记录此坐标为第二个坐标，请通过提示完成领地创建", localeP));
         }
         //存储坐标数据
         territory_->quick_create_player_data[player.getName()] = tmp;
@@ -356,6 +362,7 @@ void EventListener::onPlayerMove(endstone::PlayerMoveEvent& event)
 {
     auto& player = event.getPlayer();
     std::string player_name = player.getName();
+    const string localeP = player.getLocale();
 
     // 时间节流逻辑
     auto now = std::chrono::steady_clock::now();
@@ -401,12 +408,12 @@ void EventListener::onPlayerMove(endstone::PlayerMoveEvent& event)
             bool is_sub = !current_father_territory.empty();
 
             std::string action_str = territory_->config_welcome_all ?
-                lang_tty_.getLocal("§2[领地] §r您当前位于 ") :
-                lang_tty_.getLocal("§2[领地] §r欢迎来到 ");
+                lang_tty_.getLocal("§2[领地] §r您当前位于 ", localeP) :
+                lang_tty_.getLocal("§2[领地] §r欢迎来到 ", localeP);
 
             std::string type_str = is_sub ?
-                lang_tty_.getLocal(" 的子领地 ") :
-                lang_tty_.getLocal(" 的领地 ");
+                lang_tty_.getLocal(" 的子领地 ", localeP) :
+                lang_tty_.getLocal(" 的领地 ", localeP);
 
             player.sendTip(action_str + selectedTerritory->owner + type_str + current_territory);
 
@@ -433,7 +440,7 @@ void EventListener::onPlayerMove(endstone::PlayerMoveEvent& event)
                 renderTerritoryGroundLine(player, *leaving_territory, to_loc);
             }
 
-            player.sendTip(lang_tty_.getLocal("§2[领地] §r您已离开领地 ") + last_tty + lang_tty_.getLocal(", 欢迎下次再来"));
+            player.sendTip(lang_tty_.getLocal("§2[领地] §r您已离开领地 ", localeP) + last_tty + lang_tty_.getLocal(", 欢迎下次再来", localeP));
 
             if (territory_->config_fly_on_tty) {
                 if (int gm = static_cast<int>(player.getGameMode()); (gm == 0 || gm == 3) && player.getAllowFlight()) {

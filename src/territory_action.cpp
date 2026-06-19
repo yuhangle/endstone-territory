@@ -954,7 +954,8 @@ std::string Territory_Action::pointToString(const Point3D &p) {
 // 领地传送点变更函数
 [[nodiscard]] std::pair<bool, std::string> Territory_Action::change_tty_tppos(const std::string &ttyname,
                                               const Point3D &tppos,
-                                              const std::string &dim){
+                                              const std::string &dim,
+                                              const std::string& locale){
     // 参数：
     //   ttyname: 领地名
     //   tppos:   新的传送点坐标（Point类型）
@@ -962,6 +963,10 @@ std::string Territory_Action::pointToString(const Point3D &p) {
     // 返回：
     //   std::pair<bool, std::string>，first为操作是否成功，second为提示信息
 
+    // locale 辅助：传入 locale 时按玩家语言翻译，否则使用默认语言
+    auto tr_locale = [&](const std::string& key) -> std::string {
+        return locale.empty() ? lang_tty_.getLocal(key) : lang_tty_.getLocal(key, locale);
+    };
 
     // 在更新数据库前，先检查传送点是否合法
     // 遍历全局缓存中的所有领地记录
@@ -969,13 +974,13 @@ std::string Territory_Action::pointToString(const Point3D &p) {
         if (const TerritoryData &territory = val; territory.name == ttyname) {
             // 维度检查
             if (territory.dim != dim) {
-                std::string msg = lang_tty_.getLocal("你当前所在的维度(") + dim + lang_tty_.getLocal(")与领地维度(") + territory.dim + lang_tty_.getLocal(")不匹配, 无法设置领地传送点");
+                std::string msg = tr_locale("你当前所在的维度(") + dim + tr_locale(")与领地维度(") + territory.dim + tr_locale(")不匹配, 无法设置领地传送点");
                 return {false, msg};
             }
             // 坐标检查
             if (!isPointInCube(tppos, territory.pos1, territory.pos2)) {
                 std::string pos_str = pointToString(tppos);
-                std::string msg = lang_tty_.getLocal("无法接受的坐标") + pos_str + lang_tty_.getLocal(", 领地传送点不能位于领地之外!");
+                std::string msg = tr_locale("无法接受的坐标") + pos_str + tr_locale(", 领地传送点不能位于领地之外!");
                 return {false, msg};
             }
             // 检查通过则退出循环
@@ -1137,7 +1142,7 @@ std::vector<TerritoryData> Territory_Action::getPlayerTtyList(const std::string 
 }
 
 //更改领地大小
-std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data, const Point3D& tppos)
+std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& pos1, const Point3D& pos2, const TerritoryData& old_tty_data, const Point3D& tppos, const std::string& locale)
 {
     //检查领地是否为一个点
     if (pos1 == pos2) {
@@ -1168,7 +1173,7 @@ std::pair<bool, std::string> Territory_Action::resize_territory(const Point3D& p
         {
             std::get<1>(new_tppos) = std::get<1>(tppos);
         }
-        (void)change_tty_tppos(old_tty_data.name, new_tppos, old_tty_data.dim);
+        (void)change_tty_tppos(old_tty_data.name, new_tppos, old_tty_data.dim, locale);
     }
     (void)get_all_tty(old_tty_data.name);
     return {true,"领地大小更改成功"};
